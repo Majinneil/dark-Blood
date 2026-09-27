@@ -8,6 +8,8 @@
 
 #include "DBGameDataSubsystem.generated.h"
 
+class UDBAnimationSetDefinition;
+class UDBCharacterVisualDefinition;
 class UDBClassDefinition;
 class UDBDialogueDefinition;
 class UDBLootTableDefinition;
@@ -34,6 +36,8 @@ public:
 	void RegisterDialogue(UDBDialogueDefinition* Definition);
 	void RegisterRecipe(UDBRecipeDefinition* Definition);
 	void RegisterLootTable(UDBLootTableDefinition* Definition);
+	void RegisterCharacterVisual(UDBCharacterVisualDefinition* Definition);
+	void RegisterAnimationSet(UDBAnimationSetDefinition* Definition);
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBClassDefinition* FindClass(FName ClassId) const;
@@ -55,6 +59,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBLootTableDefinition* FindLootTable(FName LootTableId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
+	UDBCharacterVisualDefinition* FindCharacterVisual(FName ProfileId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
+	UDBAnimationSetDefinition* FindAnimationSet(FName AnimationSetId) const;
+
+	TArray<UDBCharacterVisualDefinition*> GetAllCharacterVisuals() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	TArray<UDBRecipeDefinition*> GetAllRecipes() const;
@@ -98,6 +110,12 @@ private:
 
 	UPROPERTY(Transient)
 	TMap<FName, TObjectPtr<UDBLootTableDefinition>> LootTables;
+
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UDBCharacterVisualDefinition>> CharacterVisuals;
+
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UDBAnimationSetDefinition>> AnimationSets;
 
 	DarkBlood::Rules::FItemCatalog ItemCatalog;
 	DarkBlood::Rules::FQuestDatabase QuestDatabase;

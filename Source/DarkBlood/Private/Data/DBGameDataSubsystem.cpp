@@ -8,6 +8,8 @@
 #include "Data/DBEconomyDefinitions.h"
 #include "Data/DBQuestDefinition.h"
 #include "Data/DBRegionDefinition.h"
+#include "Visual/DBAnimationSetDefinition.h"
+#include "Visual/DBCharacterVisualDefinition.h"
 
 #include "Engine/AssetManager.h"
 #include "Engine/GameInstance.h"
@@ -55,6 +57,9 @@ void UDBGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	LoadAllOfType<UDBDialogueDefinition>(UDBDialogueDefinition::AssetType, [this](UDBDialogueDefinition* D) { RegisterDialogue(D); });
 	LoadAllOfType<UDBRecipeDefinition>(UDBRecipeDefinition::AssetType, [this](UDBRecipeDefinition* D) { RegisterRecipe(D); });
 	LoadAllOfType<UDBLootTableDefinition>(UDBLootTableDefinition::AssetType, [this](UDBLootTableDefinition* D) { RegisterLootTable(D); });
+	LoadAllOfType<UDBAnimationSetDefinition>(UDBAnimationSetDefinition::AssetType, [this](UDBAnimationSetDefinition* D) { RegisterAnimationSet(D); });
+	LoadAllOfType<UDBCharacterVisualDefinition>(UDBCharacterVisualDefinition::AssetType,
+		[this](UDBCharacterVisualDefinition* D) { RegisterCharacterVisual(D); });
 
 	// Missing content is filled with clearly marked development definitions so the game stays runnable.
 	bUsingDevelopmentContent = FDBDevelopmentContent::RegisterMissing(*this);
@@ -135,6 +140,44 @@ void UDBGameDataSubsystem::RegisterLootTable(UDBLootTableDefinition* Definition)
 	{
 		LootTables.Add(Definition->LootTableId, Definition);
 	}
+}
+
+void UDBGameDataSubsystem::RegisterCharacterVisual(UDBCharacterVisualDefinition* Definition)
+{
+	if (Definition && !Definition->ProfileId.IsNone())
+	{
+		CharacterVisuals.Add(Definition->ProfileId, Definition);
+	}
+}
+
+void UDBGameDataSubsystem::RegisterAnimationSet(UDBAnimationSetDefinition* Definition)
+{
+	if (Definition && !Definition->AnimationSetId.IsNone())
+	{
+		AnimationSets.Add(Definition->AnimationSetId, Definition);
+	}
+}
+
+UDBCharacterVisualDefinition* UDBGameDataSubsystem::FindCharacterVisual(FName ProfileId) const
+{
+	const TObjectPtr<UDBCharacterVisualDefinition>* Found = CharacterVisuals.Find(ProfileId);
+	return Found ? Found->Get() : nullptr;
+}
+
+UDBAnimationSetDefinition* UDBGameDataSubsystem::FindAnimationSet(FName AnimationSetId) const
+{
+	const TObjectPtr<UDBAnimationSetDefinition>* Found = AnimationSets.Find(AnimationSetId);
+	return Found ? Found->Get() : nullptr;
+}
+
+TArray<UDBCharacterVisualDefinition*> UDBGameDataSubsystem::GetAllCharacterVisuals() const
+{
+	TArray<UDBCharacterVisualDefinition*> Result;
+	for (const TPair<FName, TObjectPtr<UDBCharacterVisualDefinition>>& Pair : CharacterVisuals)
+	{
+		Result.Add(Pair.Value.Get());
+	}
+	return Result;
 }
 
 UDBRecipeDefinition* UDBGameDataSubsystem::FindRecipe(FName RecipeId) const

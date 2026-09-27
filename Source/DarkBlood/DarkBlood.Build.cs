@@ -21,6 +21,8 @@ public class DarkBlood : ModuleRules
 			"Slate",
 			"SlateCore",
 			"DeveloperSettings",
+			"AnimGraphRuntime",
+			"RHI",
 			"DarkBloodRules",
 		});
 	}

@@ -95,6 +95,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Attack", meta = (Categories = "Damage.Type"))
 	FGameplayTag DamageType;
 
+	/** Animation-set key of the combo steps (variant = step); context attacks use Anim.Attack.Air/Sprint/Dash. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Presentation", meta = (Categories = "Anim"))
+	FGameplayTag AnimationKey;
+
 	/** Hold the input to charge; release to swing (single-step moves only use step 0). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Charge")
 	bool bChargeable = false;

@@ -88,6 +88,21 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Unblockable, "Damage.Unblockable", "Attack cannot be blocked.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Unparryable, "Damage.Unparryable", "Attack cannot be parried.");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack, "Anim.Attack", "Any attack (fallback of every Anim.Attack.* key).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Light, "Anim.Attack.Light", "Light combo steps (variant = step index).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Heavy, "Anim.Attack.Heavy", "Heavy / signature strike.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Charged, "Anim.Attack.Charged", "Released charged attack.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Air, "Anim.Attack.Air", "Attack while airborne.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Sprint, "Anim.Attack.Sprint", "Attack out of a sprint.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Dash, "Anim.Attack.Dash", "Attack right after a dodge.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Block, "Anim.Block", "Raising the guard.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Dodge, "Anim.Dodge", "Dodge / dash.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_HitReact, "Anim.HitReact", "Stagger reaction.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_HitReact_Parried, "Anim.HitReact.Parried", "Staggered by a perfect parry.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Knockdown, "Anim.Knockdown", "Knocked down and getting up.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Death, "Anim.Death", "Death (holds the last pose).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Cast, "Anim.Cast", "Casting a spell / throwing.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Class_Warrior, "Class.Warrior", "Krieger (Warrior)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Class_Shadowrunner, "Class.Shadowrunner", "Schattenlaeufer (Shadowrunner)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Class_Mage, "Class.Mage", "Magier (Mage)");

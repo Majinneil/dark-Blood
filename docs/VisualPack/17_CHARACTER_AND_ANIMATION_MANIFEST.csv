@@ -1,0 +1,8 @@
+priority,category,name,source,cost_at_verification,ai_status,use_case,raw_files_in_zip,notes
+S,Character,MetaHuman Creator UE5.8,https://dev.epicgames.com/documentation/metahuman/metahuman-creator-in-unreal-engine,Engine feature,MANUAL/EPIC LICENSE,"player, heroes, NPCs, faces, hair",NO,"Create/assemble in user's Unreal project"
+S,Animation,Game Animation Sample Project UE5.8,https://www.unrealengine.com/tech-blog/download-the-latest-game-animation-sample-project-now-updated-for-ue-5-8,Free,EPIC CONTENT,"500+ locomotion/traversal animations and Motion Matching",NO,"Acquire via Fab/Epic and migrate into project"
+S,Animation,MetaHuman Animator Markerless Mocap,https://dev.epicgames.com/documentation/metahuman/metahuman-animation-from-mono-video-capture-in-unreal-engine,Free plugin/feature,EPIC LICENSE,"face/body mocap from webcam/video",NO,"Body capture experimental in 5.8"
+A,Animation,Free Animation Pack,https://www.fab.com/listings/8de31c5d-93bc-4bd4-9606-ca789ce91b99,Free,YES_AT_VERIFICATION,"24 professional mocap animations",NO,"Re-check listing license and AI flag before acquisition"
+A,Animation,Free Anims Mix Pack,https://www.fab.com/listings/6eea6416-92c7-498e-a005-f5d604690bcb,Free,NO,"variety prototype motions",NO,"Manual-only if AI restriction remains"
+REFERENCE,Animation,Real Katana Animation Pack,https://www.fab.com/listings/525e7cd2-d64b-43a5-ba7a-a3c13408f7ef,Paid/unknown,NO,"50 realistic katana animations",NO,"Quality reference; not part of free pipeline"
+REFERENCE,Animation,Katana Animation Pack,https://www.fab.com/listings/81c4944e-f7e5-4990-b659-d4aa8218a011,Paid/unknown,NO,"large katana combat set incl. dodge/double jump",NO,"Quality reference; not part of free pipeline"

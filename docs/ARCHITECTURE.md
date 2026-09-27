@@ -125,8 +125,14 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBUse <Item>`, `DBEquipById <Item>` | Verbrauchsgut benutzen / Ausrüstung anlegen |
 | `DBCraft <Rezept>`, `DBRepair` | An der nächsten Station herstellen / reparieren |
 | `DBGrantLoot <Tabelle>` | Beutetabelle für den Spieler würfeln |
+| `DBVisualSlice 0\|1` | Visual Slice entfernen/aufbauen (alle Rechner) |
+| `DBTimeOfDay Day\|Dusk\|Night\|DemonNight` | Lichtstimmung des Visual Slice |
+| `DBVisuals 0\|1` | Charakter-Profile an / Greybox-Körper (lokal) |
+| `DBView X Y Yaw [Pitch]` | Spieler relativ zum Slice-Ursprung platzieren |
+| `DBPerfSnapshot` / `DBVisualAudit` | Frame-/GPU-Zeit, Draw Calls, Slice-Statistik / fehlende Visual-Referenzen |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
 Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),
-`-DBAutoExec="Cmd|Cmd"` (Skript nach dem Verbinden, auch auf Clients);
+`-DBAutoExec="Cmd|Cmd"` (Skript nach dem Verbinden, auch auf Clients), `-DBNoVisualSlice`, `-DBTimeOfDay=<Preset>`,
+`-DBGreybox` (Charaktere ohne Profile);
 URL-Optionen: `?World=<Slot>`, `?Character=<Index>` (Dedicated Server).

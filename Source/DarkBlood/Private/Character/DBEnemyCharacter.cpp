@@ -194,14 +194,14 @@ void ADBEnemyCharacter::RespawnInPlace()
 void ADBEnemyCharacter::PlayDeathPresentation()
 {
 	Super::PlayDeathPresentation();
-	PlaceholderBody->SetVisibility(false);
+	SetPlaceholderVisible(false);
 	RefreshNameplate();
 }
 
 void ADBEnemyCharacter::PlayRevivePresentation()
 {
 	Super::PlayRevivePresentation();
-	PlaceholderBody->SetVisibility(true);
+	SetPlaceholderVisible(true);
 	RefreshNameplate();
 }
 

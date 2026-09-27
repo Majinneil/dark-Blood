@@ -14,7 +14,14 @@
 #include "EngineUtils.h"
 #include "GameplayTagsManager.h"
 #include "TimerManager.h"
+#include "Art/DBArtMaterials.h"
+#include "Art/DBVisualSliceDirector.h"
 #include "DarkBlood.h"
+#include "Engine/SkeletalMesh.h"
+#include "RHIStats.h"
+#include "Visual/DBAnimationSetDefinition.h"
+#include "Visual/DBCharacterVisualComponent.h"
+#include "Visual/DBCharacterVisualDefinition.h"
 #include "GameplayEffect.h"
 #include "UObject/Package.h"
 #include "Engine/World.h"
@@ -622,4 +629,122 @@ void UDBCheatManager::DBUse(FName ItemId)
 	{
 		PlayerState->GetInventory()->RequestUseItem(Slot);
 	}
+}
+
+void UDBCheatManager::DBVisualSlice(int32 bEnabled)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBVisualSlice %d"), bEnabled))) return;
+	ADBVisualSliceDirector* Director = ADBVisualSliceDirector::Get(GetWorld());
+	if (!Director && bEnabled)
+	{
+		const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+		Director = ADBVisualSliceDirector::SpawnFor(GetWorld(), Pawn ? FTransform(FRotator(0.f, Pawn->GetActorRotation().Yaw, 0.f), Pawn->GetActorLocation())
+																	: FTransform::Identity);
+	}
+	if (Director)
+	{
+		Director->SetSliceEnabled(bEnabled != 0);
+	}
+}
+
+void UDBCheatManager::DBTimeOfDay(const FString& Preset)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBTimeOfDay %s"), *Preset))) return;
+	const int64 Value = StaticEnum<EDBTimeOfDay>()->GetValueByNameString(Preset);
+	ADBVisualSliceDirector* Director = ADBVisualSliceDirector::Get(GetWorld());
+	if (Value == INDEX_NONE || !Director)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBTimeOfDay: use Day | Dusk | Night | DemonNight (visual slice must exist)"));
+		return;
+	}
+	Director->SetTimeOfDay(static_cast<EDBTimeOfDay>(Value));
+}
+
+void UDBCheatManager::DBVisuals(int32 bEnabled)
+{
+	UDBCharacterVisualComponent::SetVisualsEnabled(GetWorld(), bEnabled != 0);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS character visuals %s"), bEnabled ? TEXT("on") : TEXT("off (greybox)"));
+}
+
+void UDBCheatManager::DBPerfSnapshot()
+{
+	extern ENGINE_API float GAverageFPS;
+	extern ENGINE_API float GAverageMS;
+	const double GpuMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
+	int32 DrawCalls = 0;
+	int32 Primitives = 0;
+	for (int32 Gpu = 0; Gpu < MAX_NUM_GPUS; ++Gpu)
+	{
+		DrawCalls += GNumDrawCallsRHI[Gpu];
+		Primitives += GNumPrimitivesDrawnRHI[Gpu];
+	}
+	int32 Characters = 0;
+	int32 WithBody = 0;
+	for (TActorIterator<ADBCharacterBase> It(GetWorld()); It; ++It)
+	{
+		++Characters;
+		WithBody += It->GetVisuals() && It->GetVisuals()->HasVisualBody() ? 1 : 0;
+	}
+	const ADBVisualSliceDirector* Director = ADBVisualSliceDirector::Get(GetWorld());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS perf: %.1f fps, frame %.2f ms, GPU %.2f ms, %d draw calls, %d primitives; characters %d (%d with body); %s"), GAverageFPS,
+		GAverageMS, GpuMs, DrawCalls, Primitives, Characters, WithBody, Director ? *Director->DescribeLocalSlice() : TEXT("no visual slice"));
+}
+
+void UDBCheatManager::DBVisualAudit()
+{
+	int32 Missing = 0;
+	for (int32 Index = 0; Index < static_cast<int32>(EDBArtMaterial::Count); ++Index)
+	{
+		const EDBArtMaterial Slot = static_cast<EDBArtMaterial>(Index);
+		const FString Path = UDBArtMaterialSubsystem::GetAssetPath(Slot);
+		if (!Path.IsEmpty() && !UDBArtMaterialSubsystem::IsAuthored(Slot))
+		{
+			++Missing;
+			UE_LOG(LogDarkBlood, Warning, TEXT("DBVIS audit: material slot %s missing (%s) - flat fallback"),
+				*StaticEnum<EDBArtMaterial>()->GetNameStringByValue(Index), *Path);
+		}
+	}
+	if (const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(GetWorld()))
+	{
+		for (const UDBCharacterVisualDefinition* Profile : Data->GetAllCharacterVisuals())
+		{
+			const bool bBody = Profile->BodyMesh.LoadSynchronous() != nullptr;
+			const bool bAnim = Profile->AnimationSet && !Profile->AnimationSet->AnimClass.IsNull() && Profile->AnimationSet->AnimClass.LoadSynchronous();
+			Missing += bBody ? 0 : 1;
+			UE_LOG(LogDarkBlood, Display, TEXT("DBVIS audit: profile %s tier %d body %s anim %s%s"), *Profile->ProfileId.ToString(),
+				static_cast<int32>(Profile->QualityTier), bBody ? TEXT("ok") : TEXT("MISSING"), bAnim ? TEXT("ok") : TEXT("missing"),
+				Profile->bDevelopmentPlaceholder ? TEXT(" [DEV placeholder]") : TEXT(""));
+			if (Profile->AnimationSet)
+			{
+				for (const FDBAnimationEntry& Entry : Profile->AnimationSet->Entries)
+				{
+					for (const TSoftObjectPtr<UAnimMontage>& Montage : Entry.Montages)
+					{
+						if (!Montage.LoadSynchronous())
+						{
+							++Missing;
+							UE_LOG(LogDarkBlood, Warning, TEXT("DBVIS audit: %s montage %s missing"), *Entry.Key.ToString(), *Montage.ToString());
+						}
+					}
+				}
+			}
+		}
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS audit done: %d missing references"), Missing);
+}
+
+void UDBCheatManager::DBView(float X, float Y, float Yaw, float Pitch)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBView %f %f %f %f"), X, Y, Yaw, Pitch))) return;
+	APlayerController* Controller = GetOuterAPlayerController();
+	APawn* Pawn = Controller->GetPawn();
+	const ADBVisualSliceDirector* Director = ADBVisualSliceDirector::Get(GetWorld());
+	if (!Pawn)
+	{
+		return;
+	}
+	const FTransform Origin = Director ? Director->GetActorTransform() : FTransform::Identity;
+	const FVector Target = Origin.TransformPosition(FVector(X, Y, 120.f));
+	Pawn->TeleportTo(Target, FRotator(0.f, Origin.Rotator().Yaw + Yaw, 0.f));
+	Controller->ClientSetRotation(FRotator(Pitch, Origin.Rotator().Yaw + Yaw, 0.f));
 }

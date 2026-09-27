@@ -12,6 +12,12 @@
 #include "Data/DBItemDefinition.h"
 #include "Data/DBQuestDefinition.h"
 #include "Data/DBRegionDefinition.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Engine/SkeletalMesh.h"
+#include "Materials/MaterialInterface.h"
+#include "Visual/DBAnimationSetDefinition.h"
+#include "Visual/DBCharacterVisualDefinition.h"
 
 namespace
 {
@@ -577,6 +583,86 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		Data.RegisterDialogue(Dialogue);
 		bAddedAny = true;
 	}
+
+	// ---- Character visuals (DEV: engine template mannequin, see Tools/UE58/Setup-DevMannequin.ps1) ------
+	// Profiles only reference assets softly: without the local mannequin copy every character keeps its
+	// greybox body. Real profiles (MetaHuman, custom demons) are assets under /Game/DarkBlood/Characters/Profiles.
+	UDBAnimationSetDefinition* DevAnimations = Data.FindAnimationSet(TEXT("AS_Dev_Mannequin"));
+	if (!DevAnimations)
+	{
+		DevAnimations = NewObject<UDBAnimationSetDefinition>(&Data, NAME_None, RF_Transient);
+		DevAnimations->AnimationSetId = TEXT("AS_Dev_Mannequin");
+		DevAnimations->AnimClass = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(TEXT("/Game/Characters/Mannequins/Anims/Unarmed/ABP_Unarmed.ABP_Unarmed_C")));
+		auto Montage = [](const TCHAR* Name)
+		{
+			return TSoftObjectPtr<UAnimMontage>(FSoftObjectPath(FString::Printf(TEXT("/Game/DarkBlood/Dev/Mannequin/%s.%s"), Name, Name)));
+		};
+		auto AddAnim = [&](const FGameplayTag& Key, TArray<TSoftObjectPtr<UAnimMontage>> Montages, bool bFit = true)
+		{
+			FDBAnimationEntry& New = DevAnimations->Entries.AddDefaulted_GetRef();
+			New.Key = Key;
+			New.Montages = MoveTemp(Montages);
+			New.bFitToActionDuration = bFit;
+		};
+		const TArray<TSoftObjectPtr<UAnimMontage>> Combo = {Montage(TEXT("AM_DB_Dev_Attack_01")), Montage(TEXT("AM_DB_Dev_Attack_02")),
+			Montage(TEXT("AM_DB_Dev_Attack_03"))};
+		AddAnim(DBTags::Anim_Attack, Combo);
+		AddAnim(DBTags::Anim_Attack_Light, Combo);
+		AddAnim(DBTags::Anim_Attack_Heavy, {Montage(TEXT("AM_DB_Dev_Attack_Heavy"))});
+		AddAnim(DBTags::Anim_Attack_Charged, {Montage(TEXT("AM_DB_Dev_Attack_Heavy"))});
+		AddAnim(DBTags::Anim_Dodge, {Montage(TEXT("AM_DB_Dev_Dodge"))});
+		AddAnim(DBTags::Anim_HitReact, {Montage(TEXT("AM_DB_Dev_HitReact"))});
+		AddAnim(DBTags::Anim_Knockdown, {Montage(TEXT("AM_DB_Dev_HitReact_Heavy"))});
+		AddAnim(DBTags::Anim_Death, {Montage(TEXT("AM_DB_Dev_Death")), Montage(TEXT("AM_DB_Dev_Death_Back"))}, false);
+		Data.RegisterAnimationSet(DevAnimations);
+		bAddedAny = true;
+	}
+
+	auto AddVisual = [&](FName Id, EDBVisualQualityTier Tier, const TCHAR* MeshPath, const FLinearColor& Tint, float Scale = 1.f,
+		const TCHAR* BodyMaterial = nullptr) -> UDBCharacterVisualDefinition*
+	{
+		if (Data.FindCharacterVisual(Id))
+		{
+			return nullptr;
+		}
+		UDBCharacterVisualDefinition* Def = NewObject<UDBCharacterVisualDefinition>(&Data, NAME_None, RF_Transient);
+		Def->ProfileId = Id;
+		Def->QualityTier = Tier;
+		Def->bDevelopmentPlaceholder = true;
+		Def->BodyMesh = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(MeshPath));
+		Def->AnimationSet = DevAnimations;
+		Def->MeshTransform = FTransform(FRotator(0.f, -90.f, 0.f), FVector(0.f, 0.f, -88.f), FVector(Scale));
+		Def->OutfitTintParameter = TEXT("Paint Tint");
+		Def->OutfitTint = Tint;
+		if (BodyMaterial)
+		{
+			const TSoftObjectPtr<UMaterialInterface> Material{FSoftObjectPath(BodyMaterial)};
+			Def->BodyMaterials = {Material, Material};
+		}
+		Data.RegisterCharacterVisual(Def);
+		bAddedAny = true;
+		return Def;
+	};
+	const TCHAR* Manny = TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple");
+	const TCHAR* Quinn = TEXT("/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple.SKM_Quinn_Simple");
+	const TMap<FName, FLinearColor> ClassTints = {
+		{TEXT("Warrior"), FLinearColor(0.45f, 0.05f, 0.04f)},
+		{TEXT("Shadowrunner"), FLinearColor(0.05f, 0.06f, 0.1f)},
+		{TEXT("Mage"), FLinearColor(0.2f, 0.06f, 0.35f)},
+		{TEXT("Monk"), FLinearColor(0.6f, 0.35f, 0.05f)},
+	};
+	for (const TPair<FName, const TCHAR*>& Body : TArray<TPair<FName, const TCHAR*>>{{TEXT("CV_Player_TypeA"), Manny}, {TEXT("CV_Player_TypeB"), Quinn}})
+	{
+		if (UDBCharacterVisualDefinition* Player = AddVisual(Body.Key, EDBVisualQualityTier::Player, Body.Value, FLinearColor(0.45f, 0.05f, 0.04f)))
+		{
+			Player->ClassOutfitTints = ClassTints;
+		}
+	}
+	AddVisual(TEXT("CV_NPC_King"), EDBVisualQualityTier::Hero, Manny, FLinearColor(0.75f, 0.52f, 0.12f));
+	AddVisual(TEXT("CV_NPC_Captain"), EDBVisualQualityTier::ImportantNpc, Manny, FLinearColor(0.12f, 0.14f, 0.18f));
+	AddVisual(TEXT("CV_NPC_Default"), EDBVisualQualityTier::ImportantNpc, Quinn, FLinearColor(0.5f, 0.44f, 0.34f));
+	AddVisual(TEXT("CV_Enemy_LesserDemon"), EDBVisualQualityTier::Crowd, Manny, FLinearColor(0.3f, 0.02f, 0.02f), 1.12f,
+		TEXT("/Game/DarkBlood/Art/Materials/DarkBlood/MI_DB_DarkBlood_Veins.MI_DB_DarkBlood_Veins"));
 
 	return bAddedAny;
 }

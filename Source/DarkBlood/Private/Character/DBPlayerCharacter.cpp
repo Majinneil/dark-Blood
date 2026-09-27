@@ -7,6 +7,7 @@
 #include "Interaction/DBInteractionComponent.h"
 #include "UI/DBGameHUD.h"
 #include "Components/CapsuleComponent.h"
+#include "Visual/DBCharacterVisualComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Core/DBGameplayTags.h"
 #include "DarkBlood.h"
@@ -26,6 +27,7 @@ ADBPlayerCharacter::ADBPlayerCharacter(const FObjectInitializer& ObjectInitializ
 	PrimaryActorTick.bCanEverTick = true;
 	Team = EDBTeam::Players;
 	PlaceholderColor = FLinearColor(0.2f, 0.35f, 0.75f);
+	Visuals->SetProfileId(TEXT("CV_Player_TypeA"));
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -95,11 +97,26 @@ void ADBPlayerCharacter::InitAbilityActorInfo()
 	OnDoubleJumpTagChanged(DBTags::Movement_DoubleJump, ASC->GetTagCount(DBTags::Movement_DoubleJump));
 	DBPlayerState->OnProfileChanged.AddUniqueDynamic(this, &ADBPlayerCharacter::RefreshNameplateFromState);
 	RefreshNameplate();
+	ApplyPlayerVisuals();
 }
 
 void ADBPlayerCharacter::RefreshNameplateFromState(ADBPlayerState* /*ChangedState*/)
 {
 	RefreshNameplate();
+	ApplyPlayerVisuals();
+}
+
+void ADBPlayerCharacter::ApplyPlayerVisuals()
+{
+	const ADBPlayerState* DBPlayerState = GetPlayerState<ADBPlayerState>();
+	if (!DBPlayerState)
+	{
+		return;
+	}
+	// Only replicated ids travel over the network; every machine builds the same visuals from them.
+	const FDBCharacterProfile& Profile = DBPlayerState->GetProfile();
+	Visuals->SetAppearance(Profile.Appearance, Profile.ClassId,
+		Profile.Appearance.BodyType == EDBBodyType::TypeB ? FName(TEXT("CV_Player_TypeB")) : FName(TEXT("CV_Player_TypeA")));
 }
 
 void ADBPlayerCharacter::RefreshNameplate()

@@ -80,6 +80,20 @@ public:
 	/** Uses the first carried consumable with this id. */
 	UFUNCTION(Exec) void DBUse(FName ItemId);
 
+	// ---- Visual foundation (Phase 5.5) ----
+	/** Server: builds (1) or removes (0) the visual slice on every machine. */
+	UFUNCTION(Exec) void DBVisualSlice(int32 bEnabled);
+	/** Server: Day | Dusk | Night | DemonNight. */
+	UFUNCTION(Exec) void DBTimeOfDay(const FString& Preset);
+	/** Local: character visual profiles on (1) or greybox bodies (0). */
+	UFUNCTION(Exec) void DBVisuals(int32 bEnabled);
+	/** Local: frame time, GPU time, draw calls, primitives and slice statistics. */
+	UFUNCTION(Exec) void DBPerfSnapshot();
+	/** Local: missing / placeholder visual references (materials, profiles, animation sets). */
+	UFUNCTION(Exec) void DBVisualAudit();
+	/** Server: puts your character at X Y (relative to the slice origin) facing Yaw, camera pitch Pitch. */
+	UFUNCTION(Exec) void DBView(float X, float Y, float Yaw, float Pitch = -10.f);
+
 private:
 	/** On clients: sends the command to the server and returns true. */
 	bool ForwardToServer(const FString& Command) const;

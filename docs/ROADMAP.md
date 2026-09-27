@@ -10,6 +10,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 3 | Erster Story Vertical Slice | ✅ Gameplay (Dialoge, Quests, Charaktererstellung, Slate-UI; headless + Koop getestet) · 🟡 Präsentation (Assets) |
 | 4 | Klassen & Skilltrees | ✅ Gameplay (4 Kits, 8 Signaturfähigkeiten, Skilltrees, UI; headless getestet) · 🟡 Animationen/VFX |
 | 5 | Inventar / Loot / Crafting | ✅ Gameplay (Werte, Resistenzen, Verbrauch, Beute, Crafting, Reparatur, UI; headless getestet) · 🟡 Icons/Meshes |
+| 5.5 | Visual Foundation (Codex-Paket) | ✅ Systeme, Materialsystem, Baukasten, Licht, Visual Slice (gerendert + Koop getestet) · 🟡 echte Assets (Texturen, Bäume, MetaHumans, Animationen) |
 | 6 | Open World | ⬜ (Regionen, Gefahrenstufen, Entdeckung als Basis vorhanden) |
 | 7 | NPC- und Siedlungssimulation | ⬜ |
 | 8 | Reise / Pferde / Kutschen / Survival | ⬜ |
@@ -202,6 +203,21 @@ Fähigkeitenleiste.
 
 **BEKANNT**: Die einfache Nahkampf-KI steuert direkt und bleibt an Hindernissen hängen → Navigation mit der
 Hauptwelt (Phase 6).
+
+## Abschlussbericht Phase 5.5 – Visual Foundation
+
+**ERSTELLT**: Charakter-Profile + Visual-Komponente (Slots, Qualitätsstufen, nur Ids repliziert), Aussehen in der
+Charaktererstellung, Animations-Sets nach `Anim.*` und AnimInstance-Basis, Materialsystem (12 Master, 40 Instanzen,
+per Skript erzeugt), modularer Gebäude-Baukasten mit Kit-Schnittstelle, Tore/Laternen/Wege/Mauern/Bach/Brücke/
+Dungeon-Eingang, regelbasierte Vegetation, Licht-Presets, Visual Slice um den Story-Slice, Setup-/Audit-Werkzeuge.
+Details: VISUAL_FOUNDATION.md, Stand/Blocker/nächste Schritte: VISUAL_FOUNDATION_STATUS.md.
+
+**GETESTET**: Build (Unity + Non-Unity), Regelkern 44/44, Headless-Regression (Kampf, Klassen-Kit, Crafting),
+Koop mit identischem Slice auf Server und Client, gerenderte Ansichten aller Bereiche bei Tag/Dämmerung/Nacht/
+Dämonennacht, ≈ 5 ms GPU.
+
+**OFFEN** (Assets, vom Nutzer zu beschaffen): Poly-Haven-Texturen, Fab-Free-Assets, CC0-Vegetation, Game Animation
+Sample, MetaHumans; NO-AI-Assets nur manuell.
 
 ## Abschlussbericht Phase 5 – Inventar, Loot, Crafting
 

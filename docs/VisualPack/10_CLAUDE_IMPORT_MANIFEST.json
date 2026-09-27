@@ -1,0 +1,36 @@
+{
+  "project": "DARK BLOOD",
+  "engine": "Unreal Engine 5.8",
+  "phase": "5.5 Visual Foundation",
+  "style": "realistic/semi-realistic dark fantasy, medieval Japan inspired",
+  "rules": {
+    "no_low_poly_final_art": true,
+    "no_cartoon_final_art": true,
+    "keep_gameplay_intact": true,
+    "world_partition": true,
+    "nanite_where_appropriate": true,
+    "lumen_visual_only": true,
+    "respect_no_ai_assets": true
+  },
+  "sources": [
+    {"name":"Wooden Planks","url":"https://polyhaven.com/a/wooden_planks","license":"CC0","ai":"safe","category":"material"},
+    {"name":"Wood Planks","url":"https://polyhaven.com/a/wood_planks","license":"CC0","ai":"safe","category":"material"},
+    {"name":"Oak Wood Planks","url":"https://polyhaven.com/a/oak_wood_planks","license":"CC0","ai":"safe","category":"material"},
+    {"name":"Forest Floor","url":"https://polyhaven.com/a/forest_floor","license":"CC0","ai":"safe","category":"landscape"},
+    {"name":"Forest Ground 01","url":"https://polyhaven.com/a/forrest_ground_01","license":"CC0","ai":"safe","category":"landscape"},
+    {"name":"Stony Dirt Path","url":"https://polyhaven.com/a/stony_dirt_path","license":"CC0","ai":"safe","category":"road"},
+    {"name":"Rock Path","url":"https://polyhaven.com/a/rock_path","license":"CC0","ai":"safe","category":"road"},
+    {"name":"Mossy Rock","url":"https://polyhaven.com/a/mossy_rock","license":"CC0","ai":"safe","category":"rock"},
+    {"name":"Sakura Cherry Blossom","url":"https://sketchfab.com/3d-models/cc0-sakura-cherry-blossom-f5e6f5a985ea4fc2a14ee0b4b37572b5","license":"CC0","ai":"safe","category":"foliage"},
+    {"name":"Japanese Wisteria","url":"https://sketchfab.com/3d-models/cc0-japanese-wisteria-wisteria-floribund-b1d89a4c913c4ca192533bbca8a4d448","license":"CC0","ai":"safe","category":"foliage"},
+    {"name":"Japanese Torii Gate","url":"https://www.fab.com/listings/805a07ba-a248-4871-bf06-78bea645ba7b","license":"Fab Free","ai":"yes","category":"architecture"},
+    {"name":"Wall Lantern","url":"https://www.fab.com/listings/11f8f6d9-69dd-4119-8490-ebe686ff9626","license":"Fab Free","ai":"yes","category":"prop"},
+    {"name":"European Forest Environment","url":"https://www.fab.com/listings/c849e5f2-fb4a-4c22-ae57-36cb904a8a7c","license":"Fab Free","ai":"yes","category":"environment"},
+    {"name":"Tileable Pine Forest Road 4K","url":"https://www.fab.com/listings/2e64dfe5-4727-4f94-b84d-e652a426b9e6","license":"Fab Free","ai":"yes","category":"road"}
+  ],
+  "manual_only": [
+    {"name":"Quixel Japanese Shrine Stone Floor","url":"https://www.fab.com/listings/42e25675-17ba-4205-a155-bd9216519ca1","reason":"Allows usage with AI: No"},
+    {"name":"Quixel Japanese Stone Lantern","url":"https://www.fab.com/listings/3435efc6-08eb-452a-9c3a-b145c1d24f14","reason":"Allows usage with AI: No"},
+    {"name":"Quixel Giant Bamboo","url":"https://www.fab.com/listings/73f94dc9-9642-4c44-9f8e-c37eebe3205c","reason":"Allows usage with AI: No"}
+  ]
+}

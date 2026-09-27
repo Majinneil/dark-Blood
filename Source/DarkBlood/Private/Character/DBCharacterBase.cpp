@@ -8,9 +8,11 @@
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Visual/DBCharacterVisualComponent.h"
 
 ADBCharacterBase::ADBCharacterBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -20,6 +22,8 @@ ADBCharacterBase::ADBCharacterBase(const FObjectInitializer& ObjectInitializer)
 	PlaceholderBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PlaceholderBody->SetGenerateOverlapEvents(false);
 	PlaceholderBody->SetCanEverAffectNavigation(false);
+
+	Visuals = CreateDefaultSubobject<UDBCharacterVisualComponent>(TEXT("Visuals"));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (Cylinder.Succeeded())
@@ -53,6 +57,13 @@ void ADBCharacterBase::BeginPlay()
 			Material->SetVectorParameterValue(TEXT("Color"), PlaceholderColor);
 		}
 	}
+}
+
+void ADBCharacterBase::SetPlaceholderVisible(bool bVisible)
+{
+	const bool bHasRealBody = (Visuals && Visuals->HasVisualBody()) || (GetMesh() && GetMesh()->GetSkeletalMeshAsset() != nullptr);
+	PlaceholderBody->SetHiddenInGame(false);
+	PlaceholderBody->SetVisibility(bVisible && !bHasRealBody);
 }
 
 UAbilitySystemComponent* ADBCharacterBase::GetAbilitySystemComponent() const
@@ -116,7 +127,7 @@ void ADBCharacterBase::PlayDeathPresentation()
 {
 	GetCharacterMovement()->DisableMovement();
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	// Death montage / ragdoll, VFX and audio are played here once animation assets exist.
+	Visuals->PlayDeathPresentation();
 }
 
 void ADBCharacterBase::Revive()
@@ -138,6 +149,7 @@ void ADBCharacterBase::PlayRevivePresentation()
 {
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	Visuals->PlayRevivePresentation();
 }
 
 FString ADBCharacterBase::GetCombatDisplayName() const

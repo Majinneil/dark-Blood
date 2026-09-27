@@ -4,6 +4,7 @@
 #include "Abilities/DBMeleeAttackAbility.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Visual/DBCharacterVisualComponent.h"
 
 ADBLesserDemon::ADBLesserDemon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -29,4 +30,5 @@ ADBLesserDemon::ADBLesserDemon(const FObjectInitializer& ObjectInitializer)
 	PlaceholderBody->SetRelativeScale3D(FVector(0.95f, 0.95f, 1.9f));
 
 	MeleeAI = CreateDefaultSubobject<UDBMeleeAIComponent>(TEXT("MeleeAI"));
+	Visuals->SetProfileId(TEXT("CV_Enemy_LesserDemon"));
 }

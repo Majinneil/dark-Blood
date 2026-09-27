@@ -70,6 +70,12 @@ protected:
 	/** Plays an optional montage (fire and forget). Timing never depends on it, so abilities work without animation assets. */
 	void PlayOptionalMontage(UAnimMontage* Montage, float PlayRate = 1.f);
 
+	/**
+	 * Presentation montage: Override if set, otherwise the avatar's animation set entry for Key (Anim.*).
+	 * DesiredSeconds > 0 fits the montage length to the gameplay duration of the action.
+	 */
+	void PlayPresentationMontage(UAnimMontage* Override, const FGameplayTag& Key, int32 Variant = 0, float DesiredSeconds = 0.f);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Activation")
 	EDBAbilityActivationPolicy ActivationPolicy = EDBAbilityActivationPolicy::OnInputTriggered;
 

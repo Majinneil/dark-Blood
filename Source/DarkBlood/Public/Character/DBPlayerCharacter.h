@@ -44,6 +44,7 @@ protected:
 	void OnDoubleJumpTagChanged(const FGameplayTag Tag, int32 NewCount);
 	virtual void OnJumped_Implementation() override;
 	void RefreshNameplate();
+	void ApplyPlayerVisuals();
 
 	UFUNCTION()
 	void RefreshNameplateFromState(ADBPlayerState* ChangedState);

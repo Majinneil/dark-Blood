@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DarkBloodBuildingModule",
+  "type": "object",
+  "required": ["id", "category", "moduleSizeMeters", "regionTags"],
+  "properties": {
+    "id": {"type": "string"},
+    "category": {"enum": ["FOUNDATION", "WALL", "PILLAR", "DOOR", "WINDOW", "ROOF", "VERANDA", "STAIR", "FENCE", "GATE", "BRIDGE", "PROP_SOCKET"]},
+    "moduleSizeMeters": {"type": "number", "minimum": 0.25},
+    "regionTags": {"type": "array", "items": {"type": "string"}},
+    "wealthMin": {"type": "number", "minimum": 0, "maximum": 1},
+    "wealthMax": {"type": "number", "minimum": 0, "maximum": 1},
+    "damageVariants": {"type": "array", "items": {"type": "string"}},
+    "materialVariants": {"type": "array", "items": {"type": "string"}}
+  }
+}

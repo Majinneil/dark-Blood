@@ -50,6 +50,13 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Identity)
 	FText ReplicatedName;
 
+	/** CV_<NpcId> when such a profile exists, else CV_NPC_Default. */
+	UPROPERTY(ReplicatedUsing = OnRep_Identity)
+	FName VisualProfileId;
+
+	void UpdateLookAt();
+	float LookAtRefreshSeconds = 0.f;
+
 	UFUNCTION()
 	void OnRep_Identity();
 

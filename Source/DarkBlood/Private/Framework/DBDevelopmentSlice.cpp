@@ -1,5 +1,6 @@
 #include "Framework/DBDevelopmentSlice.h"
 
+#include "Art/DBVisualSliceDirector.h"
 #include "Character/DBLesserDemon.h"
 #include "Character/DBNpcCharacter.h"
 #include "Character/DBTrainingDummy.h"
@@ -66,6 +67,8 @@ namespace DBDevelopmentSlice
 		{
 			Spawner->Setup(ADBLesserDemon::StaticClass(), 3, TEXT("MQ02_EastGate"), TEXT("Story.CaptainBriefed"));
 		}
+		// Phase 5.5 visual slice around the gameplay slice (reversible: -DBNoVisualSlice / DBVisualSlice 0).
+		ADBVisualSliceDirector::SpawnFor(World, Origin);
 		UE_LOG(LogDarkBlood, Log, TEXT("DEVELOPMENT story slice spawned"));
 	}
 }

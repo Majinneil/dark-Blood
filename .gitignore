@@ -25,3 +25,7 @@ CMakeCache.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Engine template content copied locally by Tools/UE58/Setup-DevMannequin.ps1 (not redistributed)
+Content/Characters/Mannequins/
+Content/DarkBlood/Dev/Mannequin/

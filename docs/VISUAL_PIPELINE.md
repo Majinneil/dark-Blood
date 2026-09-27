@@ -1,7 +1,8 @@
 # Visual-Pipeline
 
-**Status:** Rendering-Grundkonfiguration gesetzt. Keine finalen Assets vorhanden. Alle Visuals im Spiel sind
-Entwicklungsplatzhalter (Engine-Zylinder als Körper, Text-Namensschilder, Canvas-Overlay).
+**Status:** Phase 5.5 Visual Foundation umgesetzt (siehe VISUAL_FOUNDATION.md / VISUAL_FOUNDATION_STATUS.md):
+Profile, Animations-Sets, Materialsystem, modularer Baukasten, Vegetation, Licht, Visual Slice. Finale Assets fehlen
+noch; DEV-Stand sind das Engine-Mannequin (lokal per Skript) und prozedurale Bauteile.
 
 ## Art Direction
 
@@ -19,7 +20,8 @@ Realistisch/semi-realistisch, menschliche Proportionen, normale Architektur, rea
 ## Austauschbarkeit (Pflicht)
 
 - Gameplay-Klassen referenzieren Visuals nur über weiche Referenzen, Visual-Profile oder Blueprint-Unterklassen.
-- `ADBCharacterBase::PlaceholderBody` wird automatisch ausgeblendet, sobald ein Skeletal Mesh gesetzt ist.
+- `ADBCharacterBase::PlaceholderBody` wird automatisch ausgeblendet, sobald ein Skeletal Mesh gesetzt ist
+  (`UDBCharacterVisualComponent` + `UDBCharacterVisualDefinition`).
 - Items: `Icon`, `WorldMesh`, `EquippedMesh` als Soft-Refs; `bUsesPlaceholderVisuals` markiert Platzhalter.
 - Bosse: Logik ohne Mesh-Kenntnis (siehe BOSS_FRAMEWORK.md).
 

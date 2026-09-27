@@ -1,6 +1,10 @@
 #include "Character/DBNpcCharacter.h"
 
 #include "Components/TextRenderComponent.h"
+#include "Data/DBGameDataSubsystem.h"
+#include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
+#include "Visual/DBCharacterVisualComponent.h"
 #include "Dialogue/DBDialogueComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -27,6 +31,7 @@ void ADBNpcCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADBNpcCharacter, ReplicatedName);
+	DOREPLIFETIME(ADBNpcCharacter, VisualProfileId);
 }
 
 void ADBNpcCharacter::Setup(FName InNpcId, const FText& InDisplayName, FName InDialogueId)
@@ -35,6 +40,9 @@ void ADBNpcCharacter::Setup(FName InNpcId, const FText& InDisplayName, FName InD
 	DisplayName = InDisplayName;
 	DialogueId = InDialogueId;
 	ReplicatedName = DisplayName;
+	const FName Candidate(*(TEXT("CV_") + NpcId.ToString()));
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	VisualProfileId = Data && Data->FindCharacterVisual(Candidate) ? Candidate : FName(TEXT("CV_NPC_Default"));
 	OnRep_Identity();
 }
 
@@ -51,6 +59,32 @@ void ADBNpcCharacter::BeginPlay()
 void ADBNpcCharacter::OnRep_Identity()
 {
 	Nameplate->SetText(ReplicatedName);
+	if (!VisualProfileId.IsNone())
+	{
+		Visuals->SetProfileId(VisualProfileId);
+	}
+}
+
+void ADBNpcCharacter::UpdateLookAt()
+{
+	// Local presentation: NPCs turn their head towards the closest player within conversation distance.
+	constexpr float LookDistance = 600.f;
+	APawn* Closest = nullptr;
+	float ClosestDistSq = FMath::Square(LookDistance);
+	for (TActorIterator<APawn> It(GetWorld()); It; ++It)
+	{
+		if (*It == this || !It->IsPlayerControlled())
+		{
+			continue;
+		}
+		const float DistSq = FVector::DistSquared(It->GetActorLocation(), GetActorLocation());
+		if (DistSq < ClosestDistSq)
+		{
+			ClosestDistSq = DistSq;
+			Closest = *It;
+		}
+	}
+	Visuals->SetLookAtTarget(Closest);
 }
 
 FString ADBNpcCharacter::GetCombatDisplayName() const
@@ -86,6 +120,12 @@ void ADBNpcCharacter::Interact(APlayerController* User)
 void ADBNpcCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	LookAtRefreshSeconds -= DeltaSeconds;
+	if (LookAtRefreshSeconds <= 0.f && GetNetMode() != NM_DedicatedServer)
+	{
+		LookAtRefreshSeconds = 0.5f;
+		UpdateLookAt();
+	}
 	if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
 	{
 		const FVector ToCamera = Camera->GetCameraLocation() - Nameplate->GetComponentLocation();

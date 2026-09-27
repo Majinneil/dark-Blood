@@ -74,7 +74,7 @@ void UDBAbility_Block::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		// Moench "Innere Ruhe": +0.1 s perfect-parry window per rank.
 		ASC->AddTimedLooseTag(DBTags::State_ParryWindow, ParryWindowSeconds + 0.1f * static_cast<float>(GetSkillRank(DBSkillNodes::InnerCalm)));
 	}
-	PlayOptionalMontage(GuardMontage);
+	PlayPresentationMontage(GuardMontage, DBTags::Anim_Block);
 
 	if (UAbilityTask_WaitInputRelease* Release = UAbilityTask_WaitInputRelease::WaitInputRelease(this, IsLocallyControlled()))
 	{
@@ -127,7 +127,7 @@ void UDBAbility_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	{
 		ASC->AddTimedLooseTag(DBTags::State_Invulnerable, InvulnerableSeconds);
 	}
-	PlayOptionalMontage(DodgeMontage);
+	PlayPresentationMontage(DodgeMontage, DBTags::Anim_Dodge, 0, DurationSeconds);
 	ApplyPush(this, TEXT("Dodge"), Direction, Distance, DurationSeconds);
 	UE_LOG(LogDBCombat, Log, TEXT("%s dodges"), *DBCombat::GetCombatName(Character));
 	if (HasAuthority(&ActivationInfo))
@@ -277,10 +277,12 @@ void UDBAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 
 	float Knockback = StaggerKnockback;
 	UAnimMontage* Montage = StaggerMontage;
+	FGameplayTag AnimKey = DBTags::Anim_HitReact;
 	if (Reaction == R::EHitReaction::Knockdown)
 	{
 		Knockback = KnockdownKnockback;
 		Montage = KnockdownMontage;
+		AnimKey = DBTags::Anim_Knockdown;
 		GetAbilitySystemComponentFromActorInfo()->AddLooseGameplayTag(DBTags::State_KnockedDown);
 		bAddedKnockdownTag = true;
 	}
@@ -288,12 +290,13 @@ void UDBAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	{
 		Knockback = ParriedKnockback;
 		Montage = ParriedMontage;
+		AnimKey = DBTags::Anim_HitReact_Parried;
 	}
 
 	const AActor* Source = TriggerEventData ? TriggerEventData->Instigator.Get() : nullptr;
 	const FVector Away = Source ? Character->GetActorLocation() - Source->GetActorLocation() : -Character->GetActorForwardVector();
 	ApplyPush(this, TEXT("Knockback"), Away, Knockback * Character->GetKnockbackScale(), FMath::Min(0.25f, Seconds));
-	PlayOptionalMontage(Montage);
+	PlayPresentationMontage(Montage, AnimKey, 0, Seconds);
 	UE_LOG(LogDBCombat, Log, TEXT("%s reacts: %hs (%.1f s)"), *DBCombat::GetCombatName(Character), R::ToString(Reaction), Seconds);
 	if (HasAuthority(&ActivationInfo))
 	{

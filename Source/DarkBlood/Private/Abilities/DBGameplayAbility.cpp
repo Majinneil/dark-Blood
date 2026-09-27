@@ -4,7 +4,9 @@
 #include "Abilities/DBAttributeSet.h"
 #include "Abilities/DBCombatEffects.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Animation/AnimMontage.h"
 #include "Character/DBCharacterBase.h"
+#include "Visual/DBCharacterVisualComponent.h"
 #include "Player/DBPlayerState.h"
 #include "Player/DBProgressionComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -145,6 +147,25 @@ ADBCharacterBase* UDBGameplayAbility::GetDBCharacter() const
 UDBAbilitySystemComponent* UDBGameplayAbility::GetDBAbilitySystem() const
 {
 	return Cast<UDBAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+}
+
+void UDBGameplayAbility::PlayPresentationMontage(UAnimMontage* Override, const FGameplayTag& Key, int32 Variant, float DesiredSeconds)
+{
+	UAnimMontage* Montage = Override;
+	bool bFit = Override == nullptr;
+	if (!Montage)
+	{
+		const ADBCharacterBase* Character = GetDBCharacter();
+		const UDBCharacterVisualComponent* Visuals = Character ? Character->GetVisuals() : nullptr;
+		Montage = Visuals ? Visuals->FindMontage(Key, Variant, &bFit) : nullptr;
+	}
+	if (!Montage)
+	{
+		return;
+	}
+	const float Length = Montage->GetPlayLength();
+	const float PlayRate = bFit && DesiredSeconds > 0.f && Length > 0.f ? FMath::Clamp(Length / DesiredSeconds, 0.6f, 2.5f) : 1.f;
+	PlayOptionalMontage(Montage, PlayRate);
 }
 
 void UDBGameplayAbility::PlayOptionalMontage(UAnimMontage* Montage, float PlayRate)

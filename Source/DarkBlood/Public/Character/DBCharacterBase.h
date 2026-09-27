@@ -9,6 +9,7 @@
 
 class ADBCharacterBase;
 class UDBAbilitySystemComponent;
+class UDBCharacterVisualComponent;
 class UStaticMeshComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDBOnCharacterDied, ADBCharacterBase*, Character);
@@ -53,6 +54,12 @@ public:
 
 	float GetKnockbackScale() const { return KnockbackScale; }
 
+	/** Presentation layer (body mesh, animation set, appearance). Never read by gameplay. */
+	UDBCharacterVisualComponent* GetVisuals() const { return Visuals; }
+
+	/** Shows/hides the greybox body; it stays hidden while a real body mesh is applied. */
+	void SetPlaceholderVisible(bool bVisible);
+
 	UPROPERTY(BlueprintAssignable, Category = "Dark Blood|Character")
 	FDBOnCharacterDied OnDied;
 
@@ -93,6 +100,9 @@ protected:
 	 */
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Visuals")
 	TObjectPtr<UStaticMeshComponent> PlaceholderBody;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dark Blood|Visuals")
+	TObjectPtr<UDBCharacterVisualComponent> Visuals;
 
 	/** Tint of the placeholder body (players blue, enemies red, NPCs gold). */
 	UPROPERTY(EditDefaultsOnly, Category = "Dark Blood|Visuals")

@@ -209,7 +209,26 @@ void UDBMeleeAttackAbility::BeginSwing()
 	bSwingStarted = true;
 
 	const FDBAttackStepConfig* Step = GetCurrentStep();
-	PlayOptionalMontage(Step->Montage);
+	FGameplayTag Key = AnimationKey.IsValid() ? AnimationKey : DBTags::Anim_Attack_Light;
+	switch (Context)
+	{
+	case EDBAttackContext::Air:
+		Key = DBTags::Anim_Attack_Air;
+		break;
+	case EDBAttackContext::Sprint:
+		Key = DBTags::Anim_Attack_Sprint;
+		break;
+	case EDBAttackContext::Dash:
+		Key = DBTags::Anim_Attack_Dash;
+		break;
+	default:
+		if (Charge.bCharged)
+		{
+			Key = DBTags::Anim_Attack_Charged;
+		}
+		break;
+	}
+	PlayPresentationMontage(Step->Montage, Key, CurrentStep, Step->WindupSeconds + Step->ActiveSeconds + Step->RecoverySeconds);
 	ApplyContextMovement(*Step);
 	if (UAbilityTask_WaitDelay* Windup = UAbilityTask_WaitDelay::WaitDelay(this, Step->WindupSeconds))
 	{
@@ -417,6 +436,7 @@ UDBAbility_HeavyAttack::UDBAbility_HeavyAttack()
 	DisplayName = FText::FromString(TEXT("Schwerer Hieb"));
 	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Heavy}));
 	Steps = {MakeStep(28.f, 22.f, 30.f, 0.45f, 0.15f, 0.60f, 230.f, 50.f)};
+	AnimationKey = DBTags::Anim_Attack_Heavy;
 	bChargeable = true;
 }
 
@@ -432,6 +452,7 @@ UDBAbility_DemonClaw::UDBAbility_DemonClaw()
 	SetAssetTags(FGameplayTagContainer(DBTags::Ability_Attack));
 	DamageType = DBTags::Damage_Type_Physical;
 	Steps = {MakeStep(18.f, 0.f, 22.f, 0.5f, 0.15f, 0.6f, 200.f, 60.f)};
+	AnimationKey = DBTags::Anim_Attack_Heavy;
 }
 
 UDBAbility_KunaiCombo::UDBAbility_KunaiCombo()
@@ -476,5 +497,6 @@ UDBAbility_PalmStrike::UDBAbility_PalmStrike()
 	DisplayName = FText::FromString(TEXT("Bergstoss"));
 	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Heavy}));
 	Steps = {MakeStep(22.f, 18.f, 45.f, 0.4f, 0.12f, 0.5f, 200.f, 45.f)};
+	AnimationKey = DBTags::Anim_Attack_Heavy;
 	bChargeable = true;
 }
