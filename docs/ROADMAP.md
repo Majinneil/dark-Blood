@@ -35,13 +35,14 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 nur über ein mit Epic verknüpftes GitHub-Konto erreichbar, und ein Engine-Build übersteigt den verfügbaren
 Speicher. Folgen:
 
-- Der UE-C++-Code (`Source/DarkBlood`) wurde gegen die UE-5.5/5.6-API geschrieben, aber **nie kompiliert**.
+- Der UE-C++-Code (`Source/DarkBlood`) wurde gegen die UE-5.5/5.6-API geschrieben, aber **nie kompiliert**. Mit UE 5.8 sind zusätzlich
+  Deprecation-Warnungen oder geänderte Signaturen möglich.
   Beim ersten Build sind Kompilierfehler wahrscheinlich und müssen behoben werden.
 - Keine Laufzeit-, PIE- oder Multiplayer-Tests der UE-Schicht.
 - Assets (`.uasset`, Karten) können hier nicht erstellt werden. Deshalb erzeugt der Code klar markierte
   Entwicklungsdaten und eine Entwicklungs-Steuerung.
 
-**Auflösung:** Projekt lokal mit UE 5.6 bauen (oder Claude Code lokal mit installierter Engine nutzen), Fehler
+**Auflösung:** Projekt lokal mit UE 5.8 bauen (oder Claude Code lokal mit installierter Engine nutzen), Fehler
 beheben und danach die Tests aus Phase 1 (unten, „Manuelle Tests“) durchführen. Optional: GitHub-Actions-Runner
 auf einem Rechner mit Engine für automatische UE-Builds.
 
@@ -57,7 +58,7 @@ auf einem Rechner mit Engine für automatische UE-Builds.
   zwei Persistenzmodi, datengetriebene Assets, Trennung Gameplay/Visual
 
 **ANALYSE:** Repository war leer (nur README). Keine bestehenden Systeme zu erhalten.
-**UE-VERSION:** Zuordnung 5.6. Der Code nutzt APIs ab 5.5 (z. B. `FGameplayAbilitySpec::GetDynamicSpecSourceTags`,
+**UE-VERSION:** Zuordnung 5.8 (vom Nutzer installierte Launcher-Version, zuvor 5.6). Der Code nutzt APIs ab 5.5 (z. B. `FGameplayAbilitySpec::GetDynamicSpecSourceTags`,
 `AActor::SetNetUpdateFrequency`).
 **PLUGINS:** GameplayAbilities, EnhancedInput, MotionWarping, StateTree, GameplayStateTree, ModelingTools
 (Editor), Python + EditorScriptingUtilities (Editor). Niagara, Control Rig und World Partition sind

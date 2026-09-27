@@ -13,8 +13,8 @@ DAS ENDE, der Dämonenkönig und am Ende: **DIE HELDEN DER ZEIT**.
 
 | Werkzeug | Version |
 |---|---|
-| Unreal Engine | **5.6** (Projekt-Zuordnung; API-Stand ≥ 5.5 wird vorausgesetzt) |
-| Visual Studio 2022 (Windows) / Xcode (macOS) / clang (Linux) | laut UE-5.6-Anforderungen |
+| Unreal Engine | **5.8** (Epic Games Launcher; Code nutzt APIs ab 5.5) |
+| Visual Studio 2022 (Windows) / Xcode (macOS) / clang (Linux) | laut UE-5.8-Anforderungen (Workload „Spieleentwicklung mit C++“) |
 | Git LFS | für `.uasset`/`.umap` und Quelldateien von Assets |
 | CMake ≥ 3.20 | nur für die Regelkern-Tests |
 
