@@ -9,6 +9,31 @@
 #include "DBArtMaterials.generated.h"
 
 class UMaterialInterface;
+class UStaticMesh;
+
+/** Groups of authored meshes (CC0 Poly Haven imports, later Fab/Megascans) used by scatter and dressing. */
+UENUM(BlueprintType)
+enum class EDBArtMeshSet : uint8
+{
+	Tree,
+	DeadTree,
+	Shrub,
+	Fern,
+	Moss,
+	Rock,
+	Boulder,
+	Stump,
+	Count UMETA(Hidden)
+};
+
+USTRUCT()
+struct FDBArtMeshList
+{
+	GENERATED_BODY()
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStaticMesh>> Meshes;
+};
 
 UENUM(BlueprintType)
 enum class EDBArtMaterial : uint8
@@ -50,6 +75,8 @@ enum class EDBArtMaterial : uint8
 	DarkBloodVeins,
 	DarkBloodSoil,
 	DarkBloodStone,
+	BarkCedar,
+	BarkSakura,
 	Void,
 	Count UMETA(Hidden)
 };
@@ -69,6 +96,15 @@ public:
 	/** True when the slot resolved to its authored instance instead of the flat fallback. */
 	static bool IsAuthored(EDBArtMaterial Slot);
 
+	/** Imported meshes of a set (empty when not imported: callers fall back to primitives). */
+	static const TArray<TObjectPtr<UStaticMesh>>& GetMeshes(EDBArtMeshSet Set);
+
+	/** Deterministic pick from a set, or null. */
+	static UStaticMesh* PickMesh(EDBArtMeshSet Set, FRandomStream& Random);
+
+	/** Asset paths behind a set (audit). */
+	static TArray<FString> GetMeshPaths(EDBArtMeshSet Set);
+
 private:
 	UMaterialInterface* Resolve(EDBArtMaterial Slot);
 
@@ -76,4 +112,7 @@ private:
 	TArray<TObjectPtr<UMaterialInterface>> Cache;
 
 	TArray<bool> Authored;
+
+	UPROPERTY(Transient)
+	TArray<FDBArtMeshList> MeshSets;
 };

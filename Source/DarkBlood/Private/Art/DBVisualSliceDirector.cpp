@@ -298,7 +298,7 @@ void ADBVisualSliceDirector::BuildDressing()
 		Base->bCollision = true;
 		B.Finish(Base, FVector(3500.f, 0.f, 0.f));
 	}
-	B.Ground(FVector(800.f, 150.f, 0.f), FVector2D(3600.f, 3900.f), M::GroundCourtyard, 1.6f, 125.f);
+	B.Ground(FVector(800.f, 150.f, 0.f), FVector2D(3600.f, 3900.f), M::GroundCourtyard, 1.6f);
 	B.Ground(FVector(3900.f, -2250.f, 0.f), FVector2D(3600.f, 2400.f), M::GroundEarth, 1.1f);
 	B.Ground(FVector(8100.f, -700.f, 0.f), FVector2D(1900.f, 1700.f), M::StoneTemple, 1.4f, 0.f, true);
 
@@ -353,7 +353,7 @@ void ADBVisualSliceDirector::BuildDressing()
 	// ---- 4. Forest north of the road, 6. dungeon entrance at its far end ----------------------------------
 	B.Spline(EDBSplineDressing::StonePath, {FVector(5000.f, -470.f, 0.f), FVector(5150.f, 900.f, 0.f), FVector(5050.f, 2100.f, 0.f), FVector(5200.f, 2650.f, 0.f)},
 		150.f, 11);
-	B.Scatter(FVector(4300.f, 1450.f, 0.f), FVector(1500.f, 1050.f, 500.f), EDBBiome::TemperateForest, 5.f, 14.f, 12);
+	B.Scatter(FVector(4300.f, 1450.f, 0.f), FVector(1500.f, 1050.f, 500.f), EDBBiome::TemperateForest, 8.f, 24.f, 12);
 	if (ADBDungeonEntrance* Dungeon = B.Begin<ADBDungeonEntrance>(FVector(5250.f, 3150.f, 0.f), -90.f))
 	{
 		Dungeon->Corruption = 0.8f;
@@ -371,7 +371,7 @@ void ADBVisualSliceDirector::BuildDressing()
 		Bridge->Width = 380.f;
 		B.Finish(Bridge, FVector(6300.f, -700.f, 0.f));
 	}
-	B.Scatter(FVector(6700.f, 1800.f, 0.f), FVector(500.f, 1300.f, 500.f), EDBBiome::WetForest, 4.f, 16.f, 16);
+	B.Scatter(FVector(6700.f, 1800.f, 0.f), FVector(500.f, 1300.f, 500.f), EDBBiome::WetForest, 6.f, 24.f, 16);
 
 	// ---- 7. Shrine: torii, stone path, lanterns, cherry trees, bamboo grove ---------------------------------
 	if (ADBGate* Torii = B.Begin<ADBGate>(FVector(7100.f, -700.f, 0.f)))
@@ -495,6 +495,8 @@ void ADBVisualSliceDirector::ApplyLighting()
 		S.AutoExposureMaxBrightness = Preset.MaxBrightness;
 		S.bOverride_BloomIntensity = true;
 		S.BloomIntensity = 0.45f; // restrained: lanterns glow, no bloom orgy
+		S.bOverride_MotionBlurAmount = true;
+		S.MotionBlurAmount = 0.15f; // readable combat, no smeared camera turns
 		S.bOverride_VignetteIntensity = true;
 		S.VignetteIntensity = 0.35f;
 		S.bOverride_ColorSaturation = true;

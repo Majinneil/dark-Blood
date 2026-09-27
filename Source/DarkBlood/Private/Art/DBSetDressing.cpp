@@ -30,6 +30,35 @@ namespace
 	}
 
 	const FTransform Identity = FTransform::Identity;
+
+	/** Authored mesh from a set, scaled so its largest horizontal extent is Size cm. False when the set is empty. */
+	bool PlaceSetMesh(FDBArtBatcher& Batcher, EDBArtMeshSet Set, FRandomStream& Random, const FVector& Location, float Size, bool bCollision,
+		const FTransform& Parent = FTransform::Identity)
+	{
+		UStaticMesh* Mesh = UDBArtMaterialSubsystem::PickMesh(Set, Random);
+		if (!Mesh)
+		{
+			return false;
+		}
+		const FVector Extent = Mesh->GetBounds().BoxExtent;
+		const float Scale = Size / FMath::Max(1.f, 2.f * FMath::Max(Extent.X, Extent.Y));
+		Batcher.SetCollision(bCollision);
+		Batcher.Mesh(Mesh, nullptr, FTransform(FRotator(0.f, Random.FRandRange(0.f, 360.f), 0.f), Location, FVector(Scale)) * Parent);
+		return true;
+	}
+
+	/** Authored mesh at its natural size times Scale. */
+	bool PlaceSetMeshScaled(FDBArtBatcher& Batcher, EDBArtMeshSet Set, FRandomStream& Random, const FVector& Location, float Scale, bool bCollision)
+	{
+		UStaticMesh* Mesh = UDBArtMaterialSubsystem::PickMesh(Set, Random);
+		if (!Mesh)
+		{
+			return false;
+		}
+		Batcher.SetCollision(bCollision);
+		Batcher.Mesh(Mesh, nullptr, FTransform(FRotator(0.f, Random.FRandRange(0.f, 360.f), 0.f), Location, FVector(Scale)));
+		return true;
+	}
 }
 
 // ---- Base ------------------------------------------------------------------------------------------
@@ -250,7 +279,15 @@ void ADBSplineDressing::Build(FDBArtBatcher& Batcher)
 			const float Sign = Random.FRand() < 0.5f ? -1.f : 1.f;
 			const FVector Center = At(Distance) + Side * Sign * (Width * 0.5f + Random.FRandRange(-10.f, 30.f));
 			const float Size = Random.FRandRange(25.f, 60.f);
-			Put(Batcher, EShape::Sphere, M::StoneMossy, Identity, Center, FVector(Size, Size * 0.8f, Size * 0.45f), FRotator(0.f, Random.FRandRange(0.f, 180.f), 0.f));
+			if (!PlaceSetMesh(Batcher, EDBArtMeshSet::Rock, Random, Center, Size, false))
+			{
+				Put(Batcher, EShape::Sphere, M::StoneMossy, Identity, Center, FVector(Size, Size * 0.8f, Size * 0.45f), FRotator(0.f, Random.FRandRange(0.f, 180.f), 0.f));
+			}
+			if (Random.FRand() < 0.35f)
+			{
+				PlaceSetMesh(Batcher, Random.FRand() < 0.5f ? EDBArtMeshSet::Shrub : EDBArtMeshSet::Fern, Random,
+					Center + Side * Sign * Random.FRandRange(40.f, 120.f), Random.FRandRange(60.f, 140.f), false);
+			}
 		}
 		break;
 	}
@@ -333,8 +370,15 @@ void ADBSplineDressing::Build(FDBArtBatcher& Batcher)
 			const float Sign = Random.FRand() < 0.5f ? -1.f : 1.f;
 			const float Size = Random.FRandRange(30.f, 95.f);
 			const FVector Center = At(Distance) + Side * Sign * (Width * 0.5f + Random.FRandRange(0.f, 60.f));
-			Put(Batcher, EShape::Sphere, Random.FRand() < 0.5f ? M::StoneWet : M::StoneMossy, Identity, Center, FVector(Size, Size * 0.85f, Size * 0.5f),
-				FRotator(0.f, Random.FRandRange(0.f, 180.f), 0.f));
+			if (!PlaceSetMesh(Batcher, EDBArtMeshSet::Rock, Random, Center, Size, false))
+			{
+				Put(Batcher, EShape::Sphere, Random.FRand() < 0.5f ? M::StoneWet : M::StoneMossy, Identity, Center, FVector(Size, Size * 0.85f, Size * 0.5f),
+					FRotator(0.f, Random.FRandRange(0.f, 180.f), 0.f));
+			}
+			if (Random.FRand() < 0.3f)
+			{
+				PlaceSetMesh(Batcher, EDBArtMeshSet::Fern, Random, Center + Side * Sign * Random.FRandRange(50.f, 120.f), Random.FRandRange(70.f, 130.f), false);
+			}
 		}
 		break;
 	}
@@ -437,8 +481,11 @@ void ADBDungeonEntrance::Build(FDBArtBatcher& Batcher)
 		const float Radius = Random.FRandRange(250.f, 520.f);
 		const float Size = Random.FRandRange(320.f, 680.f);
 		const FVector Center(FMath::Cos(Angle) * Radius - 120.f, FMath::Sin(Angle) * Radius, Size * 0.22f);
-		Put(Batcher, EShape::Sphere, Index % 3 == 0 ? M::StoneMossy : M::StoneMountain, Identity, Center, FVector(Size, Size * 0.8f, Size * 0.62f),
-			FRotator(Random.FRandRange(-8.f, 8.f), Random.FRandRange(0.f, 360.f), 0.f));
+		if (!PlaceSetMesh(Batcher, EDBArtMeshSet::Boulder, Random, FVector(Center.X, Center.Y, -Size * 0.08f), Size * 1.1f, true))
+		{
+			Put(Batcher, EShape::Sphere, Index % 3 == 0 ? M::StoneMossy : M::StoneMountain, Identity, Center, FVector(Size, Size * 0.8f, Size * 0.62f),
+				FRotator(Random.FRandRange(-8.f, 8.f), Random.FRandRange(0.f, 360.f), 0.f));
+		}
 	}
 	// Stone door frame with a dark tunnel behind.
 	for (const float Sign : {-1.f, 1.f})
@@ -464,6 +511,10 @@ void ADBDungeonEntrance::Build(FDBArtBatcher& Batcher)
 	{
 		const FVector Base(Random.FRandRange(200.f, 600.f), Random.FRandRange(-500.f, 500.f), 0.f);
 		const float Height = Random.FRandRange(300.f, 520.f);
+		if (PlaceSetMeshScaled(Batcher, EDBArtMeshSet::DeadTree, Random, Base, Random.FRandRange(0.9f, 1.3f), true))
+		{
+			continue;
+		}
 		Put(Batcher, EShape::Cylinder, M::WoodBurnt, Identity, Base + FVector(0.f, 0.f, Height * 0.5f), FVector(30.f, 30.f, Height),
 			FRotator(Random.FRandRange(-8.f, 8.f), 0.f, Random.FRandRange(-8.f, 8.f)));
 		for (int32 Branch = 0; Branch < 3; ++Branch)
@@ -527,6 +578,38 @@ bool ADBScatterVolume::IsExcluded(const FVector& World, float Clearance) const
 
 void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Local, float Scale, FRandomStream& Random) const
 {
+	// Imported CC0 meshes for the biome first (Poly Haven set); cherry and bamboo have no CC0 model yet.
+	switch (Biome)
+	{
+	case EDBBiome::TemperateForest:
+	case EDBBiome::WetForest:
+	case EDBBiome::MountainForest:
+	case EDBBiome::Roadside:
+		if (Biome != EDBBiome::WetForest && Random.FRand() < 0.08f && PlaceSetMeshScaled(Batcher, EDBArtMeshSet::DeadTree, Random, Local, Scale, true))
+		{
+			return;
+		}
+		if (PlaceSetMeshScaled(Batcher, EDBArtMeshSet::Tree, Random, Local, Scale * Random.FRandRange(0.9f, 1.35f), true))
+		{
+			return;
+		}
+		break;
+	case EDBBiome::Corrupted:
+		if (Random.FRand() < 0.6f && PlaceSetMeshScaled(Batcher, EDBArtMeshSet::DeadTree, Random, Local, Scale * 1.2f, true))
+		{
+			return;
+		}
+		break;
+	case EDBBiome::ShrineGarden:
+		if (Random.FRand() < 0.35f && PlaceSetMeshScaled(Batcher, EDBArtMeshSet::Tree, Random, Local, Scale, true))
+		{
+			return;
+		}
+		break;
+	default:
+		break;
+	}
+
 	// DEV stand-ins until CC0 / Fab vegetation meshes are assigned in Plants. Recognizable by biome, not final art.
 	switch (Biome)
 	{
@@ -547,7 +630,7 @@ void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Loca
 	{
 		Batcher.SetCollision(true);
 		const float Height = Random.FRandRange(700.f, 1100.f) * Scale;
-		Put(Batcher, EShape::Cylinder, M::WoodDark, Identity, Local + FVector(0.f, 0.f, Height * 0.3f), FVector(40.f, 40.f, Height * 0.6f));
+		Put(Batcher, EShape::Cylinder, M::BarkCedar, Identity, Local + FVector(0.f, 0.f, Height * 0.3f), FVector(40.f, 40.f, Height * 0.6f));
 		Batcher.SetCollision(false);
 		for (int32 Tier = 0; Tier < 4; ++Tier)
 		{
@@ -581,7 +664,7 @@ void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Loca
 	const float Height = (bCherry ? Random.FRandRange(380.f, 560.f) : Random.FRandRange(650.f, 1000.f)) * Scale;
 	const float Trunk = (bCherry ? 34.f : 50.f) * Scale;
 	Batcher.SetCollision(true);
-	Put(Batcher, EShape::Cylinder, bCherry ? M::WoodDark : M::WoodWet, Identity, Local + FVector(0.f, 0.f, Height * 0.5f), FVector(Trunk, Trunk, Height),
+	Put(Batcher, EShape::Cylinder, bCherry ? M::BarkSakura : M::BarkCedar, Identity, Local + FVector(0.f, 0.f, Height * 0.5f), FVector(Trunk, Trunk, Height),
 		FRotator(Random.FRandRange(-3.f, 3.f), 0.f, Random.FRandRange(-3.f, 3.f)));
 	Batcher.SetCollision(false);
 	const int32 Clusters = Random.RandRange(4, 7);
@@ -592,7 +675,7 @@ void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Loca
 		const FVector Center = Local + FVector(0.f, 0.f, Height * (bCherry ? 0.92f : 0.85f)) + Offset;
 		Put(Batcher, EShape::Sphere, bCherry ? M::FoliageSakura : M::FoliageLeaves, Identity, Center, FVector(Radius * 2.f, Radius * 1.8f, Radius * 1.3f),
 			FRotator(0.f, Random.FRandRange(0.f, 360.f), 0.f));
-		Beam(Batcher, bCherry ? M::WoodDark : M::WoodWet, Identity, Local + FVector(0.f, 0.f, Height * 0.6f), Center - FVector(0.f, 0.f, Radius * 0.3f),
+		Beam(Batcher, bCherry ? M::BarkSakura : M::BarkCedar, Identity, Local + FVector(0.f, 0.f, Height * 0.6f), Center - FVector(0.f, 0.f, Radius * 0.3f),
 			Trunk * 0.35f, Trunk * 0.35f);
 	}
 }
@@ -601,6 +684,49 @@ void ADBScatterVolume::PlaceDevUndergrowth(FDBArtBatcher& Batcher, const FVector
 {
 	Batcher.SetCollision(false);
 	const float Roll = Random.FRand();
+	{
+		// Imported CC0 ground cover: shrubs, ferns, moss, rocks, boulders and stumps weighted by biome.
+		const bool bCorrupted = Biome == EDBBiome::Corrupted;
+		EDBArtMeshSet Set = EDBArtMeshSet::Shrub;
+		float Size = Random.FRandRange(80.f, 160.f) * Scale;
+		bool bCollision = false;
+		if (bCorrupted)
+		{
+			Set = Roll < 0.7f ? EDBArtMeshSet::Rock : EDBArtMeshSet::Stump;
+			Size = Random.FRandRange(40.f, 140.f) * Scale;
+		}
+		else if (Roll < 0.28f)
+		{
+			Set = EDBArtMeshSet::Fern;
+		}
+		else if (Roll < 0.48f)
+		{
+			Set = EDBArtMeshSet::Moss;
+			Size = Random.FRandRange(60.f, 140.f) * Scale;
+		}
+		else if (Roll < 0.7f)
+		{
+			Set = EDBArtMeshSet::Rock;
+			Size = Random.FRandRange(30.f, 110.f) * Scale;
+			bCollision = Size > 90.f;
+		}
+		else if (Roll < 0.76f)
+		{
+			Set = EDBArtMeshSet::Boulder;
+			Size = Random.FRandRange(150.f, 320.f) * Scale;
+			bCollision = true;
+		}
+		else if (Roll < 0.8f)
+		{
+			Set = EDBArtMeshSet::Stump;
+			Size = Random.FRandRange(60.f, 110.f) * Scale;
+			bCollision = true;
+		}
+		if (PlaceSetMesh(Batcher, Set, Random, Local, Size, bCollision))
+		{
+			return;
+		}
+	}
 	if (Roll < 0.35f)
 	{
 		const float Size = Random.FRandRange(40.f, 130.f) * Scale;

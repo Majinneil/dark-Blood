@@ -704,6 +704,15 @@ void UDBCheatManager::DBVisualAudit()
 				*StaticEnum<EDBArtMaterial>()->GetNameStringByValue(Index), *Path);
 		}
 	}
+	for (int32 Index = 0; Index < static_cast<int32>(EDBArtMeshSet::Count); ++Index)
+	{
+		const EDBArtMeshSet Set = static_cast<EDBArtMeshSet>(Index);
+		const int32 Loaded = UDBArtMaterialSubsystem::GetMeshes(Set).Num();
+		const int32 Expected = UDBArtMaterialSubsystem::GetMeshPaths(Set).Num();
+		Missing += Expected - Loaded;
+		UE_LOG(LogDarkBlood, Display, TEXT("DBVIS audit: mesh set %s %d/%d%s"), *StaticEnum<EDBArtMeshSet>()->GetNameStringByValue(Index), Loaded, Expected,
+			Loaded == 0 ? TEXT(" (primitive fallback)") : TEXT(""));
+	}
 	if (const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(GetWorld()))
 	{
 		for (const UDBCharacterVisualDefinition* Profile : Data->GetAllCharacterVisuals())

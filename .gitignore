@@ -29,3 +29,6 @@ Thumbs.db
 # Engine template content copied locally by Tools/UE58/Setup-DevMannequin.ps1 (not redistributed)
 Content/Characters/Mannequins/
 Content/DarkBlood/Dev/Mannequin/
+
+# Raw downloads (Tools/UE58/polyhaven_fetch.py); the imported assets live in Content/DarkBlood/Art
+SourceArt/

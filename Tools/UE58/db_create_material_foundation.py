@@ -199,7 +199,8 @@ def build_surface_master(name, d):
     # --- texture path (CC0 PBR sets): UV0 tiling or world-aligned projection for the modular kit
     t_color = g.texture_param("T_BaseColor", DIFFUSE_TEX, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, "04 Textures")
     t_normal = g.texture_param("T_Normal", NORMAL_TEX, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, "04 Textures")
-    t_orm = g.texture_param("T_ORM", MASKS_TEX, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, "04 Textures")
+    # ARM/ORM maps are linear (non-sRGB, default compression) -> Linear Color sampler, also inside WorldAlignedTexture.
+    t_orm = g.texture_param("T_ORM", MASKS_TEX, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, "04 Textures")
     texture_tint = g.vector("TextureTint", color(1, 1, 1), "04 Textures")
     world_size = g.scalar("TextureWorldSize", 200.0, "04 Textures")
     uv_tiling = g.scalar("UVTiling", 1.0, "04 Textures")
@@ -211,7 +212,7 @@ def build_surface_master(name, d):
     uv_normal = g.node(E.MaterialExpressionTextureSample, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
     g.link(t_normal, uv_normal, "Tex")
     g.link(uv, uv_normal, "UVs")
-    uv_orm = g.node(E.MaterialExpressionTextureSample, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    uv_orm = g.node(E.MaterialExpressionTextureSample, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
     g.link(t_orm, uv_orm, "Tex")
     g.link(uv, uv_orm, "UVs")
 
@@ -296,7 +297,11 @@ def build_surface_master(name, d):
     g.output(emissive, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
     if d.get("foliage"):
-        opacity = g.switch("UseTextures", False, "04 Textures", uv_color, g.node(E.MaterialExpressionConstant, r=1.0), "A", "")
+        t_opacity = g.texture_param("T_Opacity", MASKS_TEX, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, "04 Textures")
+        uv_opacity = g.node(E.MaterialExpressionTextureSample, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+        g.link(t_opacity, uv_opacity, "Tex")
+        g.link(uv, uv_opacity, "UVs")
+        opacity = g.switch("UseTextures", False, "04 Textures", uv_opacity, g.node(E.MaterialExpressionConstant, r=1.0), "R", "")
         g.output(opacity, unreal.MaterialProperty.MP_OPACITY_MASK)
         subsurface = g.vector("SubsurfaceColor", color(0.08, 0.12, 0.02), "03 Surface")
         g.output(subsurface, unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
