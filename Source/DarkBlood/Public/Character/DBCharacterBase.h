@@ -51,6 +51,8 @@ public:
 	/** Actions that ignore movement input (attacking, staggered, dodging ...). */
 	bool IsMovementInputBlocked() const;
 
+	float GetKnockbackScale() const { return KnockbackScale; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Dark Blood|Character")
 	FDBOnCharacterDied OnDied;
 
@@ -75,6 +77,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Combat")
 	EDBTeam Team = EDBTeam::Neutral;
+
+	/** Multiplier for knockback from hit reactions (0 = anchored, e.g. training dummies, large bosses). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Combat", meta = (ClampMin = 0))
+	float KnockbackScale = 1.f;
 
 	void BindToAttributeSet(UAbilitySystemComponent* ASC);
 

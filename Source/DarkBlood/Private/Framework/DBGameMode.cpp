@@ -309,6 +309,17 @@ void ADBGameMode::Logout(AController* Exiting)
 	Super::Logout(Exiting);
 }
 
+bool ADBGameMode::AllowCheats(APlayerController* P)
+{
+#if !UE_BUILD_SHIPPING
+	if (FParse::Param(FCommandLine::Get(), TEXT("DBCheats")))
+	{
+		return true;
+	}
+#endif
+	return Super::AllowCheats(P);
+}
+
 void ADBGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 {
 	Super::SetPlayerDefaults(PlayerPawn);

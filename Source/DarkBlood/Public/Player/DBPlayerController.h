@@ -21,6 +21,9 @@ public:
 	virtual void BeginPlay() override;
 	virtual void PostProcessInput(const float DeltaTime, const bool bGamePaused) override;
 
+	/** Development: runs the -DBAutoExec="Cmd|Cmd" command line script once (non-shipping). */
+	void RunAutoExecScript();
+
 	// ---- Character hand-over ------------------------------------------------------------------
 
 	/** Client -> server: local character data (LocalCharacters persistence). Validated by the game mode. */

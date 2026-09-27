@@ -273,7 +273,7 @@ void UDBAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 
 	const AActor* Source = TriggerEventData ? TriggerEventData->Instigator.Get() : nullptr;
 	const FVector Away = Source ? Character->GetActorLocation() - Source->GetActorLocation() : -Character->GetActorForwardVector();
-	ApplyPush(this, TEXT("Knockback"), Away, Knockback, FMath::Min(0.25f, Seconds));
+	ApplyPush(this, TEXT("Knockback"), Away, Knockback * Character->GetKnockbackScale(), FMath::Min(0.25f, Seconds));
 	PlayOptionalMontage(Montage);
 	UE_LOG(LogDBCombat, Log, TEXT("%s reacts: %hs (%.1f s)"), *DBCombat::GetCombatName(Character), R::ToString(Reaction), Seconds);
 

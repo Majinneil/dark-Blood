@@ -52,7 +52,31 @@ void ADBPlayerController::BeginPlay()
 		{
 			UploadLocalCharacter();
 		}
+		RunAutoExecScript();
 	}
+}
+
+void ADBPlayerController::RunAutoExecScript()
+{
+#if !UE_BUILD_SHIPPING
+	// -DBAutoExec="Cmd1|Cmd2|..." runs once the local controller exists (unlike -ExecCmds, this also works on
+	// clients, after connecting). Used for scripted multiplayer tests together with DBAfter.
+	static bool bRan = false;
+	FString Script;
+	if (bRan || !FParse::Value(FCommandLine::Get(), TEXT("DBAutoExec="), Script, false))
+	{
+		return;
+	}
+	bRan = true;
+	EnableCheats();
+	TArray<FString> Commands;
+	Script.TrimQuotes().ParseIntoArray(Commands, TEXT("|"));
+	for (const FString& Command : Commands)
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBAutoExec: %s"), *Command);
+		ConsoleCommand(Command.TrimStartAndEnd(), true);
+	}
+#endif
 }
 
 void ADBPlayerController::PostProcessInput(const float DeltaTime, const bool bGamePaused)

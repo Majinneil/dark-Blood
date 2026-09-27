@@ -17,8 +17,9 @@ ADBTrainingDummy::ADBTrainingDummy(const FObjectInitializer& ObjectInitializer)
 	bRespawnInPlace = true;
 	RespawnSeconds = 3.f;
 
-	// Stationary: it only turns and swings.
+	// Stationary and anchored: it only turns and swings.
 	GetCharacterMovement()->MaxWalkSpeed = 0.f;
+	KnockbackScale = 0.f;
 }
 
 void ADBTrainingDummy::BeginPlay()

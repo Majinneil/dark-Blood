@@ -82,6 +82,11 @@ void ADBEnemyCharacter::InitializeCombatState()
 	AbilitySystem->ApplyGameplayEffectToSelf(GetDefault<UDBRegenerationEffect>(), 1.f, AbilitySystem->MakeEffectContext());
 }
 
+UAbilitySystemComponent* ADBEnemyCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystem;
+}
+
 FString ADBEnemyCharacter::GetCombatDisplayName() const
 {
 	return DisplayName.IsEmpty() ? EnemyId.ToString() : DisplayName.ToString();

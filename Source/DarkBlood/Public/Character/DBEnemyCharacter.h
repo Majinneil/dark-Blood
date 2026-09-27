@@ -19,6 +19,9 @@ class DARKBLOOD_API ADBEnemyCharacter : public ADBCharacterBase
 public:
 	ADBEnemyCharacter(const FObjectInitializer& ObjectInitializer);
 
+	/** Returns the owned component directly: attribute rep-notifies can arrive on clients before BeginPlay. */
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
 	virtual FString GetCombatDisplayName() const override;
 	virtual int32 GetCombatLevel() const override { return Level; }
 	virtual AActor* GetCombatFocusTarget() const override { return CurrentTarget.Get(); }

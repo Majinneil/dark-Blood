@@ -32,6 +32,9 @@ public:
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	virtual void Logout(AController* Exiting) override;
 
+	/** Standalone/PIE as usual; -DBCheats also allows dev commands on listen/dedicated servers (non-shipping). */
+	virtual bool AllowCheats(APlayerController* P) override;
+
 	/** Deserializes, validates and applies character data uploaded by a client. */
 	bool AcceptCharacterData(ADBPlayerController* Controller, const TArray<uint8>& Data, FString& OutError);
 

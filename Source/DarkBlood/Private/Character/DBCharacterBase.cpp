@@ -48,7 +48,7 @@ UAbilitySystemComponent* ADBCharacterBase::GetAbilitySystemComponent() const
 
 UDBAbilitySystemComponent* ADBCharacterBase::GetDBAbilitySystemComponent() const
 {
-	return CachedAbilitySystem.Get();
+	return Cast<UDBAbilitySystemComponent>(GetAbilitySystemComponent());
 }
 
 void ADBCharacterBase::BindToAttributeSet(UAbilitySystemComponent* ASC)
