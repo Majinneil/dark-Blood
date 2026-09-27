@@ -3,6 +3,9 @@
 #include "UI/DBUIStyle.h"
 
 #include "AbilitySystemComponent.h"
+#include "Abilities/DBAbilitySystemComponent.h"
+#include "Abilities/DBGameplayAbility.h"
+#include "Core/DBGameplayTags.h"
 #include "Abilities/DBAttributeSet.h"
 #include "Character/DBPlayerCharacter.h"
 #include "Combat/DBCombatStatics.h"
@@ -144,8 +147,20 @@ void SDBGameHudWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
+		// Ability bar (bottom center): class abilities on 1-4 with cooldowns
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0.f, 0.f, 0.f, 32.f)
+		[
+			SNew(SBorder).BorderImage(White).BorderBackgroundColor(DBHudStyle::Panel).Padding(FMargin(14.f, 8.f))
+			.Visibility_Lambda([this]() { return GetAbilityBarText().IsEmpty() ? EVisibility::Collapsed : EVisibility::HitTestInvisible; })
+			[
+				SNew(STextBlock)
+				.Font(DBHudStyle::Font(14))
+				.Text_Lambda([this]() { return GetAbilityBarText(); })
+			]
+		]
+
 		// Interaction prompt (lower center)
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0.f, 0.f, 0.f, 200.f)
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0.f, 0.f, 0.f, 220.f)
 		[
 			SNew(SBorder).BorderImage(White).BorderBackgroundColor(DBHudStyle::Panel).Padding(FMargin(16.f, 8.f))
 			.Visibility_Lambda([this]() { return GetInteractionPrompt().IsEmpty() ? EVisibility::Collapsed : EVisibility::HitTestInvisible; })
@@ -243,6 +258,32 @@ FText SDBGameHudWidget::GetInteractionPrompt() const
 	const UDBInteractionComponent* Interaction = Pawn ? Pawn->FindComponentByClass<UDBInteractionComponent>() : nullptr;
 	const IDBInteractable* Interactable = Interaction ? Cast<IDBInteractable>(Interaction->GetFocusedInteractable()) : nullptr;
 	return Interactable ? FText::Format(LOCTEXT("Prompt", "[E]  {0}"), Interactable->GetInteractionText()) : FText::GetEmpty();
+}
+
+FText SDBGameHudWidget::GetAbilityBarText() const
+{
+	const UDBAbilitySystemComponent* ASC = Cast<UDBAbilitySystemComponent>(GetPlayerAbilitySystem());
+	if (!ASC)
+	{
+		return FText::GetEmpty();
+	}
+	const FGameplayTag Slots[] = {DBTags::Input_Ability1, DBTags::Input_Ability2, DBTags::Input_Ability3, DBTags::Input_Ability4};
+	FString Out;
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Slots); ++Index)
+	{
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			const UDBGameplayAbility* Ability = Cast<UDBGameplayAbility>(Spec.Ability);
+			if (!Ability || !Spec.GetDynamicSpecSourceTags().HasTagExact(Slots[Index]))
+			{
+				continue;
+			}
+			const float Cooldown = Ability->GetCooldownTag().IsValid() ? ASC->GetTimedTagRemaining(Ability->GetCooldownTag()) : 0.f;
+			const FString State = Spec.IsActive() ? TEXT(" (aktiv)") : Cooldown > 0.f ? FString::Printf(TEXT(" (%.1f s)"), Cooldown) : FString();
+			Out += FString::Printf(TEXT("%s[%d] %s%s"), Out.IsEmpty() ? TEXT("") : TEXT("      "), Index + 1, *Ability->GetDisplayName().ToString(), *State);
+		}
+	}
+	return FText::FromString(Out);
 }
 
 FText SDBGameHudWidget::GetQuestTrackerText() const

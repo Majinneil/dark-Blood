@@ -8,6 +8,7 @@
 #include "Combat/DBCombatStatics.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
+#include "Core/DBGameplayTags.h"
 #include "DarkBlood.h"
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -110,7 +111,9 @@ AActor* ADBEnemyCharacter::FindNearestPlayer(float Radius) const
 	float BestDistanceSq = FMath::Square(Radius);
 	for (TActorIterator<ADBCharacterBase> It(GetWorld()); It; ++It)
 	{
-		if (It->GetTeam() == EDBTeam::Players && DBCombat::CanTarget(this, *It))
+		const UAbilitySystemComponent* TargetASC = It->GetAbilitySystemComponent();
+		const bool bVeiled = TargetASC && TargetASC->HasMatchingGameplayTag(DBTags::State_Veiled);
+		if (It->GetTeam() == EDBTeam::Players && !bVeiled && DBCombat::CanTarget(this, *It))
 		{
 			const float DistanceSq = FVector::DistSquared(It->GetActorLocation(), GetActorLocation());
 			if (DistanceSq <= BestDistanceSq)

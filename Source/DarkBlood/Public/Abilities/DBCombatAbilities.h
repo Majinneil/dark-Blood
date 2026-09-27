@@ -48,6 +48,8 @@ class DARKBLOOD_API UDBAbility_Dodge : public UDBGameplayAbility
 public:
 	UDBAbility_Dodge();
 
+	virtual float GetStaminaCost() const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 

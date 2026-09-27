@@ -121,8 +121,9 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBGoto <Id>` | Zum NPC/Gegner teleportieren (`NPC_King`, `TrainingDummy`, `LesserDemon` …) |
 | `DBDialogueChoose <n>` | Dialogoption wählen (lokal) |
 | `DBCreateCharacter <Klasse> <Name>` | Charaktererstellung abschließen (lokal) |
+| `DBUnlockSkill <Knoten>` | Skilltree-Knoten lernen (normale Regeln) |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
-Charaktererstellung), `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),
+Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),
 `-DBAutoExec="Cmd|Cmd"` (Skript nach dem Verbinden, auch auf Clients);
 URL-Optionen: `?World=<Slot>`, `?Character=<Index>` (Dedicated Server).

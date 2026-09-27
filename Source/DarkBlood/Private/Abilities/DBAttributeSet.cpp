@@ -187,7 +187,8 @@ void UDBAttributeSet::HandleIncomingPoiseDamage(const FGameplayEffectModCallback
 	// A raised guard prevents knockdowns (unblockable attacks are never blocked in the first place).
 	const bool bForceKnockdown = SpecTags.HasTagExact(DBTags::Damage_Knockdown) && !ASC->HasMatchingGameplayTag(DBTags::State_Blocking);
 
-	const R::FPoiseResult Result = R::ApplyPoiseDamage(GetPoise(), GetMaxPoise(), PoiseDamage, bForceKnockdown);
+	const float Scale = ASC->HasMatchingGameplayTag(DBTags::State_IronStanceUnshakable) ? 0.5f : 1.f;
+	const R::FPoiseResult Result = R::ApplyPoiseDamage(GetPoise(), GetMaxPoise(), PoiseDamage * Scale, bForceKnockdown);
 	SetPoise(Result.NewPoise);
 	ASC->AddTimedLooseTag(DBTags::State_PoiseRecoverDelay, GetPoiseRecoverDelaySeconds());
 

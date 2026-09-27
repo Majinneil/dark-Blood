@@ -25,6 +25,9 @@ public:
 	void HideCharacterCreator();
 	bool IsCharacterCreatorVisible() const { return CreatorRoot.IsValid(); }
 
+	void ToggleSkillTree();
+	bool IsSkillTreeVisible() const { return SkillTreeRoot.IsValid(); }
+
 private:
 	void OnDialogueChanged();
 	void UpdateInputMode();
@@ -33,6 +36,7 @@ private:
 	TSharedPtr<SDBDialogueWidget> DialogueWidget;
 	TSharedPtr<SDBCharacterCreatorWidget> CreatorWidget;
 	TSharedPtr<SWidget> CreatorRoot;
+	TSharedPtr<SWidget> SkillTreeRoot;
 	FDelegateHandle DialogueHandle;
 	bool bUIReady = false;
 };

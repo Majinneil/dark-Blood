@@ -172,9 +172,10 @@ void UDBProgressionComponent::ServerUnlockSkill_Implementation(FName NodeId)
 	const R::ESkillUnlockResult Result = R::UnlockSkill(Tree, Skills, State, Id);
 	if (Result != R::ESkillUnlockResult::Ok)
 	{
-		UE_LOG(LogDarkBlood, Verbose, TEXT("Skill unlock %s refused: %hs"), *NodeId.ToString(), R::ToString(Result));
+		UE_LOG(LogDarkBlood, Log, TEXT("Skill unlock %s refused: %hs"), *NodeId.ToString(), R::ToString(Result));
 		return;
 	}
+	UE_LOG(LogDarkBlood, Log, TEXT("Skill unlocked: %s (rank %d)"), *NodeId.ToString(), Skills.GetRank(Id));
 
 	const FDBSkillNode* Node = ClassDefinition->FindSkillNode(NodeId);
 	if (Node && Node->GrantedAbility)

@@ -214,7 +214,12 @@ bool UDBSaveSubsystem::LoadOrCreateActiveCharacter(R::FCharacterRecord& OutRecor
 	FString Error;
 	const FString Name = GetDevelopmentCharacterName();
 	UE_LOG(LogDBSave, Warning, TEXT("No character in slot %s - creating DEVELOPMENT character '%s'"), *ActiveCharacterSlot, *Name);
-	if (!CreateCharacter(ActiveCharacterSlot, Name, UDBGameSettings::Get().DevelopmentDefaultClass, FDBAppearance(), OutRecord, Error))
+	// -DBCharacterClass=<ClassId> picks the class of scripted/test characters.
+	FString ClassOverride;
+	const FName ClassId = FParse::Value(FCommandLine::Get(), TEXT("DBCharacterClass="), ClassOverride) && !ClassOverride.IsEmpty()
+		? FName(*ClassOverride)
+		: UDBGameSettings::Get().DevelopmentDefaultClass;
+	if (!CreateCharacter(ActiveCharacterSlot, Name, ClassId, FDBAppearance(), OutRecord, Error))
 	{
 		UE_LOG(LogDBSave, Error, TEXT("Development character creation failed: %s"), *Error);
 		return false;

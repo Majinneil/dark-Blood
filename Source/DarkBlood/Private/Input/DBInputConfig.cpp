@@ -99,6 +99,7 @@ UDBInputConfig* UDBInputConfig::CreateDevelopmentDefaults(UObject* Outer)
 		{TEXT("IA_Dev_Ability2"), DBTags::Input_Ability2, EKeys::Two, EKeys::Gamepad_RightTrigger},
 		{TEXT("IA_Dev_Ability3"), DBTags::Input_Ability3, EKeys::Three, EKeys::Gamepad_LeftTrigger},
 		{TEXT("IA_Dev_Ability4"), DBTags::Input_Ability4, EKeys::Four, EKeys::Gamepad_DPad_Down},
+		{TEXT("IA_Dev_SkillTree"), DBTags::Input_UI_SkillTree, EKeys::K, EKeys::Gamepad_Special_Left},
 	};
 	for (const FAbilityBinding& Binding : AbilityBindings)
 	{

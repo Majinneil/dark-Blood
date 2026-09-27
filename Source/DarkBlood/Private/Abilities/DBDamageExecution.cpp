@@ -107,13 +107,23 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 
 	R::FDefenseSnapshot Defense;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorDef, EvaluationParameters, Defense.Armor);
+	bool bCounterStance = false;
 	if (TargetTags)
 	{
+		if (TargetTags->HasTagExact(DBTags::State_Warded))
+		{
+			Defense.DamageTakenMultiplier = 0.7f;
+		}
+		if (TargetTags->HasTagExact(DBTags::State_IronStance))
+		{
+			Defense.BlockStaminaMultiplier = 0.5f;
+		}
+		bCounterStance = TargetTags->HasTagExact(DBTags::State_CounterStance);
 		if (TargetTags->HasTagExact(DBTags::State_Invulnerable))
 		{
 			Defense.State = R::EDefenseState::Invulnerable;
 		}
-		else if (TargetTags->HasTagExact(DBTags::State_ParryWindow))
+		else if (TargetTags->HasTagExact(DBTags::State_ParryWindow) || bCounterStance)
 		{
 			Defense.State = R::EDefenseState::PerfectParry;
 		}
@@ -166,6 +176,14 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 		Payload.Target = TargetAvatar;
 		TargetASC->SendGameplayEventDeferred(DBTags::Event_Combat_ParrySuccess, Payload);
 		DBCombat::SendHitReact(SourceASC, R::EHitReaction::ParriedStagger, TargetAvatar);
+		if (bCounterStance)
+		{
+			// The monk's counter stance answers the caught hit (see UDBAbility_CounterStance).
+			FGameplayEventData Counter;
+			Counter.Instigator = SourceAvatar;
+			Counter.Target = TargetAvatar;
+			TargetASC->SendGameplayEventDeferred(DBTags::Event_Combat_CounterTriggered, Counter);
+		}
 	}
 
 	// Presentation hooks; without GameplayCue notify assets these are no-ops.

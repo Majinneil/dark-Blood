@@ -152,6 +152,14 @@ void ADBPlayerState::GrantSkillAbility(TSubclassOf<UDBGameplayAbility> AbilityCl
 		{
 			Spec.Level = Level;
 			AbilitySystemComponent->MarkAbilitySpecDirty(Spec);
+			// Passives apply their bonus on activation: restart them so the new rank takes effect.
+			const UDBGameplayAbility* Ability = Cast<UDBGameplayAbility>(Spec.Ability);
+			if (Ability && Ability->GetActivationPolicy() == EDBAbilityActivationPolicy::OnSpawn && Spec.IsActive())
+			{
+				const FGameplayAbilitySpecHandle Handle = Spec.Handle;
+				AbilitySystemComponent->CancelAbilityHandle(Handle);
+				AbilitySystemComponent->TryActivateAbility(Handle);
+			}
 			return;
 		}
 	}

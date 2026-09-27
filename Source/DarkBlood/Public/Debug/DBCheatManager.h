@@ -62,6 +62,10 @@ public:
 	/** Local: completes the character creator (e.g. "DBCreateCharacter Warrior Jin Akagi"). */
 	UFUNCTION(Exec) void DBCreateCharacter(FName ClassId, const FString& Name);
 
+	// ---- Classes (Phase 4) ----
+	/** Unlocks one rank of a skill node (normal rules: points, level, prerequisites). */
+	UFUNCTION(Exec) void DBUnlockSkill(FName NodeId);
+
 private:
 	/** On clients: sends the command to the server and returns true. */
 	bool ForwardToServer(const FString& Command) const;

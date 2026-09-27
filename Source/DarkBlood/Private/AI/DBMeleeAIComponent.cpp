@@ -1,6 +1,9 @@
 #include "AI/DBMeleeAIComponent.h"
 
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "Character/DBEnemyCharacter.h"
+#include "Core/DBGameplayTags.h"
 #include "Combat/DBCombatStatics.h"
 #include "DarkBlood.h"
 #include "Engine/World.h"
@@ -100,7 +103,11 @@ void UDBMeleeAIComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	}
 
 	AActor* CurrentTarget = Target.Get();
-	const bool bTargetValid = CurrentTarget && DBCombat::CanTarget(Enemy, CurrentTarget);
+	const IAbilitySystemInterface* TargetWithASC = Cast<IAbilitySystemInterface>(CurrentTarget);
+	const UAbilitySystemComponent* TargetASC = TargetWithASC ? TargetWithASC->GetAbilitySystemComponent() : nullptr;
+	// A veiled target (smoke) is lost; the demon returns home unless it sees someone else.
+	const bool bTargetVeiled = TargetASC && TargetASC->HasMatchingGameplayTag(DBTags::State_Veiled);
+	const bool bTargetValid = CurrentTarget && !bTargetVeiled && DBCombat::CanTarget(Enemy, CurrentTarget);
 	const float DistanceToTarget = bTargetValid ? FVector::Dist2D(Enemy->GetActorLocation(), CurrentTarget->GetActorLocation()) : 0.f;
 	const float DistanceFromHome = FVector::Dist2D(Enemy->GetActorLocation(), HomeLocation);
 

@@ -26,6 +26,7 @@ private:
 	TSharedRef<SWidget> MakeBar(const FText& Label, const FLinearColor& Color, TFunction<float()> Current, TFunction<float()> Max) const;
 
 	FText GetQuestTrackerText() const;
+	FText GetAbilityBarText() const;
 	FText GetInteractionPrompt() const;
 	FText GetLockTargetName() const;
 	EVisibility GetLockTargetVisibility() const;

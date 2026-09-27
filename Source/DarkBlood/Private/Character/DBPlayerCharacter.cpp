@@ -5,6 +5,7 @@
 #include "Combat/DBLockOnComponent.h"
 #include "Dialogue/DBDialogueComponent.h"
 #include "Interaction/DBInteractionComponent.h"
+#include "UI/DBGameHUD.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -168,9 +169,11 @@ void ADBPlayerCharacter::Input_Move(const FInputActionValue& Value)
 	{
 		return;
 	}
-	const FRotator YawRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
-	AddMovementInput(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X), Axis.Y);
-	AddMovementInput(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y), Axis.X);
+	// Flying follows the camera pitch; on the ground only the yaw matters.
+	const FRotator Rotation = GetCharacterMovement()->IsFlying() ? Controller->GetControlRotation()
+																 : FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f);
+	AddMovementInput(FRotationMatrix(Rotation).GetUnitAxis(EAxis::X), Axis.Y);
+	AddMovementInput(FRotationMatrix(Rotation).GetUnitAxis(EAxis::Y), Axis.X);
 }
 
 void ADBPlayerCharacter::Input_Look(const FInputActionValue& Value)
@@ -209,6 +212,17 @@ void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 	if (InputTag == DBTags::Input_Interact)
 	{
 		Interaction->TryInteract();
+		return;
+	}
+	if (InputTag == DBTags::Input_UI_SkillTree)
+	{
+		if (const APlayerController* PC = GetController<APlayerController>())
+		{
+			if (ADBGameHUD* GameHUD = PC->GetHUD<ADBGameHUD>())
+			{
+				GameHUD->ToggleSkillTree();
+			}
+		}
 		return;
 	}
 	// Lock-on is a camera/targeting feature, not an ability.

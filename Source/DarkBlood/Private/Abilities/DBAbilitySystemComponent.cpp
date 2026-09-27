@@ -24,6 +24,17 @@ void UDBAbilitySystemComponent::AddTimedLooseTag(const FGameplayTag& Tag, float 
 	}), FMath::Max(Seconds, 0.001f), false);
 }
 
+float UDBAbilitySystemComponent::GetTimedTagRemaining(const FGameplayTag& Tag) const
+{
+	const FTimerHandle* Handle = TimedTagTimers.Find(Tag);
+	const UWorld* World = GetWorld();
+	if (!Handle || !World || !HasMatchingGameplayTag(Tag))
+	{
+		return 0.f;
+	}
+	return FMath::Max(0.f, World->GetTimerManager().GetTimerRemaining(*Handle));
+}
+
 void UDBAbilitySystemComponent::SendGameplayEventDeferred(const FGameplayTag& EventTag, const FGameplayEventData& Payload)
 {
 	if (UWorld* World = GetWorld())

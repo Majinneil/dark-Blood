@@ -4,6 +4,7 @@
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Abilities/Tasks/AbilityTask_WaitInputRelease.h"
+#include "Abilities/DBClassAbilities.h"
 #include "Character/DBCharacterBase.h"
 #include "Combat/DBCombatStatics.h"
 #include "Components/CapsuleComponent.h"
@@ -41,6 +42,7 @@ UDBMeleeAttackAbility::UDBMeleeAttackAbility()
 	BlockAbilitiesWithTag.AddTag(DBTags::Ability_Attack);
 	CancelAbilitiesWithTag.AddTag(DBTags::Ability_Sprint);
 	CancelAbilitiesWithTag.AddTag(DBTags::Ability_Block);
+	CancelAbilitiesWithTag.AddTag(DBTags::Ability_Veil); // attacking reveals you
 	ActivationBlockedTags.AddTag(DBTags::State_Staggered);
 	ActivationBlockedTags.AddTag(DBTags::State_KnockedDown);
 	ActivationBlockedTags.AddTag(DBTags::State_Dodging);
@@ -312,10 +314,18 @@ void UDBMeleeAttackAbility::PerformHit()
 	const bool bCounter = SourceASC->HasMatchingGameplayTag(DBTags::State_CounterWindow);
 	if (bCounter)
 	{
-		Hit.BaseDamage *= CounterDamageMultiplier;
+		// Krieger "Konterschnitt": each rank adds another full multiple of the base damage.
+		Hit.BaseDamage *= CounterDamageMultiplier + static_cast<float>(GetSkillRank(DBSkillNodes::CounterSlash));
 		Hit.PoiseDamage *= CounterPoiseMultiplier;
 		SourceASC->SetLooseGameplayTagCount(DBTags::State_CounterWindow, 0);
 	}
+	if (SourceASC->HasMatchingGameplayTag(DBTags::State_ShadowEmpowered))
+	{
+		Hit.BaseDamage *= 1.5f;
+		SourceASC->SetLooseGameplayTagCount(DBTags::State_ShadowEmpowered, 0);
+	}
+	const int32 AmbushRank = GetSkillRank(DBSkillNodes::Ambush);
+	const int32 BloodlustRank = GetSkillRank(DBSkillNodes::Bloodlust);
 
 	UE_LOG(LogDBCombat, Log, TEXT("%s: %s %s step %d/%d%s%s"), *DBCombat::GetCombatName(Self), *GetClass()->GetName(),
 		*StaticEnum<EDBAttackContext>()->GetNameStringByValue(static_cast<int64>(Context)), CurrentStep + 1, Steps.Num(), Charge.bCharged ? *FString::Printf(TEXT(" charged %.0f%%"), Charge.ChargeFraction * 100.f) : TEXT(""),
@@ -342,7 +352,17 @@ void UDBMeleeAttackAbility::PerformHit()
 			continue;
 		}
 		AlreadyHit.Add(Target);
-		DBCombat::ApplyHit(SourceASC, Target->GetAbilitySystemComponent(), Hit);
+		FDBHitParams TargetHit = Hit;
+		// Schattenlaeufer "Hinterhalt": hits from behind deal +50 % per rank.
+		const float BehindDot = FVector::DotProduct(Target->GetActorForwardVector(), (Self->GetActorLocation() - Target->GetActorLocation()).GetSafeNormal2D());
+		if (AmbushRank > 0 && BehindDot < -0.3f)
+		{
+			TargetHit.BaseDamage *= 1.f + 0.5f * static_cast<float>(AmbushRank);
+			UE_LOG(LogDBCombat, Log, TEXT("%s: Hinterhalt"), *DBCombat::GetCombatName(Self));
+		}
+		DBCombat::ApplyHit(SourceASC, Target->GetAbilitySystemComponent(), TargetHit);
+		// Krieger "Blutrausch": every hit restores stamina.
+		RestoreStamina(3.f * static_cast<float>(BloodlustRank));
 	}
 	if (AlreadyHit.IsEmpty())
 	{
@@ -373,6 +393,7 @@ namespace
 
 UDBAbility_LightCombo::UDBAbility_LightCombo()
 {
+	DisplayName = FText::FromString(TEXT("Katana-Kombo"));
 	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Light}));
 	Steps = {
 		MakeStep(10.f, 8.f, 12.f, 0.18f, 0.12f, 0.30f),
@@ -393,6 +414,7 @@ UDBAbility_LightCombo::UDBAbility_LightCombo()
 
 UDBAbility_HeavyAttack::UDBAbility_HeavyAttack()
 {
+	DisplayName = FText::FromString(TEXT("Schwerer Hieb"));
 	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Heavy}));
 	Steps = {MakeStep(28.f, 22.f, 30.f, 0.45f, 0.15f, 0.60f, 230.f, 50.f)};
 	bChargeable = true;
@@ -410,4 +432,49 @@ UDBAbility_DemonClaw::UDBAbility_DemonClaw()
 	SetAssetTags(FGameplayTagContainer(DBTags::Ability_Attack));
 	DamageType = DBTags::Damage_Type_Physical;
 	Steps = {MakeStep(18.f, 0.f, 22.f, 0.5f, 0.15f, 0.6f, 200.f, 60.f)};
+}
+
+UDBAbility_KunaiCombo::UDBAbility_KunaiCombo()
+{
+	DisplayName = FText::FromString(TEXT("Kunai-Serie"));
+	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Light}));
+	Steps = {
+		MakeStep(7.f, 5.f, 6.f, 0.12f, 0.08f, 0.2f, 180.f, 55.f),
+		MakeStep(7.f, 5.f, 6.f, 0.12f, 0.08f, 0.2f, 180.f, 55.f),
+		MakeStep(8.f, 6.f, 8.f, 0.14f, 0.08f, 0.22f, 180.f, 55.f),
+		MakeStep(13.f, 9.f, 16.f, 0.2f, 0.1f, 0.35f, 200.f, 70.f),
+	};
+	bHasAirAttack = true;
+	AirAttack = MakeStep(16.f, 10.f, 22.f, 0.25f, 0.1f, 0.4f, 220.f, 180.f, true);
+	bHasSprintAttack = true;
+	SprintAttack = MakeStep(18.f, 12.f, 20.f, 0.2f, 0.1f, 0.4f, 220.f, 50.f);
+	bHasDashAttack = true;
+	DashAttack = MakeStep(14.f, 8.f, 14.f, 0.1f, 0.08f, 0.3f, 220.f, 45.f);
+}
+
+UDBAbility_FistCombo::UDBAbility_FistCombo()
+{
+	DisplayName = FText::FromString(TEXT("Faustfolge"));
+	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Light}));
+	Steps = {
+		MakeStep(6.f, 4.f, 7.f, 0.1f, 0.08f, 0.18f, 170.f, 55.f),
+		MakeStep(6.f, 4.f, 7.f, 0.1f, 0.08f, 0.18f, 170.f, 55.f),
+		MakeStep(7.f, 5.f, 8.f, 0.12f, 0.08f, 0.2f, 170.f, 55.f),
+		MakeStep(7.f, 5.f, 8.f, 0.12f, 0.08f, 0.2f, 170.f, 55.f),
+		MakeStep(14.f, 10.f, 22.f, 0.22f, 0.12f, 0.4f, 200.f, 180.f), // spinning kick hits all around
+	};
+	bHasAirAttack = true;
+	AirAttack = MakeStep(18.f, 10.f, 28.f, 0.25f, 0.1f, 0.4f, 230.f, 180.f, true);
+	bHasSprintAttack = true;
+	SprintAttack = MakeStep(18.f, 12.f, 24.f, 0.22f, 0.1f, 0.4f, 220.f, 50.f);
+	bHasDashAttack = true;
+	DashAttack = MakeStep(12.f, 8.f, 16.f, 0.1f, 0.08f, 0.3f, 200.f, 45.f);
+}
+
+UDBAbility_PalmStrike::UDBAbility_PalmStrike()
+{
+	DisplayName = FText::FromString(TEXT("Bergstoss"));
+	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::Ability_Attack, DBTags::Ability_Attack_Heavy}));
+	Steps = {MakeStep(22.f, 18.f, 45.f, 0.4f, 0.12f, 0.5f, 200.f, 45.f)};
+	bChargeable = true;
 }

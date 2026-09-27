@@ -103,3 +103,28 @@ DB_TEST(Combat_LockOnPrefersCenteredTargetsAndBreaksAtRange)
 	DB_CHECK(ShouldBreakLockOn(Rules.BreakDistance + 1.f, true, Rules));
 	DB_CHECK(ShouldBreakLockOn(100.f, false, Rules));
 }
+
+#include "DarkBloodRules/Damage.h"
+
+DB_TEST(Combat_DefensiveMultipliersFromClassAbilities)
+{
+	FDamageRequest Hit;
+	Hit.BaseDamage = 100.f;
+
+	// Protective circle: 30 % less damage taken, but never below the minimum damage.
+	FDefenseSnapshot Warded;
+	Warded.DamageTakenMultiplier = 0.7f;
+	DB_CHECK_NEAR(ResolveDamage(Hit, Warded).FinalDamage, 70.f, 0.01);
+	Warded.DamageTakenMultiplier = 0.f;
+	DB_CHECK_NEAR(ResolveDamage(Hit, Warded).FinalDamage, 1.f, 0.01);
+	Warded.DamageTakenMultiplier = 10.f; // clamped to 2
+	DB_CHECK_NEAR(ResolveDamage(Hit, Warded).FinalDamage, 200.f, 0.01);
+
+	// Defensive stance: blocking costs half the stamina.
+	FDefenseSnapshot Block;
+	Block.State = EDefenseState::Blocking;
+	const float NormalCost = ResolveDamage(Hit, Block).BlockStaminaCost;
+	Block.BlockStaminaMultiplier = 0.5f;
+	DB_CHECK_NEAR(ResolveDamage(Hit, Block).BlockStaminaCost, NormalCost * 0.5f, 0.01);
+	DB_CHECK_NEAR(ResolveDamage(Hit, Block).FinalDamage, 30.f, 0.01);
+}

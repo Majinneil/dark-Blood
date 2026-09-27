@@ -30,6 +30,9 @@ public:
 	 */
 	void AddTimedLooseTag(const FGameplayTag& Tag, float Seconds);
 
+	/** Seconds left on a timed loose tag (0 if not active). Used for cooldown displays. */
+	float GetTimedTagRemaining(const FGameplayTag& Tag) const;
+
 	/**
 	 * Sends a gameplay event on the next tick. Use from inside effect execution, where triggering
 	 * abilities (which may cancel the ability that is applying the effect) is not safe.

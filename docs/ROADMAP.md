@@ -8,7 +8,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 1 | Technisches Fundament | 🟡 Regelkern ✅ · UE-Schicht kompiliert (UE 5.8.3, Win64), **nicht laufzeitgetestet** |
 | 2 | Character & Combat Vertical Slice | ✅ Gameplay (Platzhalter, headless + Koop getestet) · 🟡 Animationen/VFX/Audio (Assets fehlen) |
 | 3 | Erster Story Vertical Slice | ✅ Gameplay (Dialoge, Quests, Charaktererstellung, Slate-UI; headless + Koop getestet) · 🟡 Präsentation (Assets) |
-| 4 | Klassen & Skilltrees | ⬜ |
+| 4 | Klassen & Skilltrees | ✅ Gameplay (4 Kits, 8 Signaturfähigkeiten, Skilltrees, UI; headless getestet) · 🟡 Animationen/VFX |
 | 5 | Inventar / Loot / Crafting | ⬜ (Inventar-, Taschen- und Equipment-Regeln aus Phase 1 vorhanden) |
 | 6 | Open World | ⬜ (Regionen, Gefahrenstufen, Entdeckung als Basis vorhanden) |
 | 7 | NPC- und Siedlungssimulation | ⬜ |
@@ -187,3 +187,18 @@ Charaktererstellung, Dialog und HUD.
 
 **OFFEN**: Chronik/Questbuch-Fenster, Inventar-/Ausrüstungs-UI (Phase 5), Gesichter/Haare im Editor (Assets),
 Sprachausgabe/Cinematics (Phase 18), Party-System (Phase 19).
+
+## Abschlussbericht Phase 4 – Klassen & Skilltrees
+
+**ERSTELLT**: Klassen-Kits für Krieger, Schattenläufer, Magier, Mönch (siehe CLASS_SYSTEM.md) mit je zwei
+Signaturfähigkeiten und 5 Skilltree-Knoten (inkl. Doppelsprung); Mana-Kosten, Abklingzeiten, Projektile,
+Schutzkreis-Aktor, Flug; Skilltree-Fenster `[K]` und Fähigkeitenleiste mit Abklingzeiten im HUD; Regelkern:
+`DamageTakenMultiplier`/`BlockStaminaMultiplier` (+1 Test, 40/40); `-DBCharacterClass`, `DBUnlockSkill`.
+
+**GETESTET (headless)**: je Klasse Freischaltung nach Regeln (Maximalrang wird abgelehnt), alle Signaturfähigkeiten
+und passiven Knoten mit messbarer Wirkung (z. B. Haltung 50→90 Poise und 18,9→14,9 Schaden, Kettenblitz 22,6→13,6→8,1,
+Konterhaltung 47,1 Konter + Knockdown, Rauchschleier: KI verliert das Ziel); gerenderte Screenshots von Skilltree und
+Fähigkeitenleiste.
+
+**BEKANNT**: Die einfache Nahkampf-KI steuert direkt und bleibt an Hindernissen hängen → Navigation mit der
+Hauptwelt (Phase 6).

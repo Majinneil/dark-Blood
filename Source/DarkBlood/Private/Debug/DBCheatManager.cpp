@@ -491,3 +491,12 @@ void UDBCheatManager::DBCreateCharacter(FName ClassId, const FString& Name)
 		UE_LOG(LogDarkBlood, Display, TEXT("DBCreateCharacter: %s"), bOk ? TEXT("ok") : *Error);
 	}
 }
+
+void UDBCheatManager::DBUnlockSkill(FName NodeId)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBUnlockSkill %s"), *NodeId.ToString()))) return;
+	if (ADBPlayerState* PlayerState = GetDBPlayerState())
+	{
+		PlayerState->GetProgression()->RequestUnlockSkill(NodeId);
+	}
+}

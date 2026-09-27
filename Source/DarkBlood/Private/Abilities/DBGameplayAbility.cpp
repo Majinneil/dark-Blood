@@ -5,6 +5,8 @@
 #include "Abilities/DBCombatEffects.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Character/DBCharacterBase.h"
+#include "Player/DBPlayerState.h"
+#include "Player/DBProgressionComponent.h"
 #include "Core/DBGameplayTags.h"
 
 #include "DarkBloodRules/Combat.h"
@@ -40,7 +42,8 @@ bool UDBGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle, cons
 		return false;
 	}
 	const float Stamina = ASC->GetNumericAttribute(UDBAttributeSet::GetStaminaAttribute());
-	return DarkBlood::Rules::CanStartStaminaAction(Stamina, GetStaminaCost());
+	const float Mana = ASC->GetNumericAttribute(UDBAttributeSet::GetManaAttribute());
+	return DarkBlood::Rules::CanStartStaminaAction(Stamina, GetStaminaCost()) && Mana >= GetManaCost();
 }
 
 void UDBGameplayAbility::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -51,6 +54,68 @@ void UDBGameplayAbility::ApplyCost(const FGameplayAbilitySpecHandle Handle, cons
 	{
 		SpendStamina(GetStaminaCost());
 	}
+	if (GetManaCost() > 0.f && HasAuthority(&ActivationInfo))
+	{
+		ChangeMana(-GetManaCost());
+	}
+}
+
+bool UDBGameplayAbility::CheckCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CheckCooldown(Handle, ActorInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+	const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	return !CooldownTag.IsValid() || !ASC || !ASC->HasMatchingGameplayTag(CooldownTag);
+}
+
+void UDBGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	Super::ApplyCooldown(Handle, ActorInfo, ActivationInfo);
+	UDBAbilitySystemComponent* ASC = ActorInfo ? Cast<UDBAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get()) : nullptr;
+	if (ASC && CooldownTag.IsValid() && GetCooldownSeconds() > 0.f)
+	{
+		ASC->AddTimedLooseTag(CooldownTag, GetCooldownSeconds());
+	}
+}
+
+void UDBGameplayAbility::ChangeMana(float Delta) const
+{
+	UDBAbilitySystemComponent* ASC = GetDBAbilitySystem();
+	if (!ASC || FMath::IsNearlyZero(Delta) || !ASC->IsOwnerActorAuthoritative())
+	{
+		return;
+	}
+	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UDBManaChangeEffect::StaticClass(), 1.f, ASC->MakeEffectContext());
+	if (Spec.IsValid())
+	{
+		Spec.Data->SetSetByCallerMagnitude(DBTags::SetByCaller_Magnitude, Delta);
+		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+	}
+}
+
+void UDBGameplayAbility::RestoreStamina(float Amount) const
+{
+	UDBAbilitySystemComponent* ASC = GetDBAbilitySystem();
+	if (!ASC || Amount <= 0.f || !ASC->IsOwnerActorAuthoritative())
+	{
+		return;
+	}
+	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UDBStaminaCostEffect::StaticClass(), 1.f, ASC->MakeEffectContext());
+	if (Spec.IsValid())
+	{
+		Spec.Data->SetSetByCallerMagnitude(DBTags::SetByCaller_StaminaCost, Amount);
+		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+	}
+}
+
+int32 UDBGameplayAbility::GetSkillRank(FName NodeId) const
+{
+	const ADBPlayerState* PlayerState = Cast<ADBPlayerState>(GetOwningActorFromActorInfo());
+	return PlayerState && PlayerState->GetProgression() ? PlayerState->GetProgression()->GetSkillRank(NodeId) : 0;
 }
 
 void UDBGameplayAbility::SpendStamina(float Amount) const

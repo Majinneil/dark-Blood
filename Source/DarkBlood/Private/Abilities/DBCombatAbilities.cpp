@@ -2,6 +2,7 @@
 
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBAttributeSet.h"
+#include "Abilities/DBClassAbilities.h"
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Abilities/Tasks/AbilityTask_WaitInputRelease.h"
@@ -42,6 +43,7 @@ namespace
 
 UDBAbility_Block::UDBAbility_Block()
 {
+	DisplayName = FText::FromString(TEXT("Block"));
 	ActivationPolicy = EDBAbilityActivationPolicy::WhileInputActive;
 	SetAssetTags(FGameplayTagContainer(DBTags::Ability_Block));
 	ActivationOwnedTags.AddTag(DBTags::State_Blocking);
@@ -69,7 +71,8 @@ void UDBAbility_Block::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	}
 	if (UDBAbilitySystemComponent* ASC = GetDBAbilitySystem())
 	{
-		ASC->AddTimedLooseTag(DBTags::State_ParryWindow, ParryWindowSeconds);
+		// Moench "Innere Ruhe": +0.1 s perfect-parry window per rank.
+		ASC->AddTimedLooseTag(DBTags::State_ParryWindow, ParryWindowSeconds + 0.1f * static_cast<float>(GetSkillRank(DBSkillNodes::InnerCalm)));
 	}
 	PlayOptionalMontage(GuardMontage);
 
@@ -89,6 +92,7 @@ void UDBAbility_Block::OnReleased(float /*TimeHeld*/)
 
 UDBAbility_Dodge::UDBAbility_Dodge()
 {
+	DisplayName = FText::FromString(TEXT("Ausweichen"));
 	SetAssetTags(FGameplayTagContainer(DBTags::Ability_Dodge));
 	ActivationOwnedTags.AddTag(DBTags::State_Dodging);
 	// Dodging cancels attacks and blocks (responsive action combat).
@@ -136,6 +140,12 @@ void UDBAbility_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		Wait->OnFinish.AddDynamic(this, &UDBAbility_Dodge::OnDodgeFinished);
 		Wait->ReadyForActivation();
 	}
+}
+
+float UDBAbility_Dodge::GetStaminaCost() const
+{
+	// Schattenlaeufer "Leichtfuessig": dodging costs half.
+	return GetSkillRank(DBSkillNodes::LightFooted) > 0 ? StaminaCost * 0.5f : StaminaCost;
 }
 
 void UDBAbility_Dodge::OnDodgeFinished()
@@ -325,6 +335,7 @@ void UDBAbility_HitReact::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 
 UDBAbility_DoubleJump::UDBAbility_DoubleJump()
 {
+	DisplayName = FText::FromString(TEXT("Doppelsprung"));
 	ActivationPolicy = EDBAbilityActivationPolicy::OnSpawn;
 	// The server owns unlocks. A server-triggered LocalPredicted activation fails for remote clients whose
 	// ability list has not replicated yet, so activate on the server only and replicate the tag instead.

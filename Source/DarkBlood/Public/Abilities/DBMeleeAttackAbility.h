@@ -222,3 +222,33 @@ class DARKBLOOD_API UDBAbility_EnemySwing : public UDBMeleeAttackAbility
 public:
 	UDBAbility_EnemySwing();
 };
+
+/** Schattenlaeufer moveset: four quick kunai cuts. */
+UCLASS()
+class DARKBLOOD_API UDBAbility_KunaiCombo : public UDBMeleeAttackAbility
+{
+	GENERATED_BODY()
+
+public:
+	UDBAbility_KunaiCombo();
+};
+
+/** Moench moveset: five fast strikes, the last one a spinning kick. */
+UCLASS()
+class DARKBLOOD_API UDBAbility_FistCombo : public UDBMeleeAttackAbility
+{
+	GENERATED_BODY()
+
+public:
+	UDBAbility_FistCombo();
+};
+
+/** Moench heavy: palm strike with strong poise damage (chargeable). */
+UCLASS()
+class DARKBLOOD_API UDBAbility_PalmStrike : public UDBMeleeAttackAbility
+{
+	GENERATED_BODY()
+
+public:
+	UDBAbility_PalmStrike();
+};

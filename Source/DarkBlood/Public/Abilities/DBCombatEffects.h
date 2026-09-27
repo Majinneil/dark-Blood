@@ -28,3 +28,53 @@ class DARKBLOOD_API UDBStaminaCostEffect : public UGameplayEffect
 public:
 	UDBStaminaCostEffect();
 };
+
+/** Instant mana change (SetByCaller.Magnitude; negative = spent). */
+UCLASS()
+class DARKBLOOD_API UDBManaChangeEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UDBManaChangeEffect();
+};
+
+/** Instant heal (SetByCaller.Magnitude). */
+UCLASS()
+class DARKBLOOD_API UDBHealEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UDBHealEffect();
+};
+
+/** Warrior Iron Stance while active: +Armor and +MaxPoise (SetByCaller.Magnitude scales both). */
+UCLASS()
+class DARKBLOOD_API UDBIronStanceEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UDBIronStanceEffect();
+};
+
+/** Passive (Magier "Manafluss"): +ManaRegen (SetByCaller.Magnitude). */
+UCLASS()
+class DARKBLOOD_API UDBManaFlowEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UDBManaFlowEffect();
+};
+
+/** Passive (Moench "Eisenkoerper"): +MaxPoise (SetByCaller.Magnitude). */
+UCLASS()
+class DARKBLOOD_API UDBIronBodyEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UDBIronBodyEffect();
+};

@@ -1,6 +1,7 @@
 #include "Data/DBDevelopmentContent.h"
 
 #include "Abilities/DBAbilitySet.h"
+#include "Abilities/DBClassAbilities.h"
 #include "Abilities/DBCombatAbilities.h"
 #include "Abilities/DBMeleeAttackAbility.h"
 #include "Core/DBGameplayTags.h"
@@ -43,8 +44,8 @@ namespace
 		return Mask;
 	}
 
-	/** DEVELOPMENT moveset shared by all classes until class kits exist (Phase 4). */
-	UDBAbilitySet* CreateDevelopmentMoveset(UObject* Outer)
+	/** DEVELOPMENT class kit: class moveset (light/heavy) plus the shared defensive and movement abilities. */
+	UDBAbilitySet* CreateClassKit(UObject* Outer, TSubclassOf<UDBGameplayAbility> Light, TSubclassOf<UDBGameplayAbility> Heavy)
 	{
 		UDBAbilitySet* Set = NewObject<UDBAbilitySet>(Outer, NAME_None, RF_Transient);
 		auto Add = [Set](TSubclassOf<UDBGameplayAbility> Ability, const FGameplayTag& InputTag)
@@ -54,14 +55,35 @@ namespace
 			Entry.InputTag = InputTag;
 			Set->GrantedAbilities.Add(Entry);
 		};
-		Add(UDBAbility_LightCombo::StaticClass(), DBTags::Input_LightAttack);
-		Add(UDBAbility_HeavyAttack::StaticClass(), DBTags::Input_HeavyAttack);
+		Add(Light, DBTags::Input_LightAttack);
+		Add(Heavy, DBTags::Input_HeavyAttack);
 		Add(UDBAbility_Dodge::StaticClass(), DBTags::Input_Dodge);
 		Add(UDBAbility_Block::StaticClass(), DBTags::Input_Block);
 		Add(UDBAbility_Sprint::StaticClass(), DBTags::Input_Sprint);
 		Add(UDBAbility_HitReact::StaticClass(), FGameplayTag()); // triggered by gameplay events
-		Add(UDBAbility_DoubleJump::StaticClass(), FGameplayTag()); // DEV: later unlocked through the skill tree
 		return Set;
+	}
+
+	FDBSkillNode SkillNode(FName Id, const TCHAR* Name, const TCHAR* Description, int32 RequiredLevel, int32 MaxRank,
+		TSubclassOf<UDBGameplayAbility> Ability = nullptr, FGameplayTag InputTag = FGameplayTag(), FVector2D Position = FVector2D::ZeroVector)
+	{
+		FDBSkillNode Node;
+		Node.NodeId = Id;
+		Node.DisplayName = FText::FromString(Name);
+		Node.Description = FText::FromString(Description);
+		Node.RequiredLevel = RequiredLevel;
+		Node.MaxRank = MaxRank;
+		Node.CostPerRank = 1;
+		Node.GrantedAbility = Ability;
+		Node.InputTag = InputTag;
+		Node.UIPosition = Position;
+		return Node;
+	}
+
+	FDBSkillNode DoubleJumpNode()
+	{
+		return SkillNode(DBSkillNodes::DoubleJump, TEXT("Doppelsprung"), TEXT("Ein zweiter Sprung in der Luft - erreicht Daecher, Felsen und Luftkaempfe."),
+			2, 1, UDBAbility_DoubleJump::StaticClass());
 	}
 }
 
@@ -70,9 +92,8 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	bool bAddedAny = false;
 
 	// ---- Classes --------------------------------------------------------------------------------
-	UDBAbilitySet* DevMoveset = nullptr;
 	auto AddClass = [&](FName Id, const FGameplayTag& Tag, const TCHAR* Name, const FDBStatBlock& Base, const FDBStatBlock& PerLevel,
-		TArray<FDBItemGrant> StartItems, const TCHAR* Description)
+		TArray<FDBItemGrant> StartItems, const TCHAR* Description, UDBAbilitySet* Kit, TArray<FDBSkillNode> Tree)
 	{
 		if (Data.FindClass(Id))
 		{
@@ -86,27 +107,72 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		Def->BaseStats = Base;
 		Def->StatsPerLevel = PerLevel;
 		Def->StartingItems = MoveTemp(StartItems);
-		if (!DevMoveset)
-		{
-			DevMoveset = CreateDevelopmentMoveset(&Data);
-		}
-		Def->BaseAbilitySet = DevMoveset;
+		Def->BaseAbilitySet = Kit;
+		Def->SkillTree = MoveTemp(Tree);
 		Data.RegisterClass(Def);
 		bAddedAny = true;
 	};
 
 	AddClass(TEXT("Warrior"), DBTags::Class_Warrior, TEXT("Krieger"), Stats(14, 8, 3, 5, 14, 12), Stats(2.0f, 0.8f, 0.2f, 0.5f, 2.0f, 1.5f),
 		{Grant(TEXT("Katana_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
-		TEXT("Schwertkaempfer der Frontlinie. Viel Leben und Ausdauer, starke Haltungen, haelt Treffer aus, die andere umwerfen."));
+		TEXT("Schwertkaempfer der Frontlinie. Viel Leben und Ausdauer, starke Haltungen, haelt Treffer aus, die andere umwerfen."),
+		CreateClassKit(&Data, UDBAbility_LightCombo::StaticClass(), UDBAbility_HeavyAttack::StaticClass()),
+		{
+			SkillNode(DBSkillNodes::IronStance, TEXT("Eiserne Haltung"),
+				TEXT("Taste 1: Haltung an/aus. +40 Ruestung und Poise, Blocken kostet halb so viel Ausdauer, 20 % langsamer. Rang 2: Poise-Schaden halbiert."),
+				1, 2, UDBAbility_IronStance::StaticClass(), DBTags::Input_Ability1),
+			DoubleJumpNode(),
+			SkillNode(DBSkillNodes::CounterSlash, TEXT("Konterschnitt"),
+				TEXT("Konter nach perfekter Parade verursachen pro Rang einen weiteren vollen Schadensanteil (x2 -> x3 -> x4)."), 3, 2),
+			SkillNode(DBSkillNodes::Bloodlust, TEXT("Blutrausch"), TEXT("Jeder Nahkampftreffer stellt 3 Ausdauer pro Rang wieder her."), 4, 2),
+			SkillNode(DBSkillNodes::Breakthrough, TEXT("Durchbruch"),
+				TEXT("Taste 2: Sturmangriff durch die Gegner (6 m): 30 Schaden und Knockdown. Rang 2: Abklingzeit 6 -> 4 s."),
+				5, 2, UDBAbility_Breakthrough::StaticClass(), DBTags::Input_Ability2),
+		});
 	AddClass(TEXT("Shadowrunner"), DBTags::Class_Shadowrunner, TEXT("Schattenlaeufer"), Stats(8, 15, 5, 6, 9, 14),
 		Stats(0.9f, 2.2f, 0.4f, 0.6f, 1.2f, 1.8f), {Grant(TEXT("Kunai_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
-		TEXT("Schneller Kaempfer aus den Schatten. Kunai, Schattenmal und Teleport, hohe Kritchance, wenig Ruestung."));
+		TEXT("Schneller Kaempfer aus den Schatten. Kunai, Schattenmal und Teleport, hohe Kritchance, wenig Ruestung."),
+		CreateClassKit(&Data, UDBAbility_KunaiCombo::StaticClass(), UDBAbility_HeavyAttack::StaticClass()),
+		{
+			SkillNode(DBSkillNodes::ShadowMark, TEXT("Schattenmal"),
+				TEXT("Taste 1: Gegner markieren. Erneut: hinter ihn teleportieren - kurz unverwundbar, naechster Treffer +50 %. Rang 2: Ankunft verursacht 15 Schattenschaden."),
+				1, 2, UDBAbility_ShadowMark::StaticClass(), DBTags::Input_Ability1),
+			DoubleJumpNode(),
+			SkillNode(DBSkillNodes::Ambush, TEXT("Hinterhalt"), TEXT("Treffer von hinten verursachen +50 % Schaden pro Rang."), 3, 2),
+			SkillNode(DBSkillNodes::LightFooted, TEXT("Leichtfuessig"), TEXT("Ausweichen kostet nur halb so viel Ausdauer."), 4, 1),
+			SkillNode(DBSkillNodes::SmokeVeil, TEXT("Rauchschleier"),
+				TEXT("Taste 2: 4 s im Rauch - Gegner verlieren dich aus den Augen. Angreifen beendet den Schleier."),
+				5, 1, UDBAbility_SmokeVeil::StaticClass(), DBTags::Input_Ability2),
+		});
 	AddClass(TEXT("Mage"), DBTags::Class_Mage, TEXT("Magier"), Stats(3, 6, 16, 12, 8, 8), Stats(0.2f, 0.6f, 2.4f, 1.6f, 1.0f, 1.0f),
 		{Grant(TEXT("Staff_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
-		TEXT("Gelehrter der alten Zauber. Elementarmagie, Schutzkreis und Flug - maechtig auf Distanz, verletzlich im Nahkampf."));
+		TEXT("Gelehrter der alten Zauber. Elementarmagie, Schutzkreis und Flug - maechtig auf Distanz, verletzlich im Nahkampf."),
+		CreateClassKit(&Data, UDBAbility_MagicBolt::StaticClass(), UDBAbility_FrostLance::StaticClass()),
+		{
+			SkillNode(DBSkillNodes::WardingCircle, TEXT("Schutzkreis"),
+				TEXT("Taste 1: Schutzkreis (8 m, 10 s). Daemonen werden hinausgedraengt und verbrannt, Verbuendete nehmen 30 % weniger Schaden. Rang 2: heilt Verbuendete (5/s)."),
+				1, 2, UDBAbility_WardingCircle::StaticClass(), DBTags::Input_Ability1),
+			DoubleJumpNode(),
+			SkillNode(DBSkillNodes::ChainBolt, TEXT("Kettenblitz"), TEXT("Magiegeschosse springen pro Rang auf einen weiteren Gegner (60 % Schaden)."), 3, 2),
+			SkillNode(DBSkillNodes::ManaFlow, TEXT("Manafluss"), TEXT("+1,5 Manaregeneration pro Sekunde und Rang."), 4, 2, UDBAbility_ManaFlow::StaticClass()),
+			SkillNode(DBSkillNodes::Flight, TEXT("Flug"), TEXT("Taste 2: Fliegen in Blickrichtung (8 Mana/s). Erneut druecken zum Landen."),
+				6, 1, UDBAbility_Flight::StaticClass(), DBTags::Input_Ability2),
+		});
 	AddClass(TEXT("Monk"), DBTags::Class_Monk, TEXT("Moench"), Stats(11, 12, 4, 12, 11, 13), Stats(1.4f, 1.4f, 0.3f, 1.4f, 1.4f, 1.6f),
 		{Grant(TEXT("Handwraps_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
-		TEXT("Kriegermoench mit blossen Faeusten. Konter, Luftkampf und geistige Kraft gegen Daemonen."));
+		TEXT("Kriegermoench mit blossen Faeusten. Konter, Luftkampf und geistige Kraft gegen Daemonen."),
+		CreateClassKit(&Data, UDBAbility_FistCombo::StaticClass(), UDBAbility_PalmStrike::StaticClass()),
+		{
+			SkillNode(DBSkillNodes::CounterStance, TEXT("Konterhaltung"),
+				TEXT("Taste 1: 0,6 s Konterhaltung - der naechste Treffer wird abgefangen und mit 25 Geistschaden beantwortet. Rang 2: Konter +50 %."),
+				1, 2, UDBAbility_CounterStance::StaticClass(), DBTags::Input_Ability1),
+			DoubleJumpNode(),
+			SkillNode(DBSkillNodes::InnerCalm, TEXT("Innere Ruhe"), TEXT("Perfektes Parierfenster +0,1 s pro Rang."), 3, 2),
+			SkillNode(DBSkillNodes::IronBody, TEXT("Eisenkoerper"), TEXT("+20 maximale Poise pro Rang."), 4, 2, UDBAbility_IronBody::StaticClass()),
+			SkillNode(DBSkillNodes::SkyKick, TEXT("Himmelstritt"),
+				TEXT("Taste 2: Tritt dich und Gegner vor dir in die Luft - weiter mit Luftangriffen."),
+				5, 1, UDBAbility_SkyKick::StaticClass(), DBTags::Input_Ability2),
+		});
 
 	// ---- Items ----------------------------------------------------------------------------------
 	auto AddItem = [&](FName Id, const TCHAR* Name, EDBItemCategory Category, int32 MaxStack, TFunctionRef<void(UDBItemDefinition&)> Setup)

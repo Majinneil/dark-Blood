@@ -10,6 +10,7 @@
 #include "UI/SDBCharacterCreatorWidget.h"
 #include "UI/SDBDialogueWidget.h"
 #include "UI/SDBGameHudWidget.h"
+#include "UI/SDBSkillTreeWidget.h"
 #include "Widgets/SWeakWidget.h"
 
 void ADBGameHUD::BeginPlay()
@@ -53,6 +54,10 @@ void ADBGameHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		if (CreatorRoot.IsValid())
 		{
 			Viewport->RemoveViewportWidgetContent(CreatorRoot.ToSharedRef());
+		}
+		if (SkillTreeRoot.IsValid())
+		{
+			Viewport->RemoveViewportWidgetContent(SkillTreeRoot.ToSharedRef());
 		}
 	}
 	if (ADBPlayerController* Controller = Cast<ADBPlayerController>(GetOwningPlayerController()))
@@ -121,6 +126,26 @@ void ADBGameHUD::HideCharacterCreator()
 	UpdateInputMode();
 }
 
+void ADBGameHUD::ToggleSkillTree()
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	if (!bUIReady || !Viewport || CreatorRoot.IsValid())
+	{
+		return;
+	}
+	if (SkillTreeRoot.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(SkillTreeRoot.ToSharedRef());
+		SkillTreeRoot.Reset();
+	}
+	else
+	{
+		SkillTreeRoot = SNew(SDBSkillTreeWidget).Owner(GetOwningPlayerController());
+		Viewport->AddViewportWidgetContent(SkillTreeRoot.ToSharedRef(), 50);
+	}
+	UpdateInputMode();
+}
+
 void ADBGameHUD::OnDialogueChanged()
 {
 	if (DialogueWidget.IsValid())
@@ -137,7 +162,7 @@ void ADBGameHUD::UpdateInputMode()
 	{
 		return;
 	}
-	if (Controller->GetDialogue()->IsDialogueOpen())
+	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid())
 	{
 		// Mouse for the option buttons; keys 1-4 and E keep working through game input.
 		FInputModeGameAndUI Mode;

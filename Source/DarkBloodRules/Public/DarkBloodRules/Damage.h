@@ -53,6 +53,10 @@ namespace DarkBlood::Rules
 		EDefenseState State = EDefenseState::None;
 		/** Fraction of damage negated when blocking. */
 		float BlockEfficiency = 0.7f;
+		/** Scales the stamina a block costs (e.g. 0.5 in a defensive stance). */
+		float BlockStaminaMultiplier = 1.f;
+		/** Final multiplier on damage taken (protective circles, buffs); clamped to [0, 2]. */
+		float DamageTakenMultiplier = 1.f;
 	};
 
 	struct FDamageRules

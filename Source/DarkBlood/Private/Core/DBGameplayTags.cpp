@@ -33,6 +33,21 @@ namespace DBTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_DodgeRecovery, "State.DodgeRecovery", "Just finished a dodge: an attack now is a dash attack.");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_IronStance, "State.IronStance", "Warrior stance: tougher, blocks cost less, slower.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_IronStanceUnshakable, "State.IronStanceUnshakable", "Stance rank 2: poise damage halved.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Veiled, "State.Veiled", "Hidden in smoke: enemies lose track.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Warded, "State.Warded", "Inside a protective circle: less damage taken.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CounterStance, "State.CounterStance", "Monk counter stance: the next hit is answered.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ShadowEmpowered, "State.ShadowEmpowered", "After a shadow teleport: next hit is stronger.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Flying, "State.Flying", "Mage flight.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_Breakthrough, "Cooldown.Breakthrough", "Cooldown: Durchbruch.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_ShadowMark, "Cooldown.ShadowMark", "Cooldown: Schattenmal.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_SmokeVeil, "Cooldown.SmokeVeil", "Cooldown: Rauchschleier.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_WardingCircle, "Cooldown.WardingCircle", "Cooldown: Schutzkreis.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_CounterStance, "Cooldown.CounterStance", "Cooldown: Konterhaltung.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_SkyKick, "Cooldown.SkyKick", "Cooldown: Himmelstritt.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Movement_DoubleJump, "Movement.DoubleJump", "Double jump unlocked.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Hit, "GameplayCue.Combat.Hit", "A hit dealt damage.");
@@ -48,13 +63,18 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Ability.Dodge", "Dodge / roll / dash.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Sprint, "Ability.Sprint", "Sprint.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HitReact, "Ability.HitReact", "Hit reaction (stagger, knockdown, parried).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Class, "Ability.Class", "Class signature ability.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Veil, "Ability.Veil", "Smoke veil (ends when attacking).");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_HitReact, "Event.Combat.HitReact", "Victim must react; magnitude = EHitReaction.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySuccess, "Event.Combat.ParrySuccess", "Defender parried an attack perfectly.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_CounterTriggered, "Event.Combat.CounterTriggered", "A counter stance caught a hit.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_SkillTree, "Input.UI.SkillTree", "Open/close the skill tree.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage", "Base damage passed into the damage execution.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_PoiseDamage, "SetByCaller.PoiseDamage", "Poise damage passed into the damage execution.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_StaminaCost, "SetByCaller.StaminaCost", "Stamina spent by an action.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Magnitude, "SetByCaller.Magnitude", "Generic magnitude (heal, mana, bonuses).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Knockdown, "Damage.Knockdown", "Hit knocks the target down regardless of poise.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Physical, "Damage.Type.Physical", "Physical damage (reduced by armor).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Fire, "Damage.Type.Fire", "Fire / ash damage.");

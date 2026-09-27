@@ -49,12 +49,13 @@ namespace DarkBlood::Rules
 		{
 			const float Efficiency = std::clamp(Defense.BlockEfficiency, 0.f, 1.f);
 			Result.bBlocked = true;
-			Result.BlockStaminaCost = Damage * Efficiency * Rules.BlockStaminaPerDamage;
+			Result.BlockStaminaCost = Damage * Efficiency * Rules.BlockStaminaPerDamage * std::max(0.f, Defense.BlockStaminaMultiplier);
 			Damage *= 1.f - Efficiency;
-			Result.FinalDamage = std::max(0.f, Damage);
+			Result.FinalDamage = std::max(0.f, Damage * std::clamp(Defense.DamageTakenMultiplier, 0.f, 2.f));
 			return Result;
 		}
 
+		Damage *= std::clamp(Defense.DamageTakenMultiplier, 0.f, 2.f);
 		Result.FinalDamage = std::max(Rules.MinimumDamage, Damage);
 		return Result;
 	}
