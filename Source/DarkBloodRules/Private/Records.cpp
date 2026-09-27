@@ -327,6 +327,11 @@ namespace DarkBlood::Rules
 			WriteStringSet(W, C.Titles);
 			W.WriteString(C.RespawnPointId);
 			W.WriteI64(C.PlayTimeSeconds);
+			W.WriteU32(static_cast<uint32>(C.PendingDeliveries.size()));
+			for (const FItemStack& Stack : C.PendingDeliveries)
+			{
+				WriteStack(W, Stack);
+			}
 		}
 
 		bool ReadCharacterPayload(FBinaryReader& R, uint32 /*Version*/, FCharacterRecord& C)
@@ -376,8 +381,20 @@ namespace DarkBlood::Rules
 				}
 			}
 
-			return ReadQuestLog(R, C.PersonalQuests) && ReadStringSet(R, C.DiscoveredRegions) && ReadStringSet(R, C.Titles) &&
-				R.ReadString(C.RespawnPointId) && R.ReadI64(C.PlayTimeSeconds);
+			if (!ReadQuestLog(R, C.PersonalQuests) || !ReadStringSet(R, C.DiscoveredRegions) || !ReadStringSet(R, C.Titles) ||
+				!R.ReadString(C.RespawnPointId) || !R.ReadI64(C.PlayTimeSeconds) || !R.ReadCount(Count))
+			{
+				return false;
+			}
+			C.PendingDeliveries.resize(Count);
+			for (FItemStack& Stack : C.PendingDeliveries)
+			{
+				if (!ReadStack(R, Stack))
+				{
+					return false;
+				}
+			}
+			return true;
 		}
 
 		// ---- World ----------------------------------------------------------------------------------
@@ -590,6 +607,10 @@ namespace DarkBlood::Rules
 		for (const FItemStack& Quest : Inventory.GetQuestItems())
 		{
 			CheckStack(Quest, "quest items");
+		}
+		for (const FItemStack& Pending : Record.PendingDeliveries)
+		{
+			CheckStack(Pending, "pending deliveries");
 		}
 
 		const FEquipContext Context{Record.Progression.Level, Record.ClassId};

@@ -59,6 +59,8 @@ namespace DarkBlood::Rules
 		std::set<std::string, std::less<>> Titles;
 		std::string RespawnPointId;
 		int64 PlayTimeSeconds = 0;
+		/** Rewards that did not fit into the inventory; delivered as soon as space is free (never discarded). */
+		std::vector<FItemStack> PendingDeliveries;
 	};
 
 	struct FWorldRecord

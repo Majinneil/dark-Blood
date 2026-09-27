@@ -34,7 +34,7 @@ namespace DarkBlood::Rules
 	DARKBLOODRULES_API std::string NormalizeCharacterName(std::string_view Raw);
 
 	/**
-	 * Validates an already normalized name. Allowed: Latin letters (incl. umlauts, ß and
+	 * Validates an already normalized name. Allowed: Latin letters (incl. umlauts, ss (eszett) and
 	 * Latin Extended-A), Hiragana, Katakana, CJK ideographs; separators: space, '-', apostrophe.
 	 */
 	DARKBLOODRULES_API ENameValidation ValidateCharacterName(std::string_view Name, const FNameRules& Rules = FNameRules());

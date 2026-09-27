@@ -151,7 +151,7 @@ namespace DarkBlood::Rules
 			{
 				continue;
 			}
-			const int32 Loss = std::max(1, static_cast<int32>(std::lround(Definition->MaxDurability * Rules.DurabilityLossFraction)));
+			const int32 Loss = std::max(1, static_cast<int32>(std::lround(static_cast<float>(Definition->MaxDurability) * Rules.DurabilityLossFraction)));
 			const int32 Before = Stack.Durability;
 			Stack.Durability = std::max(0, Stack.Durability - Loss);
 			Result.ItemsDamaged += Stack.Durability != Before ? 1 : 0;

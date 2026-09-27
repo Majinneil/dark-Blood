@@ -1,0 +1,33 @@
+name: Rules core tests
+
+on:
+  push:
+    paths:
+      - "Source/DarkBloodRules/**"
+      - "Tests/RulesTests/**"
+      - ".github/workflows/rules-tests.yml"
+  pull_request:
+    paths:
+      - "Source/DarkBloodRules/**"
+      - "Tests/RulesTests/**"
+      - ".github/workflows/rules-tests.yml"
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.config }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Configure
+        run: cmake -S Tests/RulesTests -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} ${{ matrix.os == 'ubuntu-latest' && matrix.config == 'Debug' && '-DDB_SANITIZE=ON' || '' }}
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }} --parallel
+      - name: Test
+        run: ctest --test-dir build -C ${{ matrix.config }} --output-on-failure

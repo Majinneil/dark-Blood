@@ -156,6 +156,7 @@ DB_TEST(Save_CharacterRoundTrip)
 	Record.Titles = {"Title.HeroOfTime"};
 	Record.RespawnPointId = "Tavern_Capital_RedLantern";
 	Record.PlayTimeSeconds = 3600;
+	Record.PendingDeliveries.push_back({"Tamahagane", 7});
 
 	const std::vector<uint8> Bytes = SerializeCharacter(Record);
 	FCharacterRecord Loaded;
@@ -171,6 +172,7 @@ DB_TEST(Save_CharacterRoundTrip)
 	DB_CHECK(Loaded.Equipment.Get(EEquipSlot::MainHand) == Record.Equipment.Get(EEquipSlot::MainHand));
 	DB_CHECK(Loaded.DiscoveredRegions == Record.DiscoveredRegions);
 	DB_CHECK_EQ(Loaded.Skills.GetRank("Iaido"), 1);
+	DB_CHECK(Loaded.PendingDeliveries == Record.PendingDeliveries);
 	DB_CHECK(SerializeCharacter(Loaded) == Bytes); // stable byte-for-byte
 
 	const std::vector<std::string> Issues = ValidateCharacterRecord(Loaded, Catalog);

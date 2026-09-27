@@ -37,12 +37,12 @@ namespace DarkBlood::Rules
 
 	enum class EItemRarity : uint8
 	{
-		Common,    // gewöhnlich
-		Uncommon,  // ungewöhnlich
+		Common,    // gewoehnlich
+		Uncommon,  // ungewoehnlich
 		Rare,      // selten
 		Epic,      // episch
-		Legendary, // legendär
-		Demonic,   // dämonisch
+		Legendary, // legendaer
+		Demonic,   // daemonisch
 	};
 
 	enum class EEquipSlot : uint8

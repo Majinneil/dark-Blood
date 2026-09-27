@@ -11,7 +11,7 @@ namespace DarkBlood::Rules
 		float Dexterity = 0.f;    // Geschick: speed weapons, crit
 		float Intelligence = 0.f; // Intellekt: spell power, max mana
 		float Spirit = 0.f;       // Geist: mana regen, ki techniques, barrier strength
-		float Vitality = 0.f;     // Vitalität: max health
+		float Vitality = 0.f;     // Vitalitaet: max health
 		float Endurance = 0.f;    // Ausdauer: max stamina, stamina regen
 
 		DARKBLOODRULES_API FPrimaryStats& operator+=(const FPrimaryStats& Other);
@@ -66,7 +66,7 @@ namespace DarkBlood::Rules
 	DARKBLOODRULES_API FDerivedStats ComputeDerivedStats(const FPrimaryStats& Stats, const FDerivedStatFormula& Formula);
 
 	/**
-	 * Power rating ("Stärke") shown in the UI and compared against region recommendations.
+	 * Power rating ("Staerke") shown in the UI and compared against region recommendations.
 	 * GearScore is the average item level of equipped gear (0 when nothing is equipped).
 	 */
 	DARKBLOODRULES_API int32 ComputePowerRating(int32 Level, float GearScore);
@@ -76,7 +76,7 @@ namespace DarkBlood::Rules
 		Trivial,     // Gering
 		Appropriate, // Angemessen
 		Challenging, // Herausfordernd
-		Dangerous,   // Gefährlich
+		Dangerous,   // Gefaehrlich
 		Extreme,     // Extrem
 	};
 

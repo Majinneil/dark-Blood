@@ -15,7 +15,7 @@ namespace DarkBlood::Rules
 
 		bool IsNameSeparator(char32_t C)
 		{
-			return C == U' ' || C == U'-' || C == U'\'' || C == U'’';
+			return C == U' ' || C == U'-' || C == U'\'' || C == U'\u2019';
 		}
 
 		bool IsNameLetter(char32_t C)

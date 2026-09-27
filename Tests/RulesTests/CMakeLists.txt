@@ -18,7 +18,7 @@ target_include_directories(DarkBloodRules PUBLIC ${RULES_DIR}/Public)
 
 # Mirror Unreal's defaults so code that builds here also builds in UBT.
 if(MSVC)
-  target_compile_options(DarkBloodRules PUBLIC /W4 /WX /GR- /EHs-c- /D_HAS_EXCEPTIONS=0)
+  target_compile_options(DarkBloodRules PUBLIC /W4 /WX /utf-8 /permissive- /GR- /EHs-c- /D_HAS_EXCEPTIONS=0)
 else()
   target_compile_options(DarkBloodRules PUBLIC -Wall -Wextra -Wpedantic -Wshadow -Werror -fno-exceptions -fno-rtti)
 endif()
