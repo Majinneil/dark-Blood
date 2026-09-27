@@ -319,3 +319,10 @@ UDBAbility_EnemySwing::UDBAbility_EnemySwing()
 	// Long, readable windup: 0.8 s to react with block, parry or dodge.
 	Steps = {MakeStep(15.f, 0.f, 20.f, 0.8f, 0.15f, 0.8f, 230.f, 70.f)};
 }
+
+UDBAbility_DemonClaw::UDBAbility_DemonClaw()
+{
+	SetAssetTags(FGameplayTagContainer(DBTags::Ability_Attack));
+	DamageType = DBTags::Damage_Type_Physical;
+	Steps = {MakeStep(18.f, 0.f, 22.f, 0.5f, 0.15f, 0.6f, 200.f, 60.f)};
+}

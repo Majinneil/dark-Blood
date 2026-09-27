@@ -149,5 +149,10 @@ geladener Heavy (112 Schaden), Puppenschlag trifft (15), Block (4,5 statt 15, Po
 Puppe `ParriedStagger`, Konter ausgelöst), Dodge weicht aus, Sprint, Lock-On. Gerendert: Screenshots mit Debug-HUD,
 Namensschild/HP der Puppe.
 
-**OFFEN**: Animationen, VFX/Audio, Doppelsprung, Luft-/Sprint-/Dash-Angriffe, echte Gegner-KI, Multiplayer-Test
-des Kampfes (Listen-Server), Balancing.
+**KOOP (Listen-Server + Client, headless)**: Client-Combo, Knockdown, Perfect Parry des Clients, Konter (×2),
+geladener Heavy, Dodge – serverseitig bestätigt. Dabei behoben: Client-Absturz (GAS-Assertion), wenn ein Gegner
+repliziert wurde, bevor sein BeginPlay lief.
+**GEGNER**: Niederer Dämon mit einfacher Nahkampf-KI – verfolgt, greift an, wird geblockt/gestaggert, stirbt, 45 XP.
+
+**OFFEN**: Animationen, VFX/Audio, Doppelsprung, Luft-/Sprint-/Dash-Angriffe, KI mit Navigation/StateTree,
+Balancing.

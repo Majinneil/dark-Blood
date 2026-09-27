@@ -44,7 +44,8 @@ Timing kommt aus Daten (Windup → Treffer → Recovery), nicht aus Animationen;
 | Sprint | `UDBAbility_Sprint` | ×1,6 Tempo, 12 Ausdauer/s in Bewegung |
 | Trefferreaktion | `UDBAbility_HitReact` | Event `Event.Combat.HitReact`; Stagger 0,6 s, Knockdown 1,6 s, Parried 1,0 s + Rückstoß |
 | Lock-On | `UDBLockOnComponent` | Kegel 45°, 20 m, Sichtlinie; Strafing; Zielwechsel per Maus-/Stick-Flick; Server erhält nur Hinweis |
-| Trainingsgegner | `ADBTrainingDummy` (`ADBEnemyCharacter`) | 60 HP, 30 Poise, 20 XP, `Kill TrainingDummy`, Respawn nach 3 s, telegrafierter Schlag (0,8 s Windup) |
+| Trainingsgegner | `ADBTrainingDummy` (`ADBEnemyCharacter`) | 60 HP, 30 Poise, 20 XP, `Kill TrainingDummy`, Respawn nach 3 s, telegrafierter Schlag (0,8 s Windup), verankert (kein Rückstoß) |
+| Erster Gegner | `ADBLesserDemon` + `UDBMeleeAIComponent` | 140 HP, 45 Poise, 20 Rüstung, Stufe 3, 45 XP, `Kill LesserDemon`; KI: Suchen (15 m, Sichtlinie) → Verfolgen → Klauenhieb (0,5 s Windup) → 1,2–2,4 s Pause; Leine 25 m; Aggro bei Treffer |
 
 **Poise** (`Poise`/`MaxPoise`, Meta `IncomingPoiseDamage`): `Rules::ApplyPoiseDamage` → Flinch / Stagger /
 Knockdown; geblockte Treffer 30 % Poise-Schaden, Deckung verhindert Knockdown; Poise füllt sich 3 s nach dem
@@ -53,12 +54,16 @@ letzten Poise-Schaden wieder auf. Ausdauer 0 beim Blocken → Guard Break (Stagg
 1 s nach Verbrauch sowie während Sprint und Block (Tag-Bedingungen im `UDBRegenerationEffect`).
 
 **Offen:** Animationen/Montages, VFX/Audio (GameplayCues), Doppelsprung, Sprint-/Dash-/Sprung-/Luftangriffe,
-Get-up-Animation, Gegner-KI jenseits der Trainingspuppe, Client-Vorhersage von Trefferfeedback.
+Get-up-Animation, KI mit Navigation/StateTree (aktuelle KI steuert direkt, ohne NavMesh), Client-Vorhersage von
+Trefferfeedback.
 
 ### Test-Kommandos
 
-`DBSpawnDummy [cm]`, `DBDummyAttack`, `DBDummyAutoAttack <s>`, `DBInput <LightAttack|HeavyAttack|Dodge|Block|Sprint> [Halten s]`,
+`DBSpawnDummy [cm]`, `DBSpawnEnemy [cm]`, `DBDummyAttack`, `DBDummyAutoAttack <s>`, `DBInput <LightAttack|HeavyAttack|Dodge|Block|Sprint> [Halten s]`,
 `DBLockOn`, `DBAfter <s> <Kommando>`, `DBDumpCombat`. Beispiel (headless, Karte mit Boden):
+
+Koop-Tests: Server mit `?listen` und `-DBCheats`, Client mit `-DBAutoExec="DBAfter 3 DBSpawnDummy 180|DBAfter 5 DBInput LightAttack|…"`
+(Befehle mit `|` getrennt, laufen nach dem Verbinden).
 
 ```
 UnrealEditor-Cmd.exe DarkBlood.uproject "/Engine/Maps/Templates/Template_Default?game=/Script/DarkBlood.DBGameMode" -game -nullrhi

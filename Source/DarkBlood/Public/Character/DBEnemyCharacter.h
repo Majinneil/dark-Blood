@@ -34,6 +34,9 @@ public:
 	/** Server: nearest living player within Radius (cm). */
 	AActor* FindNearestPlayer(float Radius) const;
 
+	/** Server: a hit from Attacker landed (AI aggro). */
+	virtual void OnAttackedBy(AActor* Attacker);
+
 	FName GetEnemyId() const { return EnemyId; }
 
 protected:

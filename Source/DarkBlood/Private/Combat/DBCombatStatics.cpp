@@ -3,6 +3,7 @@
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBCombatEffects.h"
 #include "Character/DBCharacterBase.h"
+#include "Character/DBEnemyCharacter.h"
 #include "Core/DBGameplayTags.h"
 #include "GameFramework/PlayerState.h"
 
@@ -62,6 +63,10 @@ namespace DBCombat
 			Spec.Data->AddDynamicAssetTag(DBTags::Damage_Unparryable);
 		}
 		SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+		if (ADBEnemyCharacter* Enemy = Cast<ADBEnemyCharacter>(TargetASC->GetAvatarActor()))
+		{
+			Enemy->OnAttackedBy(SourceASC->GetAvatarActor());
+		}
 		return true;
 	}
 

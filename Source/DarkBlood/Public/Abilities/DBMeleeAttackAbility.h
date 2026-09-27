@@ -152,6 +152,16 @@ public:
 	UDBAbility_HeavyAttack();
 };
 
+/** DEVELOPMENT enemy attack: lesser demon claw strike (shorter windup than the dummy). */
+UCLASS()
+class DARKBLOOD_API UDBAbility_DemonClaw : public UDBMeleeAttackAbility
+{
+	GENERATED_BODY()
+
+public:
+	UDBAbility_DemonClaw();
+};
+
 /** Telegraphed enemy swing (long windup; used by training dummies to practise block, parry and dodge). */
 UCLASS()
 class DARKBLOOD_API UDBAbility_EnemySwing : public UDBMeleeAttackAbility

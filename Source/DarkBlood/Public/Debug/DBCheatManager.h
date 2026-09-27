@@ -35,6 +35,8 @@ public:
 	// ---- Combat (Phase 2) ----
 	/** Spawns a training dummy Distance cm in front of the player. */
 	UFUNCTION(Exec) void DBSpawnDummy(float Distance = 200.f);
+	/** Spawns a lesser demon (melee AI) Distance cm in front of the player. */
+	UFUNCTION(Exec) void DBSpawnEnemy(float Distance = 800.f);
 	/** Every training dummy swings at the nearest player in reach. */
 	UFUNCTION(Exec) void DBDummyAttack();
 	/** Training dummies swing every Interval seconds (0 = off). */

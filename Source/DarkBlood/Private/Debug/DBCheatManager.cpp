@@ -2,6 +2,7 @@
 
 #include "Abilities/DBAttributeSet.h"
 #include "AbilitySystemComponent.h"
+#include "Character/DBLesserDemon.h"
 #include "Character/DBPlayerCharacter.h"
 #include "Character/DBTrainingDummy.h"
 #include "Combat/DBCombatStatics.h"
@@ -296,6 +297,23 @@ void UDBCheatManager::DBSpawnDummy(float Distance)
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	const ADBTrainingDummy* Dummy = GetWorld()->SpawnActor<ADBTrainingDummy>(ADBTrainingDummy::StaticClass(), Location, Facing, Params);
 	UE_LOG(LogDBCombat, Display, TEXT("DBSpawnDummy: %s at %.0f cm"), Dummy ? *Dummy->GetName() : TEXT("failed"), UsedDistance);
+}
+
+void UDBCheatManager::DBSpawnEnemy(float Distance)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBSpawnEnemy %f"), Distance))) return;
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	const float UsedDistance = Distance > 0.f ? Distance : 800.f;
+	const FVector Location = Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * UsedDistance;
+	const FRotator Facing(0.f, (Pawn->GetActorLocation() - Location).Rotation().Yaw, 0.f);
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	const ADBLesserDemon* Demon = GetWorld()->SpawnActor<ADBLesserDemon>(ADBLesserDemon::StaticClass(), Location, Facing, Params);
+	UE_LOG(LogDBCombat, Display, TEXT("DBSpawnEnemy: %s at %.0f cm"), Demon ? *Demon->GetName() : TEXT("failed"), UsedDistance);
 }
 
 void UDBCheatManager::DBDummyAttack()

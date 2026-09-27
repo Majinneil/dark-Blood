@@ -4,6 +4,7 @@
 #include "Abilities/DBAttributeSet.h"
 #include "Abilities/DBCombatAbilities.h"
 #include "Abilities/DBRegenerationEffect.h"
+#include "AI/DBMeleeAIComponent.h"
 #include "Combat/DBCombatStatics.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -119,6 +120,14 @@ AActor* ADBEnemyCharacter::FindNearestPlayer(float Radius) const
 		}
 	}
 	return Best;
+}
+
+void ADBEnemyCharacter::OnAttackedBy(AActor* Attacker)
+{
+	if (UDBMeleeAIComponent* AI = FindComponentByClass<UDBMeleeAIComponent>())
+	{
+		AI->NotifyAttackedBy(Attacker);
+	}
 }
 
 void ADBEnemyCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, float DamageMagnitude)
