@@ -22,7 +22,30 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ParryWindow, "State.ParryWindow", "Inside the perfect-parry window.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Invulnerable, "State.Invulnerable", "Invulnerability frames (dodge, cinematic).");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Attacking, "State.Attacking", "Performing an attack (movement input is ignored).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dodging, "State.Dodging", "Performing a dodge.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Sprinting, "State.Sprinting", "Sprinting (stamina does not regenerate).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Staggered, "State.Staggered", "Poise broken / hit reaction, cannot act.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_KnockedDown, "State.KnockedDown", "Knocked to the ground, getting up.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CounterWindow, "State.CounterWindow", "After a perfect parry: the next attack is a counter.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_StaminaRegenDelay, "State.StaminaRegenDelay", "Stamina was just spent; regeneration paused.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_PoiseRecoverDelay, "State.PoiseRecoverDelay", "Poise was just damaged; recovery paused.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack, "Ability.Attack", "Any attack.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack_Light, "Ability.Attack.Light", "Light attack / combo.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack_Heavy, "Ability.Attack.Heavy", "Heavy / charged attack.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Block, "Ability.Block", "Block / parry.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Ability.Dodge", "Dodge / roll / dash.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Sprint, "Ability.Sprint", "Sprint.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HitReact, "Ability.HitReact", "Hit reaction (stagger, knockdown, parried).");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_HitReact, "Event.Combat.HitReact", "Victim must react; magnitude = EHitReaction.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySuccess, "Event.Combat.ParrySuccess", "Defender parried an attack perfectly.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage", "Base damage passed into the damage execution.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_PoiseDamage, "SetByCaller.PoiseDamage", "Poise damage passed into the damage execution.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_StaminaCost, "SetByCaller.StaminaCost", "Stamina spent by an action.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Knockdown, "Damage.Knockdown", "Hit knocks the target down regardless of poise.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Physical, "Damage.Type.Physical", "Physical damage (reduced by armor).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Fire, "Damage.Type.Fire", "Fire / ash damage.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Frost, "Damage.Type.Frost", "Frost damage.");

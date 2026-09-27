@@ -83,13 +83,18 @@ void ADBCharacterBase::HandleOutOfHealth(AActor* DamageInstigator, AActor* Damag
 
 void ADBCharacterBase::OnRep_IsDead()
 {
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (ASC)
+	{
+		ASC->SetLooseGameplayTagCount(DBTags::State_Dead, bIsDead ? 1 : 0);
+	}
 	if (bIsDead)
 	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
-		{
-			ASC->SetLooseGameplayTagCount(DBTags::State_Dead, 1);
-		}
 		PlayDeathPresentation();
+	}
+	else
+	{
+		PlayRevivePresentation();
 	}
 }
 
@@ -97,5 +102,39 @@ void ADBCharacterBase::PlayDeathPresentation()
 {
 	GetCharacterMovement()->DisableMovement();
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	// Phase 2: death montage / ragdoll, VFX and audio are played here.
+	// Death montage / ragdoll, VFX and audio are played here once animation assets exist.
+}
+
+void ADBCharacterBase::Revive()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!HasAuthority() || !bIsDead || !ASC)
+	{
+		return;
+	}
+	bIsDead = false;
+	ASC->SetLooseGameplayTagCount(DBTags::State_Dead, 0);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetHealthAttribute(), ASC->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute()));
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetStaminaAttribute(), ASC->GetNumericAttribute(UDBAttributeSet::GetMaxStaminaAttribute()));
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetPoiseAttribute(), ASC->GetNumericAttribute(UDBAttributeSet::GetMaxPoiseAttribute()));
+	PlayRevivePresentation();
+}
+
+void ADBCharacterBase::PlayRevivePresentation()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+}
+
+FString ADBCharacterBase::GetCombatDisplayName() const
+{
+	return GetName();
+}
+
+bool ADBCharacterBase::IsMovementInputBlocked() const
+{
+	static const FGameplayTagContainer BlockingTags = FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{
+		DBTags::State_Attacking, DBTags::State_Dodging, DBTags::State_Staggered, DBTags::State_KnockedDown, DBTags::State_Dead});
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	return bIsDead || (ASC && ASC->HasAnyMatchingGameplayTags(BlockingTags));
 }

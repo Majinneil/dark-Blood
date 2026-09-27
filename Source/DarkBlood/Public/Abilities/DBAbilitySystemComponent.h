@@ -23,7 +23,22 @@ public:
 	/** Activates abilities whose policy is OnSpawn (passives). */
 	void TryActivatePassiveAbilities();
 
+	/**
+	 * Adds a loose (non-replicated) tag for Seconds; adding it again restarts the timer.
+	 * Called by predicted abilities on client and server alike, so both see the same windows
+	 * (parry window, i-frames, regeneration delays). The server's copy is the one damage uses.
+	 */
+	void AddTimedLooseTag(const FGameplayTag& Tag, float Seconds);
+
+	/**
+	 * Sends a gameplay event on the next tick. Use from inside effect execution, where triggering
+	 * abilities (which may cancel the ability that is applying the effect) is not safe.
+	 */
+	void SendGameplayEventDeferred(const FGameplayTag& EventTag, const FGameplayEventData& Payload);
+
 private:
+	TMap<FGameplayTag, FTimerHandle> TimedTagTimers;
+
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;

@@ -2,6 +2,13 @@
 
 #include "Abilities/DBAttributeSet.h"
 #include "AbilitySystemComponent.h"
+#include "Character/DBPlayerCharacter.h"
+#include "Character/DBTrainingDummy.h"
+#include "Combat/DBCombatStatics.h"
+#include "Combat/DBLockOnComponent.h"
+#include "EngineUtils.h"
+#include "GameplayTagsManager.h"
+#include "TimerManager.h"
 #include "DarkBlood.h"
 #include "GameplayEffect.h"
 #include "UObject/Package.h"
@@ -269,5 +276,105 @@ void UDBCheatManager::DBDumpWorld()
 	for (const FDBQuestProgressView& Quest : GameState->GetSharedQuests()->GetQuests())
 	{
 		UE_LOG(LogDBQuest, Display, TEXT("  shared quest %s status=%d"), *Quest.QuestId.ToString(), static_cast<int32>(Quest.Status));
+	}
+}
+
+// ---- Combat -----------------------------------------------------------------------------------
+
+void UDBCheatManager::DBSpawnDummy(float Distance)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBSpawnDummy %f"), Distance))) return;
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	const float UsedDistance = Distance > 0.f ? Distance : 200.f;
+	const FVector Location = Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * UsedDistance;
+	const FRotator Facing(0.f, (Pawn->GetActorLocation() - Location).Rotation().Yaw, 0.f);
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	const ADBTrainingDummy* Dummy = GetWorld()->SpawnActor<ADBTrainingDummy>(ADBTrainingDummy::StaticClass(), Location, Facing, Params);
+	UE_LOG(LogDBCombat, Display, TEXT("DBSpawnDummy: %s at %.0f cm"), Dummy ? *Dummy->GetName() : TEXT("failed"), UsedDistance);
+}
+
+void UDBCheatManager::DBDummyAttack()
+{
+	if (ForwardToServer(TEXT("DBDummyAttack"))) return;
+	for (TActorIterator<ADBTrainingDummy> It(GetWorld()); It; ++It)
+	{
+		UE_LOG(LogDBCombat, Display, TEXT("DBDummyAttack: %s %s"), *It->GetName(), It->SwingAtNearestPlayer() ? TEXT("swings") : TEXT("has no target"));
+	}
+}
+
+void UDBCheatManager::DBDummyAutoAttack(float Interval)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBDummyAutoAttack %f"), Interval))) return;
+	for (TActorIterator<ADBTrainingDummy> It(GetWorld()); It; ++It)
+	{
+		It->SetAutoAttack(Interval);
+	}
+}
+
+void UDBCheatManager::DBInput(const FString& Input, float HoldSeconds)
+{
+	ADBPlayerCharacter* Character = Cast<ADBPlayerCharacter>(GetOuterAPlayerController()->GetPawn());
+	const FGameplayTag Tag = UGameplayTagsManager::Get().RequestGameplayTag(FName(*(TEXT("Input.") + Input)), false);
+	if (!Character || !Tag.IsValid())
+	{
+		UE_LOG(LogDBCombat, Warning, TEXT("DBInput: unknown input '%s' or no character"), *Input);
+		return;
+	}
+	Character->PressAbilityInput(Tag);
+	const TWeakObjectPtr<ADBPlayerCharacter> WeakCharacter = Character;
+	FTimerHandle Release;
+	GetWorld()->GetTimerManager().SetTimer(Release, FTimerDelegate::CreateWeakLambda(this, [WeakCharacter, Tag]()
+	{
+		if (WeakCharacter.IsValid())
+		{
+			WeakCharacter->ReleaseAbilityInput(Tag);
+		}
+	}), FMath::Max(0.01f, HoldSeconds), false);
+}
+
+void UDBCheatManager::DBLockOn()
+{
+	if (const ADBPlayerCharacter* Character = Cast<ADBPlayerCharacter>(GetOuterAPlayerController()->GetPawn()))
+	{
+		Character->GetLockOn()->ToggleLockOn();
+	}
+}
+
+void UDBCheatManager::DBAfter(float Seconds, const FString& Command)
+{
+	APlayerController* Controller = GetOuterAPlayerController();
+	const TWeakObjectPtr<APlayerController> WeakController = Controller;
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [WeakController, Command]()
+	{
+		if (WeakController.IsValid())
+		{
+			WeakController->ConsoleCommand(Command, true);
+		}
+	}), FMath::Max(0.01f, Seconds), false);
+}
+
+void UDBCheatManager::DBDumpCombat()
+{
+	if (ForwardToServer(TEXT("DBDumpCombat"))) return;
+	for (TActorIterator<ADBCharacterBase> It(GetWorld()); It; ++It)
+	{
+		const UAbilitySystemComponent* ASC = It->GetAbilitySystemComponent();
+		if (!ASC)
+		{
+			continue;
+		}
+		FGameplayTagContainer Tags;
+		ASC->GetOwnedGameplayTags(Tags);
+		UE_LOG(LogDBCombat, Display, TEXT("%s%s: HP %.1f/%.0f  ST %.1f/%.0f  Poise %.1f/%.0f  Tags [%s]"), *DBCombat::GetCombatName(*It),
+			It->IsDead() ? TEXT(" (dead)") : TEXT(""), ASC->GetNumericAttribute(UDBAttributeSet::GetHealthAttribute()),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetStaminaAttribute()),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxStaminaAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetPoiseAttribute()),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxPoiseAttribute()), *Tags.ToStringSimple());
 	}
 }

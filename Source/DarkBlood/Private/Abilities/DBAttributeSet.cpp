@@ -1,7 +1,20 @@
 #include "Abilities/DBAttributeSet.h"
 
+#include "Abilities/DBAbilitySystemComponent.h"
+#include "Combat/DBCombatStatics.h"
+#include "Core/DBGameplayTags.h"
+#include "DarkBlood.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+
+#include "DarkBloodRules/Combat.h"
+
+namespace R = DarkBlood::Rules;
+
+float UDBAttributeSet::GetPoiseRecoverDelaySeconds()
+{
+	return R::FPoiseRules().RecoverDelaySeconds;
+}
 
 UDBAttributeSet::UDBAttributeSet()
 {
@@ -12,6 +25,8 @@ UDBAttributeSet::UDBAttributeSet()
 	InitMana(50.f);
 	InitMaxMana(50.f);
 	InitCritChance(0.05f);
+	InitPoise(50.f);
+	InitMaxPoise(50.f);
 }
 
 void UDBAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -24,6 +39,9 @@ void UDBAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, MaxStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, Mana, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, MaxMana, COND_None, REPNOTIFY_Always);
+	// Poise is visible to everyone (boss/enemy poise bars).
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, Poise, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, MaxPoise, COND_None, REPNOTIFY_Always);
 	// Secondary stats only matter to the owning player's UI.
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, HealthRegen, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, StaminaRegen, COND_OwnerOnly, REPNOTIFY_Always);
@@ -48,9 +66,17 @@ void UDBAttributeSet::ClampToMax(const FGameplayAttribute& Attribute, float& New
 	{
 		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxMana());
 	}
+	else if (Attribute == GetPoiseAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxPoise());
+	}
 	else if (Attribute == GetMaxHealthAttribute() || Attribute == GetMaxStaminaAttribute() || Attribute == GetMaxManaAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 1.f);
+	}
+	else if (Attribute == GetMaxPoiseAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.f);
 	}
 	else if (Attribute == GetCritChanceAttribute())
 	{
@@ -92,6 +118,10 @@ void UDBAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, f
 	{
 		ASC->ApplyModToAttribute(GetManaAttribute(), EGameplayModOp::Override, NewValue);
 	}
+	else if (Attribute == GetMaxPoiseAttribute() && GetPoise() > NewValue)
+	{
+		ASC->ApplyModToAttribute(GetPoiseAttribute(), EGameplayModOp::Override, NewValue);
+	}
 
 	if (Attribute == GetHealthAttribute() && NewValue > 0.f)
 	{
@@ -123,13 +153,59 @@ void UDBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
 	}
+	else if (Data.EvaluatedData.Attribute == GetIncomingPoiseDamageAttribute())
+	{
+		HandleIncomingPoiseDamage(Data);
+	}
 	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
+		HandleGuardBreak(Data);
+	}
+	else if (Data.EvaluatedData.Attribute == GetPoiseAttribute())
+	{
+		SetPoise(FMath::Clamp(GetPoise(), 0.f, GetMaxPoise()));
 	}
 	else if (Data.EvaluatedData.Attribute == GetManaAttribute())
 	{
 		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+	}
+}
+
+void UDBAttributeSet::HandleIncomingPoiseDamage(const FGameplayEffectModCallbackData& Data)
+{
+	const float PoiseDamage = GetIncomingPoiseDamage();
+	SetIncomingPoiseDamage(0.f);
+	UDBAbilitySystemComponent* ASC = Cast<UDBAbilitySystemComponent>(GetOwningAbilitySystemComponent());
+	if (!ASC || GetHealth() <= 0.f)
+	{
+		return; // the dead do not stagger
+	}
+
+	FGameplayTagContainer SpecTags;
+	Data.EffectSpec.GetAllAssetTags(SpecTags);
+	// A raised guard prevents knockdowns (unblockable attacks are never blocked in the first place).
+	const bool bForceKnockdown = SpecTags.HasTagExact(DBTags::Damage_Knockdown) && !ASC->HasMatchingGameplayTag(DBTags::State_Blocking);
+
+	const R::FPoiseResult Result = R::ApplyPoiseDamage(GetPoise(), GetMaxPoise(), PoiseDamage, bForceKnockdown);
+	SetPoise(Result.NewPoise);
+	ASC->AddTimedLooseTag(DBTags::State_PoiseRecoverDelay, GetPoiseRecoverDelaySeconds());
+
+	if (R::InterruptsAction(Result.Reaction))
+	{
+		UE_LOG(LogDBCombat, Log, TEXT("%s: poise broken -> %hs"), *DBCombat::GetCombatName(ASC->GetAvatarActor()), R::ToString(Result.Reaction));
+		DBCombat::SendHitReact(ASC, Result.Reaction, Data.EffectSpec.GetEffectContext().GetEffectCauser());
+	}
+}
+
+void UDBAttributeSet::HandleGuardBreak(const FGameplayEffectModCallbackData& Data)
+{
+	UDBAbilitySystemComponent* ASC = Cast<UDBAbilitySystemComponent>(GetOwningAbilitySystemComponent());
+	// Blocking a hit with no stamina left breaks the guard.
+	if (ASC && GetStamina() <= 0.f && Data.EvaluatedData.Magnitude < 0.f && ASC->HasMatchingGameplayTag(DBTags::State_Blocking))
+	{
+		UE_LOG(LogDBCombat, Log, TEXT("%s: guard broken"), *DBCombat::GetCombatName(ASC->GetAvatarActor()));
+		DBCombat::SendHitReact(ASC, R::EHitReaction::Stagger, Data.EffectSpec.GetEffectContext().GetEffectCauser());
 	}
 }
 
@@ -146,3 +222,5 @@ void UDBAttributeSet::OnRep_AttackPower(const FGameplayAttributeData& OldValue) 
 void UDBAttributeSet::OnRep_SpellPower(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, SpellPower, OldValue); }
 void UDBAttributeSet::OnRep_CritChance(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, CritChance, OldValue); }
 void UDBAttributeSet::OnRep_Armor(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, Armor, OldValue); }
+void UDBAttributeSet::OnRep_Poise(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, Poise, OldValue); }
+void UDBAttributeSet::OnRep_MaxPoise(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, MaxPoise, OldValue); }

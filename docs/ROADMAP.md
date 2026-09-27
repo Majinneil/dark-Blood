@@ -6,7 +6,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 |---|---|---|
 | 0 | Preproduction: Analyse, Architektur, Struktur, Konventionen, Dokumentation | ✅ |
 | 1 | Technisches Fundament | 🟡 Regelkern ✅ · UE-Schicht kompiliert (UE 5.8.3, Win64), **nicht laufzeitgetestet** |
-| 2 | Character & Combat Vertical Slice | ⬜ |
+| 2 | Character & Combat Vertical Slice | 🟡 Kampfsystem spielbar (Platzhalter), headless getestet; Animationen/VFX offen |
 | 3 | Erster Story Vertical Slice | ⬜ |
 | 4 | Klassen & Skilltrees | ⬜ |
 | 5 | Inventar / Loot / Crafting | ⬜ (Inventar-, Taschen- und Equipment-Regeln aus Phase 1 vorhanden) |
@@ -133,3 +133,21 @@ Regionswerte, Uhr-Extrapolation statt Tick-Replikation.
 5. `DBQuestEvent Talk NPC_King 1`, dann 3× `DBQuestEvent Kill TrainingDummy 1` → Belohnung, Story-Flag.
 6. `DBSaveAll`, PIE beenden, neu starten → Zustand identisch.
 7. PIE mit 2 Spielern (Listen Server): Client lädt eigenen Charakter hoch, Namensschilder zeigen Charakternamen.
+
+## Zwischenstand Phase 2 – Character & Combat Vertical Slice
+
+**ERSTELLT**
+- Regelkern `Combat.h`: Combo-Fenster, Aufladen, Trefferbogen, Ausdauerregeln, Poise → Flinch/Stagger/Knockdown,
+  Lock-On-Bewertung; 6 neue Tests (36/36 bestanden, MSVC)
+- GAS: Light-Combo, Heavy/Charged, Block/Perfect Parry/Konter, Dodge mit i-Frames, Sprint, Trefferreaktion;
+  Schadens- und Ausdauer-Effekte; Poise-Attribute; Regenerationspausen per Tag
+- `UDBLockOnComponent`, `ADBEnemyCharacter`, `ADBTrainingDummy`; Teams; Kill-XP + Quest-Kill-Ereignis
+- Dev-Kommandos für skriptbare Kampftests (siehe COMBAT_SYSTEM.md)
+
+**GETESTET (headless, `Template_Default`)**: 3er-Combo trifft und tötet die Puppe (+20 XP, Respawn), voll
+geladener Heavy (112 Schaden), Puppenschlag trifft (15), Block (4,5 statt 15, Poise 6), Perfect Parry (0 Schaden,
+Puppe `ParriedStagger`, Konter ausgelöst), Dodge weicht aus, Sprint, Lock-On. Gerendert: Screenshots mit Debug-HUD,
+Namensschild/HP der Puppe.
+
+**OFFEN**: Animationen, VFX/Audio, Doppelsprung, Luft-/Sprint-/Dash-Angriffe, echte Gegner-KI, Multiplayer-Test
+des Kampfes (Listen-Server), Balancing.

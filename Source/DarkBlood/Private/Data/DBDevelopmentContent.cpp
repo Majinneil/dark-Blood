@@ -1,5 +1,8 @@
 #include "Data/DBDevelopmentContent.h"
 
+#include "Abilities/DBAbilitySet.h"
+#include "Abilities/DBCombatAbilities.h"
+#include "Abilities/DBMeleeAttackAbility.h"
 #include "Core/DBGameplayTags.h"
 #include "Data/DBClassDefinition.h"
 #include "Data/DBGameDataSubsystem.h"
@@ -38,6 +41,26 @@ namespace
 		}
 		return Mask;
 	}
+
+	/** DEVELOPMENT moveset shared by all classes until class kits exist (Phase 4). */
+	UDBAbilitySet* CreateDevelopmentMoveset(UObject* Outer)
+	{
+		UDBAbilitySet* Set = NewObject<UDBAbilitySet>(Outer, NAME_None, RF_Transient);
+		auto Add = [Set](TSubclassOf<UDBGameplayAbility> Ability, const FGameplayTag& InputTag)
+		{
+			FDBAbilitySetAbility Entry;
+			Entry.Ability = Ability;
+			Entry.InputTag = InputTag;
+			Set->GrantedAbilities.Add(Entry);
+		};
+		Add(UDBAbility_LightCombo::StaticClass(), DBTags::Input_LightAttack);
+		Add(UDBAbility_HeavyAttack::StaticClass(), DBTags::Input_HeavyAttack);
+		Add(UDBAbility_Dodge::StaticClass(), DBTags::Input_Dodge);
+		Add(UDBAbility_Block::StaticClass(), DBTags::Input_Block);
+		Add(UDBAbility_Sprint::StaticClass(), DBTags::Input_Sprint);
+		Add(UDBAbility_HitReact::StaticClass(), FGameplayTag()); // triggered by gameplay events
+		return Set;
+	}
 }
 
 bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
@@ -45,6 +68,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	bool bAddedAny = false;
 
 	// ---- Classes --------------------------------------------------------------------------------
+	UDBAbilitySet* DevMoveset = nullptr;
 	auto AddClass = [&](FName Id, const FGameplayTag& Tag, const TCHAR* Name, const FDBStatBlock& Base, const FDBStatBlock& PerLevel,
 		TArray<FDBItemGrant> StartItems)
 	{
@@ -59,6 +83,11 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		Def->BaseStats = Base;
 		Def->StatsPerLevel = PerLevel;
 		Def->StartingItems = MoveTemp(StartItems);
+		if (!DevMoveset)
+		{
+			DevMoveset = CreateDevelopmentMoveset(&Data);
+		}
+		Def->BaseAbilitySet = DevMoveset;
 		Data.RegisterClass(Def);
 		bAddedAny = true;
 	};

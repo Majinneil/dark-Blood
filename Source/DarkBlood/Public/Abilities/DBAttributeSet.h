@@ -46,6 +46,12 @@ public:
 	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, CritChance);
 	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, Armor);
 	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, IncomingDamage);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, Poise);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, MaxPoise);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, IncomingPoiseDamage);
+
+	/** Seconds without poise damage before poise refills (rules core value). */
+	static float GetPoiseRecoverDelaySeconds();
 
 protected:
 	UFUNCTION() void OnRep_Health(const FGameplayAttributeData& OldValue);
@@ -61,9 +67,13 @@ protected:
 	UFUNCTION() void OnRep_SpellPower(const FGameplayAttributeData& OldValue);
 	UFUNCTION() void OnRep_CritChance(const FGameplayAttributeData& OldValue);
 	UFUNCTION() void OnRep_Armor(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_Poise(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_MaxPoise(const FGameplayAttributeData& OldValue);
 
 private:
 	void ClampToMax(const FGameplayAttribute& Attribute, float& NewValue) const;
+	void HandleIncomingPoiseDamage(const FGameplayEffectModCallbackData& Data);
+	void HandleGuardBreak(const FGameplayEffectModCallbackData& Data);
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Health, Category = "Vitals", meta = (AllowPrivateAccess = true))
 	FGameplayAttributeData Health;
@@ -107,6 +117,17 @@ private:
 	/** Meta attribute written by the damage execution; converted into health loss on the server. Not replicated. */
 	UPROPERTY(BlueprintReadOnly, Category = "Meta", meta = (AllowPrivateAccess = true))
 	FGameplayAttributeData IncomingDamage;
+
+	/** Resistance against being interrupted. Broken poise -> stagger/knockdown (rules core). */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Poise, Category = "Combat", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData Poise;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxPoise, Category = "Combat", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData MaxPoise;
+
+	/** Meta attribute written by the damage execution. Not replicated. */
+	UPROPERTY(BlueprintReadOnly, Category = "Meta", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData IncomingPoiseDamage;
 
 	bool bOutOfHealth = false;
 };

@@ -1,10 +1,39 @@
 #include "Abilities/DBAbilitySystemComponent.h"
 
 #include "Abilities/DBGameplayAbility.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 UDBAbilitySystemComponent::UDBAbilitySystemComponent()
 {
 	SetIsReplicatedByDefault(true);
+}
+
+void UDBAbilitySystemComponent::AddTimedLooseTag(const FGameplayTag& Tag, float Seconds)
+{
+	UWorld* World = GetWorld();
+	if (!Tag.IsValid() || !World)
+	{
+		return;
+	}
+	SetLooseGameplayTagCount(Tag, 1);
+	FTimerHandle& Handle = TimedTagTimers.FindOrAdd(Tag);
+	World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, Tag]()
+	{
+		SetLooseGameplayTagCount(Tag, 0);
+	}), FMath::Max(Seconds, 0.001f), false);
+}
+
+void UDBAbilitySystemComponent::SendGameplayEventDeferred(const FGameplayTag& EventTag, const FGameplayEventData& Payload)
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, EventTag, Payload]()
+		{
+			FGameplayEventData Copy = Payload;
+			HandleGameplayEvent(EventTag, &Copy);
+		}));
+	}
 }
 
 void UDBAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)

@@ -1,12 +1,18 @@
 #include "Abilities/DBDamageExecution.h"
 
+#include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBAttributeSet.h"
+#include "Combat/DBCombatStatics.h"
 #include "Core/DBGameplayTags.h"
+#include "DarkBlood.h"
 
 #include "DarkBloodRules/Damage.h"
 
 namespace
 {
+	/** How long a perfect parry opens the counter window. */
+	constexpr float CounterWindowSeconds = 1.f;
+
 	// Built from the public attribute getters: the attribute properties are private,
 	// so DEFINE_ATTRIBUTE_CAPTUREDEF (which names the member directly) cannot be used.
 	struct FDBDamageStatics
@@ -129,5 +135,41 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 		OutExecutionOutput.AddOutputModifier(
 			FGameplayModifierEvaluatedData(UDBAttributeSet::GetStaminaAttribute(), EGameplayModOp::Additive, -Result.BlockStaminaCost));
 	}
-	// Parry/immune reactions (counter windows, VFX) are driven by gameplay events in Phase 2.
+
+	// Poise: nothing on parry/immunity, a block absorbs the same share as for health.
+	float PoiseDamage = 0.f;
+	if (!Result.bParried && !Result.bImmune)
+	{
+		PoiseDamage = Spec.GetSetByCallerMagnitude(DBTags::SetByCaller_PoiseDamage, false, 0.f);
+		if (Result.bBlocked)
+		{
+			PoiseDamage *= 1.f - Defense.BlockEfficiency;
+		}
+		if (PoiseDamage > 0.f || SpecTags.HasTagExact(DBTags::Damage_Knockdown))
+		{
+			OutExecutionOutput.AddOutputModifier(
+				FGameplayModifierEvaluatedData(UDBAttributeSet::GetIncomingPoiseDamageAttribute(), EGameplayModOp::Additive, PoiseDamage));
+		}
+	}
+
+	UDBAbilitySystemComponent* SourceASC = Cast<UDBAbilitySystemComponent>(ExecutionParams.GetSourceAbilitySystemComponent());
+	UDBAbilitySystemComponent* TargetASC = Cast<UDBAbilitySystemComponent>(ExecutionParams.GetTargetAbilitySystemComponent());
+	const AActor* SourceAvatar = SourceASC ? SourceASC->GetAvatarActor() : nullptr;
+	const AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
+
+	if (Result.bParried && TargetASC)
+	{
+		// Perfect parry: the defender gets a counter window, the attacker bounces off.
+		TargetASC->AddTimedLooseTag(DBTags::State_CounterWindow, CounterWindowSeconds);
+		FGameplayEventData Payload;
+		Payload.Instigator = SourceAvatar;
+		Payload.Target = TargetAvatar;
+		TargetASC->SendGameplayEventDeferred(DBTags::Event_Combat_ParrySuccess, Payload);
+		DBCombat::SendHitReact(SourceASC, R::EHitReaction::ParriedStagger, TargetAvatar);
+	}
+
+	UE_LOG(LogDBCombat, Log, TEXT("%s -> %s: %.1f damage%s%s%s%s, poise %.1f"), *DBCombat::GetCombatName(SourceAvatar),
+		*DBCombat::GetCombatName(TargetAvatar), Result.FinalDamage, Result.bCritical ? TEXT(" CRIT") : TEXT(""),
+		Result.bBlocked ? TEXT(" BLOCKED") : TEXT(""), Result.bParried ? TEXT(" PARRIED") : TEXT(""), Result.bImmune ? TEXT(" IMMUNE") : TEXT(""),
+		PoiseDamage);
 }

@@ -2,6 +2,7 @@
 
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Combat/DBLockOnComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -13,11 +14,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
+#include "Player/DBProgressionComponent.h"
 
 ADBPlayerCharacter::ADBPlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
+	Team = EDBTeam::Players;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -44,6 +47,8 @@ ADBPlayerCharacter::ADBPlayerCharacter(const FObjectInitializer& ObjectInitializ
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	LockOn = CreateDefaultSubobject<UDBLockOnComponent>(TEXT("LockOn"));
 
 	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
 	Nameplate->SetupAttachment(RootComponent);
@@ -151,7 +156,8 @@ void ADBPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 void ADBPlayerCharacter::Input_Move(const FInputActionValue& Value)
 {
 	const FVector2D Axis = Value.Get<FVector2D>();
-	if (!Controller || IsDead())
+	// Attacks, dodges and hit reactions own the movement while they run.
+	if (!Controller || IsMovementInputBlocked())
 	{
 		return;
 	}
@@ -163,12 +169,24 @@ void ADBPlayerCharacter::Input_Move(const FInputActionValue& Value)
 void ADBPlayerCharacter::Input_Look(const FInputActionValue& Value)
 {
 	const FVector2D Axis = Value.Get<FVector2D>();
+	if (LockOn->IsLockedOn())
+	{
+		// The camera follows the target; a horizontal flick switches to the next one.
+		LockOn->AddSwitchInput(Axis.X);
+		return;
+	}
 	AddControllerYawInput(Axis.X);
 	AddControllerPitchInput(Axis.Y);
 }
 
 void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 {
+	// Lock-on is a camera/targeting feature, not an ability.
+	if (InputTag == DBTags::Input_LockOn)
+	{
+		LockOn->ToggleLockOn();
+		return;
+	}
 	if (UDBAbilitySystemComponent* ASC = GetDBAbilitySystemComponent())
 	{
 		ASC->AbilityInputTagPressed(InputTag);
@@ -181,4 +199,21 @@ void ADBPlayerCharacter::Input_AbilityReleased(FGameplayTag InputTag)
 	{
 		ASC->AbilityInputTagReleased(InputTag);
 	}
+}
+
+FString ADBPlayerCharacter::GetCombatDisplayName() const
+{
+	const ADBPlayerState* DBPlayerState = GetPlayerState<ADBPlayerState>();
+	return DBPlayerState ? DBPlayerState->GetPlayerName() : Super::GetCombatDisplayName();
+}
+
+int32 ADBPlayerCharacter::GetCombatLevel() const
+{
+	const ADBPlayerState* DBPlayerState = GetPlayerState<ADBPlayerState>();
+	return DBPlayerState ? DBPlayerState->GetProgression()->GetLevel() : 1;
+}
+
+AActor* ADBPlayerCharacter::GetCombatFocusTarget() const
+{
+	return LockOn->GetLockTarget();
 }

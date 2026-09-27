@@ -1,6 +1,6 @@
 # Kampfsystem
 
-**Status:** Schadensregeln (Regelkern) und GAS-Grundlage ✅/🟡. Spielbare Kampfaktionen folgen in Phase 2.
+**Status:** Phase 2 (Vertical Slice) 🟡 – spielbar mit Platzhalterkörpern, headless getestet; Animationen/VFX fehlen.
 
 ## Schadensmodell (implementiert)
 
@@ -29,17 +29,41 @@ Schadensarten (Tags): Physical, Fire, Frost, Lightning, Shadow, Poison, Spirit, 
 - Regeneration über `UDBRegenerationEffect` (periodisch, 0,25 s, liest die *Regen-Attribute*).
   Phase 2: Regenerationsverzögerung nach Anstrengung (Tag `State.Exhausted` als Voraussetzung).
 
-## Geplant für Phase 2 (Vertical Slice)
+## Phase 2 – umgesetzt
 
-| Aktion | Umsetzung |
-|---|---|
-| Light-Combo, Heavy, Charged, Sprint-/Dash-/Jump-/Air-Attack | `UDBGameplayAbility`-Unterklassen + Montages mit Combo-Fenstern (AnimNotifyStates), Treffer per Trace im Notify, Schaden per GE-Spec mit `SetByCaller.Damage` |
-| Block / Perfect Parry / Konter | `WhileInputActive`-Ability setzt `State.Blocking`; die ersten ~150 ms zusätzlich `State.ParryWindow`; erfolgreiche Parade → GameplayEvent → Konterfenster |
-| Dodge / Roll / Side-/Back-Step / Dash | Root-Motion-Montage + Motion Warping, i-Frames als GE mit `State.Invulnerable`, Ausdauerkosten |
-| Doppelsprung | `JumpMaxCount = 2` nach Freischaltung; eigene Animation/VFX/Sound |
-| Lock-On | lokale Zielwahl (Kegel + Sichtlinie), Server erhält nur Ziel-Hinweis; Kamera fokussiert, Strafing, Dodge relativ zum Ziel, Zielwechsel per Stick/Maus |
-| Trefferreaktion, Knockdown, Get-up | Poise-Wert (Phase 2 Attribut) und Reaktions-Abilities |
-| Trainingsgegner | NPC-Charakter mit eigenem ASC, `Kill`-Questereignis `TrainingDummy` |
+Timing kommt aus Daten (Windup → Treffer → Recovery), nicht aus Animationen; Montages sind optional
+(`FDBAttackStepConfig::Montage`, `GuardMontage`, …). Treffer werden nur auf dem Server ermittelt
+(Kugel-Overlap + Bogenprüfung `Rules::IsInsideAttackArc`) und über `UDBDamageEffect` angewendet.
 
-Serverautorität: Treffer werden vom Server bestätigt (Client-Vorhersage für Animation/Feedback, Server-Trace mit
-Toleranz für Latenz). Schaden entsteht ausschließlich auf dem Server.
+| Aktion | Klasse | Werte (DEV) |
+|---|---|---|
+| Leichte Combo (3 Schläge) | `UDBAbility_LightCombo` | 10/12/18 Schaden, 8/9/14 Ausdauer, Combo-Fenster 0,9 s nach dem Treffer |
+| Schwerer / aufgeladener Angriff | `UDBAbility_HeavyAttack` | 28 Schaden, halten 0,35–1,5 s → bis ×2,5 Schaden, ×3 Poise, voll geladen = Knockdown |
+| Block / Perfect Parry / Konter | `UDBAbility_Block` | Parierfenster 0,15 s; Parade → Angreifer `ParriedStagger`, Verteidiger 1 s Konterfenster (×2 Schaden, ×3 Poise); Angriff aus dem Block senkt die Deckung |
+| Ausweichen | `UDBAbility_Dodge` | 450 cm in 0,4 s (Eingaberichtung, sonst Rückschritt), 0,3 s i-Frames, 20 Ausdauer |
+| Sprint | `UDBAbility_Sprint` | ×1,6 Tempo, 12 Ausdauer/s in Bewegung |
+| Trefferreaktion | `UDBAbility_HitReact` | Event `Event.Combat.HitReact`; Stagger 0,6 s, Knockdown 1,6 s, Parried 1,0 s + Rückstoß |
+| Lock-On | `UDBLockOnComponent` | Kegel 45°, 20 m, Sichtlinie; Strafing; Zielwechsel per Maus-/Stick-Flick; Server erhält nur Hinweis |
+| Trainingsgegner | `ADBTrainingDummy` (`ADBEnemyCharacter`) | 60 HP, 30 Poise, 20 XP, `Kill TrainingDummy`, Respawn nach 3 s, telegrafierter Schlag (0,8 s Windup) |
+
+**Poise** (`Poise`/`MaxPoise`, Meta `IncomingPoiseDamage`): `Rules::ApplyPoiseDamage` → Flinch / Stagger /
+Knockdown; geblockte Treffer 30 % Poise-Schaden, Deckung verhindert Knockdown; Poise füllt sich 3 s nach dem
+letzten Poise-Schaden wieder auf. Ausdauer 0 beim Blocken → Guard Break (Stagger).
+**Ausdauer:** Aktion startet mit jeder positiven Ausdauer (`Rules::CanStartStaminaAction`); Regeneration pausiert
+1 s nach Verbrauch sowie während Sprint und Block (Tag-Bedingungen im `UDBRegenerationEffect`).
+
+**Offen:** Animationen/Montages, VFX/Audio (GameplayCues), Doppelsprung, Sprint-/Dash-/Sprung-/Luftangriffe,
+Get-up-Animation, Gegner-KI jenseits der Trainingspuppe, Client-Vorhersage von Trefferfeedback.
+
+### Test-Kommandos
+
+`DBSpawnDummy [cm]`, `DBDummyAttack`, `DBDummyAutoAttack <s>`, `DBInput <LightAttack|HeavyAttack|Dodge|Block|Sprint> [Halten s]`,
+`DBLockOn`, `DBAfter <s> <Kommando>`, `DBDumpCombat`. Beispiel (headless, Karte mit Boden):
+
+```
+UnrealEditor-Cmd.exe DarkBlood.uproject "/Engine/Maps/Templates/Template_Default?game=/Script/DarkBlood.DBGameMode" -game -nullrhi
+  -ExecCmds="DBSpawnDummy 180,DBAfter 1 DBInput LightAttack,DBAfter 3 DBDummyAttack,DBAfter 3.7 DBInput Block 0.4,DBAfter 4.1 DBInput LightAttack,DBAfter 6 DBDumpCombat,DBAfter 7 quit"
+```
+
+Serverautorität: Schaden, Poise und Reaktionen entstehen ausschließlich auf dem Server. Aktionen sind LocalPredicted
+(Ausdauer, Tags, Root Motion), Trefferreaktionen ServerInitiated.
