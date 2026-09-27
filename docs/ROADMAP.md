@@ -5,7 +5,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | Phase | Inhalt | Status |
 |---|---|---|
 | 0 | Preproduction: Analyse, Architektur, Struktur, Konventionen, Dokumentation | ✅ |
-| 1 | Technisches Fundament | 🟡 Regelkern ✅ · UE-Schicht geschrieben, **nicht kompiliert** |
+| 1 | Technisches Fundament | 🟡 Regelkern ✅ · UE-Schicht kompiliert (UE 5.8.3, Win64), **nicht laufzeitgetestet** |
 | 2 | Character & Combat Vertical Slice | ⬜ |
 | 3 | Erster Story Vertical Slice | ⬜ |
 | 4 | Klassen & Skilltrees | ⬜ |
@@ -111,7 +111,8 @@ Engine-Standard.
 
 **TESTS:** `ctest` – 30/30 bestanden (GCC 13, Debug, ASan+UBSan; Clang 18, Release). Zusätzlich
 `-Wconversion`-Prüfung mit Clang ohne Befund.
-**BUILD:** Regelkern ✅. UE-Module: **kein Build möglich** (keine Engine).
+**BUILD:** Regelkern ✅. UE-Module: `DarkBloodEditor Win64 Development` mit UE 5.8.3 / VS 2022 fehlerfrei und
+ohne Warnungen (Unity und `-DisableUnity`). Regelkern-Tests zusätzlich mit MSVC bestanden.
 **MULTIPLAYER:** Replikationsdesign implementiert (siehe MULTIPLAYER.md), **nicht getestet**.
 **PERFORMANCE:** keine Messungen möglich. Designentscheidungen: Fast-Array-Delta für Inventar, quantisierte
 Regionswerte, Uhr-Extrapolation statt Tick-Replikation.

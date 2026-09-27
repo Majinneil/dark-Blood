@@ -17,6 +17,7 @@ public class DarkBlood : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"NetCore",
+			"CoreOnline",
 			"DeveloperSettings",
 			"DarkBloodRules",
 		});

@@ -2,6 +2,8 @@
 
 #include "Misc/Guid.h"
 
+#include "DarkBloodRules/Stats.h"
+
 namespace R = DarkBlood::Rules;
 
 // Keep Blueprint enums and rules enums in lockstep.

@@ -7,19 +7,21 @@
 
 namespace
 {
+	// Built from the public attribute getters: the attribute properties are private,
+	// so DEFINE_ATTRIBUTE_CAPTUREDEF (which names the member directly) cannot be used.
 	struct FDBDamageStatics
 	{
-		DECLARE_ATTRIBUTE_CAPTUREDEF(AttackPower);
-		DECLARE_ATTRIBUTE_CAPTUREDEF(SpellPower);
-		DECLARE_ATTRIBUTE_CAPTUREDEF(CritChance);
-		DECLARE_ATTRIBUTE_CAPTUREDEF(Armor);
+		FGameplayEffectAttributeCaptureDefinition AttackPowerDef;
+		FGameplayEffectAttributeCaptureDefinition SpellPowerDef;
+		FGameplayEffectAttributeCaptureDefinition CritChanceDef;
+		FGameplayEffectAttributeCaptureDefinition ArmorDef;
 
 		FDBDamageStatics()
+			: AttackPowerDef(UDBAttributeSet::GetAttackPowerAttribute(), EGameplayEffectAttributeCaptureSource::Source, true)
+			, SpellPowerDef(UDBAttributeSet::GetSpellPowerAttribute(), EGameplayEffectAttributeCaptureSource::Source, true)
+			, CritChanceDef(UDBAttributeSet::GetCritChanceAttribute(), EGameplayEffectAttributeCaptureSource::Source, true)
+			, ArmorDef(UDBAttributeSet::GetArmorAttribute(), EGameplayEffectAttributeCaptureSource::Target, false)
 		{
-			DEFINE_ATTRIBUTE_CAPTUREDEF(UDBAttributeSet, AttackPower, Source, true);
-			DEFINE_ATTRIBUTE_CAPTUREDEF(UDBAttributeSet, SpellPower, Source, true);
-			DEFINE_ATTRIBUTE_CAPTUREDEF(UDBAttributeSet, CritChance, Source, true);
-			DEFINE_ATTRIBUTE_CAPTUREDEF(UDBAttributeSet, Armor, Target, false);
 		}
 	};
 

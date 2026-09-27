@@ -9,6 +9,24 @@
 
 #include <cstdint>
 
+// In modular UBT builds DARKBLOODRULES_API expands to DLLEXPORT/DLLIMPORT, which
+// normally come from Unreal's platform headers. The rules core must not include
+// those, so provide token-identical fallbacks (no redefinition warnings).
+#ifndef DLLEXPORT
+#if defined(_MSC_VER)
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT __attribute__((visibility("default")))
+#endif
+#endif
+#ifndef DLLIMPORT
+#if defined(_MSC_VER)
+#define DLLIMPORT __declspec(dllimport)
+#else
+#define DLLIMPORT __attribute__((visibility("default")))
+#endif
+#endif
+
 #ifndef DARKBLOODRULES_API
 #define DARKBLOODRULES_API
 #endif

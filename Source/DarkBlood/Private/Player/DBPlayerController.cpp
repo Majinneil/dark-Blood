@@ -152,7 +152,7 @@ void ADBPlayerController::ClientRequestCharacterCreation_Implementation()
 void ADBPlayerController::ServerRunDevCommand_Implementation(const FString& Command)
 {
 #if !UE_BUILD_SHIPPING
-	const AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
+	AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
 	if (!GameMode || !GameMode->AllowCheats(this) || !Command.StartsWith(TEXT("DB")))
 	{
 		UE_LOG(LogDarkBlood, Warning, TEXT("Refused dev command from %s: %s"), *GetName(), *Command);
