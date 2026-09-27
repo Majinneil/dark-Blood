@@ -3,6 +3,8 @@
 #include "Abilities/DBAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "DarkBlood.h"
+#include "GameplayEffect.h"
+#include "UObject/Package.h"
 #include "Engine/World.h"
 #include "Framework/DBGameMode.h"
 #include "Framework/DBGameState.h"
@@ -183,9 +185,18 @@ void UDBCheatManager::DBDamageSelf(float Amount)
 	if (ForwardToServer(FString::Printf(TEXT("DBDamageSelf %f"), Amount))) return;
 	if (ADBPlayerState* PlayerState = GetDBPlayerState())
 	{
-		// Runs through PostGameplayEffectExecute, so death handling is exercised.
-		PlayerState->GetAbilitySystemComponent()->ApplyModToAttribute(UDBAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive,
-			FMath::Max(0.f, Amount));
+		// ApplyModToAttribute only sets the base value and skips PostGameplayEffectExecute, so apply a
+		// transient instant effect instead: the damage meta attribute and death handling run as in combat.
+		UGameplayEffect* DamageEffect = NewObject<UGameplayEffect>(GetTransientPackage(), TEXT("DBDevDamageSelf"));
+		DamageEffect->DurationPolicy = EGameplayEffectDurationType::Instant;
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = UDBAttributeSet::GetIncomingDamageAttribute();
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(FMath::Max(0.f, Amount)));
+		DamageEffect->Modifiers.Add(Modifier);
+
+		UAbilitySystemComponent* AbilitySystem = PlayerState->GetAbilitySystemComponent();
+		AbilitySystem->ApplyGameplayEffectToSelf(DamageEffect, 1.f, AbilitySystem->MakeEffectContext());
 	}
 }
 
@@ -226,6 +237,16 @@ void UDBCheatManager::DBDumpCharacter()
 	{
 		UE_LOG(LogDarkBlood, Display, TEXT("  [%d:%d] %s x%d (dur %d)"), Entry.Section, Entry.SlotIndex, *Entry.Stack.ItemId.ToString(),
 			Entry.Stack.Count, Entry.Stack.Durability);
+	}
+	for (uint8 SlotIndex = 0; SlotIndex <= static_cast<uint8>(EDBEquipSlot::Accessory2); ++SlotIndex)
+	{
+		const EDBEquipSlot Slot = static_cast<EDBEquipSlot>(SlotIndex);
+		const FDBItemStackView Equipped = Inventory->GetEquipped(Slot);
+		if (!Equipped.ItemId.IsNone())
+		{
+			UE_LOG(LogDarkBlood, Display, TEXT("  equipped %s: %s (dur %d)"), *StaticEnum<EDBEquipSlot>()->GetNameStringByValue(SlotIndex),
+				*Equipped.ItemId.ToString(), Equipped.Durability);
+		}
 	}
 }
 

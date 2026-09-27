@@ -357,6 +357,7 @@ void ADBGameMode::RespawnPlayer(AController* Controller)
 	if (const ADBPlayerState* PlayerState = Controller->GetPlayerState<ADBPlayerState>())
 	{
 		PlayerState->GetProgression()->RecalculateAttributes(true);
+		UE_LOG(LogDarkBlood, Log, TEXT("%s respawned"), *PlayerState->GetPlayerName());
 	}
 }
 

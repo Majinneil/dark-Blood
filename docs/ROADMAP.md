@@ -113,7 +113,14 @@ Engine-Standard.
 `-Wconversion`-Prüfung mit Clang ohne Befund.
 **BUILD:** Regelkern ✅. UE-Module: `DarkBloodEditor Win64 Development` mit UE 5.8.3 / VS 2022 fehlerfrei und
 ohne Warnungen (Unity und `-DisableUnity`). Regelkern-Tests zusätzlich mit MSVC bestanden.
-**MULTIPLAYER:** Replikationsdesign implementiert (siehe MULTIPLAYER.md), **nicht getestet**.
+**LAUFZEIT (headless, `-game -nullrhi`, Karte `/Engine/Maps/Entry`):** Tests 2–6 unten per `-ExecCmds` bestanden:
+Levelaufstieg 1 → 6, Tasche ausgerüstet, MQ01 abgeschlossen (Belohnung erhalten), Tod mit 5 % Mon-Verlust und −5 %
+Haltbarkeit der ausgerüsteten Waffe, Respawn nach 5 s, Zustand nach Neustart identisch. Dabei behoben:
+`DBDamageSelf` nutzte `ApplyModToAttribute` (umgeht `PostGameplayEffectExecute`, kein Tod) und wendet jetzt einen
+Instant-Effekt an. Test 1 (Debug-Overlay) braucht Rendering und ist offen.
+**MULTIPLAYER:** Replikationsdesign implementiert (siehe MULTIPLAYER.md). Listen-Server + Client (headless):
+Client verbindet, lädt Charakter „Jin Akagi“ hoch, Server nimmt ihn an. Namensschilder (Rendering) nicht geprüft.
+Dev-Kommandos sind im Listen-Server außerhalb des Editors gesperrt (`AllowCheats`).
 **PERFORMANCE:** keine Messungen möglich. Designentscheidungen: Fast-Array-Delta für Inventar, quantisierte
 Regionswerte, Uhr-Extrapolation statt Tick-Replikation.
 
