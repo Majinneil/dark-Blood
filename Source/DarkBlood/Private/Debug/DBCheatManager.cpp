@@ -355,6 +355,27 @@ void UDBCheatManager::DBInput(const FString& Input, float HoldSeconds)
 	}), FMath::Max(0.01f, HoldSeconds), false);
 }
 
+void UDBCheatManager::DBJump()
+{
+	ACharacter* Character = Cast<ACharacter>(GetOuterAPlayerController()->GetPawn());
+	if (!Character)
+	{
+		return;
+	}
+	Character->Jump();
+	const TWeakObjectPtr<ACharacter> WeakCharacter = Character;
+	FTimerHandle Release;
+	GetWorld()->GetTimerManager().SetTimer(Release, FTimerDelegate::CreateWeakLambda(this, [WeakCharacter]()
+	{
+		if (WeakCharacter.IsValid())
+		{
+			WeakCharacter->StopJumping();
+			UE_LOG(LogDBCombat, Display, TEXT("DBJump: jump %d/%d, height %.0f"), WeakCharacter->JumpCurrentCount, WeakCharacter->JumpMaxCount,
+				WeakCharacter->GetActorLocation().Z);
+		}
+	}), 0.1f, false);
+}
+
 void UDBCheatManager::DBLockOn()
 {
 	if (const ADBPlayerCharacter* Character = Cast<ADBPlayerCharacter>(GetOuterAPlayerController()->GetPawn()))

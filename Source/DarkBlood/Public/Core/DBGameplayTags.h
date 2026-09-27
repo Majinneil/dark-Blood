@@ -34,6 +34,17 @@ namespace DBTags
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_CounterWindow);
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_StaminaRegenDelay);
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_PoiseRecoverDelay);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_DodgeRecovery);
+
+	// Movement unlocks
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Movement_DoubleJump);
+
+	// Gameplay cues (presentation hooks: VFX/audio assets live under /Game/DarkBlood/GameplayCues)
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Hit);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Blocked);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Parried);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Stagger);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Dodge);
 
 	// Abilities (ability tags, used for cancelling/blocking)
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Attack);

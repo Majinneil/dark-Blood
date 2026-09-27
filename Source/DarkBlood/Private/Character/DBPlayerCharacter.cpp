@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Core/DBGameplayTags.h"
+#include "DarkBlood.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -85,6 +86,8 @@ void ADBPlayerCharacter::InitAbilityActorInfo()
 	ASC->SetLooseGameplayTagCount(DBTags::State_Dead, 0);
 
 	BindToAttributeSet(ASC);
+	ASC->RegisterGameplayTagEvent(DBTags::Movement_DoubleJump).AddUObject(this, &ADBPlayerCharacter::OnDoubleJumpTagChanged);
+	OnDoubleJumpTagChanged(DBTags::Movement_DoubleJump, ASC->GetTagCount(DBTags::Movement_DoubleJump));
 	DBPlayerState->OnProfileChanged.AddUniqueDynamic(this, &ADBPlayerCharacter::RefreshNameplateFromState);
 	RefreshNameplate();
 }
@@ -216,4 +219,15 @@ int32 ADBPlayerCharacter::GetCombatLevel() const
 AActor* ADBPlayerCharacter::GetCombatFocusTarget() const
 {
 	return LockOn->GetLockTarget();
+}
+
+void ADBPlayerCharacter::OnDoubleJumpTagChanged(const FGameplayTag /*Tag*/, int32 NewCount)
+{
+	JumpMaxCount = NewCount > 0 ? 2 : 1;
+}
+
+void ADBPlayerCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+	UE_LOG(LogDBCombat, Verbose, TEXT("%s jump %d/%d"), *GetCombatDisplayName(), JumpCurrentCount, JumpMaxCount);
 }

@@ -168,6 +168,19 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 		DBCombat::SendHitReact(SourceASC, R::EHitReaction::ParriedStagger, TargetAvatar);
 	}
 
+	// Presentation hooks; without GameplayCue notify assets these are no-ops.
+	if (TargetASC)
+	{
+		const FGameplayTag Cue = Result.bParried  ? DBTags::GameplayCue_Combat_Parried
+							   : Result.bBlocked  ? DBTags::GameplayCue_Combat_Blocked
+							   : Result.bImmune   ? FGameplayTag()
+												  : DBTags::GameplayCue_Combat_Hit;
+		if (Cue.IsValid())
+		{
+			TargetASC->ExecuteGameplayCue(Cue, Spec.GetEffectContext());
+		}
+	}
+
 	UE_LOG(LogDBCombat, Log, TEXT("%s -> %s: %.1f damage%s%s%s%s, poise %.1f"), *DBCombat::GetCombatName(SourceAvatar),
 		*DBCombat::GetCombatName(TargetAvatar), Result.FinalDamage, Result.bCritical ? TEXT(" CRIT") : TEXT(""),
 		Result.bBlocked ? TEXT(" BLOCKED") : TEXT(""), Result.bParried ? TEXT(" PARRIED") : TEXT(""), Result.bImmune ? TEXT(" IMMUNE") : TEXT(""),

@@ -6,7 +6,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 |---|---|---|
 | 0 | Preproduction: Analyse, Architektur, Struktur, Konventionen, Dokumentation | ✅ |
 | 1 | Technisches Fundament | 🟡 Regelkern ✅ · UE-Schicht kompiliert (UE 5.8.3, Win64), **nicht laufzeitgetestet** |
-| 2 | Character & Combat Vertical Slice | 🟡 Kampfsystem spielbar (Platzhalter), headless getestet; Animationen/VFX offen |
+| 2 | Character & Combat Vertical Slice | ✅ Gameplay (Platzhalter, headless + Koop getestet) · 🟡 Animationen/VFX/Audio (Assets fehlen) |
 | 3 | Erster Story Vertical Slice | ⬜ |
 | 4 | Klassen & Skilltrees | ⬜ |
 | 5 | Inventar / Loot / Crafting | ⬜ (Inventar-, Taschen- und Equipment-Regeln aus Phase 1 vorhanden) |
@@ -154,5 +154,9 @@ geladener Heavy, Dodge – serverseitig bestätigt. Dabei behoben: Client-Abstur
 repliziert wurde, bevor sein BeginPlay lief.
 **GEGNER**: Niederer Dämon mit einfacher Nahkampf-KI – verfolgt, greift an, wird geblockt/gestaggert, stirbt, 45 XP.
 
-**OFFEN**: Animationen, VFX/Audio, Doppelsprung, Luft-/Sprint-/Dash-Angriffe, KI mit Navigation/StateTree,
-Balancing.
+**KONTEXT-ANGRIFFE & DOPPELSPRUNG**: Doppelsprung (145 → 264 cm), Luftangriff (Knockdown), Sprint-Angriff, Dash-Angriff –
+einzeln und im Koop getestet. Dabei behoben: passiver Doppelsprung wurde für Remote-Clients nie aktiviert
+(jetzt serverseitig + repliziertes Tag).
+
+**OFFEN (Assets / spätere Phasen)**: Animationen, VFX/Audio (GameplayCue-Notifies), KI mit Navigation/StateTree,
+Balancing mit Klassen-Kits.

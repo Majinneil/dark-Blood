@@ -55,6 +55,19 @@ struct FDBAttackStepConfig
 	DarkBlood::Rules::FAttackStep ToRules() const;
 };
 
+/** Which move an activation performs: the combo chain or a situational attack. */
+UENUM(BlueprintType)
+enum class EDBAttackContext : uint8
+{
+	Combo,
+	/** In the air: plunge down, hits all around on landing. */
+	Air,
+	/** Out of a sprint: lunge forward. */
+	Sprint,
+	/** Right after a dodge: quick dash thrust. */
+	Dash,
+};
+
 UCLASS(Abstract)
 class DARKBLOOD_API UDBMeleeAttackAbility : public UDBGameplayAbility
 {
@@ -72,6 +85,9 @@ public:
 
 protected:
 	virtual float GetStaminaCost() const override;
+	virtual void PreActivate(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate,
+		const FGameplayEventData* TriggerEventData = nullptr) override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Attack", meta = (TitleProperty = "BaseDamage"))
 	TArray<FDBAttackStepConfig> Steps;
@@ -103,6 +119,36 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Counter")
 	float CounterPoiseMultiplier = 3.f;
 
+	// ---- Situational attacks (replace the combo step when their condition holds) ----
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context")
+	bool bHasAirAttack = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context", meta = (EditCondition = "bHasAirAttack"))
+	FDBAttackStepConfig AirAttack;
+
+	/** Downward speed of the plunge during the air attack windup. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context", meta = (EditCondition = "bHasAirAttack", Units = "cm/s"))
+	float AirPlungeSpeed = 1800.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context")
+	bool bHasSprintAttack = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context", meta = (EditCondition = "bHasSprintAttack"))
+	FDBAttackStepConfig SprintAttack;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context", meta = (EditCondition = "bHasSprintAttack", Units = "cm"))
+	float SprintLungeDistance = 350.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context")
+	bool bHasDashAttack = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context", meta = (EditCondition = "bHasDashAttack"))
+	FDBAttackStepConfig DashAttack;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Context", meta = (EditCondition = "bHasDashAttack", Units = "cm"))
+	float DashLungeDistance = 200.f;
+
 private:
 	UFUNCTION()
 	void OnChargeReleased(float TimeHeld);
@@ -121,6 +167,8 @@ private:
 	void FaceTarget() const;
 
 	const FDBAttackStepConfig* GetCurrentStep() const;
+	EDBAttackContext ChooseContext() const;
+	void ApplyContextMovement(const FDBAttackStepConfig& Step);
 	DarkBlood::Rules::FChargeRules GetChargeRules() const;
 
 	/** Combo step of the current (or next) activation. Instances persist per actor, so this spans activations. */
@@ -129,6 +177,9 @@ private:
 	double LastHitWorldTime = -1000.0;
 	bool bNextStepQueued = false;
 	bool bSwingStarted = false;
+	/** Sampled in PreActivate: activating an attack cancels the sprint before ActivateAbility runs. */
+	bool bWasSprinting = false;
+	EDBAttackContext Context = EDBAttackContext::Combo;
 	DarkBlood::Rules::FChargeResult Charge;
 };
 

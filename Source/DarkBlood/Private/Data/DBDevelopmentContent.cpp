@@ -59,6 +59,7 @@ namespace
 		Add(UDBAbility_Block::StaticClass(), DBTags::Input_Block);
 		Add(UDBAbility_Sprint::StaticClass(), DBTags::Input_Sprint);
 		Add(UDBAbility_HitReact::StaticClass(), FGameplayTag()); // triggered by gameplay events
+		Add(UDBAbility_DoubleJump::StaticClass(), FGameplayTag()); // DEV: later unlocked through the skill tree
 		return Set;
 	}
 }

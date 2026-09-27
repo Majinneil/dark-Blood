@@ -126,6 +126,10 @@ void UDBAbility_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	PlayOptionalMontage(DodgeMontage);
 	ApplyPush(this, TEXT("Dodge"), Direction, Distance, DurationSeconds);
 	UE_LOG(LogDBCombat, Log, TEXT("%s dodges"), *DBCombat::GetCombatName(Character));
+	if (HasAuthority(&ActivationInfo))
+	{
+		GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(DBTags::GameplayCue_Combat_Dodge);
+	}
 
 	if (UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, DurationSeconds))
 	{
@@ -136,6 +140,11 @@ void UDBAbility_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 
 void UDBAbility_Dodge::OnDodgeFinished()
 {
+	// A short window after the dodge turns the next attack into a dash attack.
+	if (UDBAbilitySystemComponent* ASC = GetDBAbilitySystem())
+	{
+		ASC->AddTimedLooseTag(DBTags::State_DodgeRecovery, DashAttackWindowSeconds);
+	}
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
@@ -276,6 +285,10 @@ void UDBAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	ApplyPush(this, TEXT("Knockback"), Away, Knockback * Character->GetKnockbackScale(), FMath::Min(0.25f, Seconds));
 	PlayOptionalMontage(Montage);
 	UE_LOG(LogDBCombat, Log, TEXT("%s reacts: %hs (%.1f s)"), *DBCombat::GetCombatName(Character), R::ToString(Reaction), Seconds);
+	if (HasAuthority(&ActivationInfo))
+	{
+		GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(DBTags::GameplayCue_Combat_Stagger);
+	}
 
 	if (UAbilityTask_WaitDelay* Wait = UAbilityTask_WaitDelay::WaitDelay(this, Seconds))
 	{
@@ -294,11 +307,47 @@ void UDBAbility_HitReact::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 {
 	if (bAddedKnockdownTag)
 	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		if (UDBAbilitySystemComponent* ASC = GetDBAbilitySystem())
 		{
 			ASC->RemoveLooseGameplayTag(DBTags::State_KnockedDown);
+			// Getting up is briefly invulnerable, so a knockdown cannot be chained forever.
+			if (!bWasCancelled && GetUpInvulnerableSeconds > 0.f)
+			{
+				ASC->AddTimedLooseTag(DBTags::State_Invulnerable, GetUpInvulnerableSeconds);
+			}
 		}
 		bAddedKnockdownTag = false;
+	}
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+// ---- Double jump (passive unlock) ----------------------------------------------------------------
+
+UDBAbility_DoubleJump::UDBAbility_DoubleJump()
+{
+	ActivationPolicy = EDBAbilityActivationPolicy::OnSpawn;
+	// The server owns unlocks. A server-triggered LocalPredicted activation fails for remote clients whose
+	// ability list has not replicated yet, so activate on the server only and replicate the tag instead.
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
+	// Passive: stays active (also while dead) so the unlock survives death and respawn.
+	ActivationBlockedTags.RemoveTag(DBTags::State_Dead);
+}
+
+void UDBAbility_DoubleJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	// Intentionally never ends; the replicated tag raises the jump count on server and owning client
+	// (character movement predicts jumps on the client, so it must know about the unlock too).
+	CommitAbility(Handle, ActorInfo, ActivationInfo);
+	ActorInfo->AbilitySystemComponent->AddLooseGameplayTag(DBTags::Movement_DoubleJump, 1, EGameplayTagReplicationState::TagOnly);
+}
+
+void UDBAbility_DoubleJump::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(DBTags::Movement_DoubleJump, 1, EGameplayTagReplicationState::TagOnly);
 	}
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

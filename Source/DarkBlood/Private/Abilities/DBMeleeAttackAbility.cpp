@@ -1,6 +1,7 @@
 #include "Abilities/DBMeleeAttackAbility.h"
 
 #include "AbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Abilities/Tasks/AbilityTask_WaitInputRelease.h"
 #include "Character/DBCharacterBase.h"
@@ -10,6 +11,8 @@
 #include "DarkBlood.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/RootMotionSource.h"
 #include "TimerManager.h"
 
 namespace R = DarkBlood::Rules;
@@ -46,7 +49,75 @@ UDBMeleeAttackAbility::UDBMeleeAttackAbility()
 
 const FDBAttackStepConfig* UDBMeleeAttackAbility::GetCurrentStep() const
 {
+	switch (Context)
+	{
+	case EDBAttackContext::Air: return &AirAttack;
+	case EDBAttackContext::Sprint: return &SprintAttack;
+	case EDBAttackContext::Dash: return &DashAttack;
+	case EDBAttackContext::Combo: break;
+	}
 	return Steps.IsValidIndex(CurrentStep) ? &Steps[CurrentStep] : nullptr;
+}
+
+void UDBMeleeAttackAbility::PreActivate(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate,
+	const FGameplayEventData* TriggerEventData)
+{
+	const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	bWasSprinting = ASC && ASC->HasMatchingGameplayTag(DBTags::State_Sprinting);
+	Super::PreActivate(Handle, ActorInfo, ActivationInfo, OnGameplayAbilityEndedDelegate, TriggerEventData);
+}
+
+EDBAttackContext UDBMeleeAttackAbility::ChooseContext() const
+{
+	const ADBCharacterBase* Self = GetDBCharacter();
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (bHasAirAttack && Self && Self->GetCharacterMovement()->IsFalling())
+	{
+		return EDBAttackContext::Air;
+	}
+	if (bHasSprintAttack && bWasSprinting)
+	{
+		return EDBAttackContext::Sprint;
+	}
+	if (bHasDashAttack && ASC && ASC->HasMatchingGameplayTag(DBTags::State_DodgeRecovery))
+	{
+		return EDBAttackContext::Dash;
+	}
+	return EDBAttackContext::Combo;
+}
+
+void UDBMeleeAttackAbility::ApplyContextMovement(const FDBAttackStepConfig& Step)
+{
+	const ADBCharacterBase* Self = GetDBCharacter();
+	if (!Self || Context == EDBAttackContext::Combo || Step.WindupSeconds <= 0.f)
+	{
+		return;
+	}
+	FVector Direction = Self->GetActorForwardVector();
+	float Speed = 0.f;
+	switch (Context)
+	{
+	case EDBAttackContext::Air:
+		Direction = FVector::DownVector;
+		Speed = AirPlungeSpeed;
+		break;
+	case EDBAttackContext::Sprint:
+		Speed = SprintLungeDistance / Step.WindupSeconds;
+		break;
+	case EDBAttackContext::Dash:
+		Speed = DashLungeDistance / Step.WindupSeconds;
+		break;
+	case EDBAttackContext::Combo:
+		break;
+	}
+	UAbilityTask_ApplyRootMotionConstantForce* Task = UAbilityTask_ApplyRootMotionConstantForce::ApplyRootMotionConstantForce(this,
+		TEXT("AttackMovement"), Direction, Speed, Step.WindupSeconds, false, nullptr, ERootMotionFinishVelocityMode::ClampVelocity,
+		FVector::ZeroVector, 100.f, Context != EDBAttackContext::Air);
+	if (Task)
+	{
+		Task->ReadyForActivation();
+	}
 }
 
 float UDBMeleeAttackAbility::GetStaminaCost() const
@@ -64,9 +135,11 @@ void UDBMeleeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 
-	// Continue the chain if this press came inside the previous hit's combo window.
+	// Situational attacks take precedence; otherwise continue the chain if this press came inside
+	// the previous hit's combo window.
+	Context = ChooseContext();
 	const double Now = GetWorld()->GetTimeSeconds();
-	CurrentStep = Steps.IsValidIndex(LastHitStep)
+	CurrentStep = Context == EDBAttackContext::Combo && Steps.IsValidIndex(LastHitStep)
 		? R::NextComboStep(LastHitStep, Steps.Num(), static_cast<float>(Now - LastHitWorldTime), Steps[LastHitStep].ComboWindowSeconds)
 		: 0;
 	bNextStepQueued = false;
@@ -81,7 +154,7 @@ void UDBMeleeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	}
 	FaceTarget();
 
-	if (!bChargeable)
+	if (!bChargeable || Context != EDBAttackContext::Combo)
 	{
 		BeginSwing();
 		return;
@@ -135,6 +208,7 @@ void UDBMeleeAttackAbility::BeginSwing()
 
 	const FDBAttackStepConfig* Step = GetCurrentStep();
 	PlayOptionalMontage(Step->Montage);
+	ApplyContextMovement(*Step);
 	if (UAbilityTask_WaitDelay* Windup = UAbilityTask_WaitDelay::WaitDelay(this, Step->WindupSeconds))
 	{
 		Windup->OnFinish.AddDynamic(this, &UDBMeleeAttackAbility::OnWindupFinished);
@@ -145,7 +219,8 @@ void UDBMeleeAttackAbility::BeginSwing()
 void UDBMeleeAttackAbility::OnWindupFinished()
 {
 	const FDBAttackStepConfig* Step = GetCurrentStep();
-	LastHitStep = CurrentStep;
+	// Situational attacks do not feed the combo chain.
+	LastHitStep = Context == EDBAttackContext::Combo ? CurrentStep : INDEX_NONE;
 	LastHitWorldTime = GetWorld()->GetTimeSeconds();
 	if (HasAuthority(&CurrentActivationInfo))
 	{
@@ -242,8 +317,8 @@ void UDBMeleeAttackAbility::PerformHit()
 		SourceASC->SetLooseGameplayTagCount(DBTags::State_CounterWindow, 0);
 	}
 
-	UE_LOG(LogDBCombat, Log, TEXT("%s: %s step %d/%d%s%s"), *DBCombat::GetCombatName(Self), *GetClass()->GetName(), CurrentStep + 1,
-		Steps.Num(), Charge.bCharged ? *FString::Printf(TEXT(" charged %.0f%%"), Charge.ChargeFraction * 100.f) : TEXT(""),
+	UE_LOG(LogDBCombat, Log, TEXT("%s: %s %s step %d/%d%s%s"), *DBCombat::GetCombatName(Self), *GetClass()->GetName(),
+		*StaticEnum<EDBAttackContext>()->GetNameStringByValue(static_cast<int64>(Context)), CurrentStep + 1, Steps.Num(), Charge.bCharged ? *FString::Printf(TEXT(" charged %.0f%%"), Charge.ChargeFraction * 100.f) : TEXT(""),
 		bCounter ? TEXT(" COUNTER") : TEXT(""));
 
 	const FVector Origin = Self->GetActorLocation();
@@ -304,6 +379,16 @@ UDBAbility_LightCombo::UDBAbility_LightCombo()
 		MakeStep(12.f, 9.f, 14.f, 0.20f, 0.12f, 0.32f),
 		MakeStep(18.f, 14.f, 26.f, 0.28f, 0.15f, 0.45f, 220.f, 75.f),
 	};
+
+	// Plunge from the air: hits everything around the landing spot and knocks down.
+	bHasAirAttack = true;
+	AirAttack = MakeStep(20.f, 12.f, 30.f, 0.3f, 0.1f, 0.45f, 230.f, 180.f, true);
+	// Lunge out of a sprint.
+	bHasSprintAttack = true;
+	SprintAttack = MakeStep(22.f, 14.f, 28.f, 0.25f, 0.12f, 0.5f, 230.f, 50.f);
+	// Quick thrust right after a dodge.
+	bHasDashAttack = true;
+	DashAttack = MakeStep(16.f, 10.f, 18.f, 0.12f, 0.1f, 0.35f, 220.f, 45.f);
 }
 
 UDBAbility_HeavyAttack::UDBAbility_HeavyAttack()

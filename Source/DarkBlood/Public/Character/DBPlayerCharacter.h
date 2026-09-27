@@ -40,6 +40,8 @@ public:
 
 protected:
 	void InitAbilityActorInfo();
+	void OnDoubleJumpTagChanged(const FGameplayTag Tag, int32 NewCount);
+	virtual void OnJumped_Implementation() override;
 	void RefreshNameplate();
 
 	UFUNCTION()

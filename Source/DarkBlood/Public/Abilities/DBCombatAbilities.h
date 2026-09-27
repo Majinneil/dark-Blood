@@ -64,6 +64,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Dodge", meta = (ClampMin = 0, Units = "s"))
 	float InvulnerableSeconds = 0.3f;
 
+	/** After the dodge, an attack within this window becomes a dash attack. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Dodge", meta = (ClampMin = 0, Units = "s"))
+	float DashAttackWindowSeconds = 0.35f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Presentation")
 	TObjectPtr<UAnimMontage> DodgeMontage = nullptr;
 };
@@ -135,6 +139,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Knockback", meta = (Units = "cm"))
 	float ParriedKnockback = 60.f;
 
+	/** Invulnerability while getting up after a knockdown. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Knockback", meta = (ClampMin = 0, Units = "s"))
+	float GetUpInvulnerableSeconds = 0.4f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Presentation")
 	TObjectPtr<UAnimMontage> StaggerMontage = nullptr;
 
@@ -146,4 +154,22 @@ protected:
 
 private:
 	bool bAddedKnockdownTag = false;
+};
+
+/**
+ * Passive unlock: while granted, the character can jump twice. Granted by a skill node or ability set
+ * (the development moveset grants it so it can be tested).
+ */
+UCLASS()
+class DARKBLOOD_API UDBAbility_DoubleJump : public UDBGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UDBAbility_DoubleJump();
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 };

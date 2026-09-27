@@ -43,6 +43,8 @@ public:
 	UFUNCTION(Exec) void DBDummyAutoAttack(float Interval);
 	/** Local: presses an ability input (e.g. LightAttack, HeavyAttack, Dodge, Block, Sprint) and releases it after HoldSeconds. */
 	UFUNCTION(Exec) void DBInput(const FString& Input, float HoldSeconds = 0.05f);
+	/** Local: presses jump (like the jump button); logs the jump count. */
+	UFUNCTION(Exec) void DBJump();
 	/** Local: toggles the target lock (like the lock-on button). */
 	UFUNCTION(Exec) void DBLockOn();
 	/** Local: runs Command after Seconds (scripted tests: -ExecCmds="DBAfter 2 DBInput LightAttack"). */

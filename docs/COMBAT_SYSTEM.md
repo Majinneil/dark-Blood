@@ -1,6 +1,6 @@
 # Kampfsystem
 
-**Status:** Phase 2 (Vertical Slice) 🟡 – spielbar mit Platzhalterkörpern, headless getestet; Animationen/VFX fehlen.
+**Status:** Phase 2 (Vertical Slice) ✅ Gameplay – spielbar mit Platzhalterkörpern, headless und im Koop getestet. Präsentation (Animationen, VFX, Audio) fehlt: braucht Assets; die Anschlüsse (Montage-Felder, GameplayCues) sind vorhanden.
 
 ## Schadensmodell (implementiert)
 
@@ -42,6 +42,11 @@ Timing kommt aus Daten (Windup → Treffer → Recovery), nicht aus Animationen;
 | Block / Perfect Parry / Konter | `UDBAbility_Block` | Parierfenster 0,15 s; Parade → Angreifer `ParriedStagger`, Verteidiger 1 s Konterfenster (×2 Schaden, ×3 Poise); Angriff aus dem Block senkt die Deckung |
 | Ausweichen | `UDBAbility_Dodge` | 450 cm in 0,4 s (Eingaberichtung, sonst Rückschritt), 0,3 s i-Frames, 20 Ausdauer |
 | Sprint | `UDBAbility_Sprint` | ×1,6 Tempo, 12 Ausdauer/s in Bewegung |
+| Luftangriff | `UDBAbility_LightCombo` (Kontext *Air*) | in der Luft: Sturz nach unten (1800 cm/s), 20 Schaden rundum (180°), Knockdown |
+| Sprint-Angriff | Kontext *Sprint* | aus dem Sprint: Ausfallschritt 350 cm, 22 Schaden, 28 Poise |
+| Dash-Angriff | Kontext *Dash* | bis 0,35 s nach dem Ausweichen: schneller Stoß 200 cm, 16 Schaden |
+| Doppelsprung | `UDBAbility_DoubleJump` (passiv) | `Movement.DoubleJump` (repliziertes Tag) → `JumpMaxCount = 2`; DEV-Moveset schaltet ihn frei, später Skilltree |
+| Aufstehen | `UDBAbility_HitReact` | nach Knockdown 0,4 s unverwundbar (kein Dauer-Knockdown) |
 | Trefferreaktion | `UDBAbility_HitReact` | Event `Event.Combat.HitReact`; Stagger 0,6 s, Knockdown 1,6 s, Parried 1,0 s + Rückstoß |
 | Lock-On | `UDBLockOnComponent` | Kegel 45°, 20 m, Sichtlinie; Strafing; Zielwechsel per Maus-/Stick-Flick; Server erhält nur Hinweis |
 | Trainingsgegner | `ADBTrainingDummy` (`ADBEnemyCharacter`) | 60 HP, 30 Poise, 20 XP, `Kill TrainingDummy`, Respawn nach 3 s, telegrafierter Schlag (0,8 s Windup), verankert (kein Rückstoß) |
@@ -53,13 +58,17 @@ letzten Poise-Schaden wieder auf. Ausdauer 0 beim Blocken → Guard Break (Stagg
 **Ausdauer:** Aktion startet mit jeder positiven Ausdauer (`Rules::CanStartStaminaAction`); Regeneration pausiert
 1 s nach Verbrauch sowie während Sprint und Block (Tag-Bedingungen im `UDBRegenerationEffect`).
 
-**Offen:** Animationen/Montages, VFX/Audio (GameplayCues), Doppelsprung, Sprint-/Dash-/Sprung-/Luftangriffe,
-Get-up-Animation, KI mit Navigation/StateTree (aktuelle KI steuert direkt, ohne NavMesh), Client-Vorhersage von
-Trefferfeedback.
+**GameplayCues** (Präsentations-Anschlüsse, ohne Notify-Assets wirkungslos): `GameplayCue.Combat.Hit`, `.Blocked`,
+`.Parried` (Ziel des Treffers), `.Stagger`, `.Dodge`. Notifies gehören nach `/Game/DarkBlood/GameplayCues`
+(`DefaultGame.ini`).
+
+**Offen (braucht Assets bzw. spätere Phasen):** Animationen/Montages und Get-up-Animation, VFX/Audio als
+GameplayCue-Notifies, KI mit Navigation/StateTree (aktuelle KI steuert direkt, ohne NavMesh), Client-Vorhersage von
+Trefferfeedback, Balancing mit echten Klassen-Kits (Phase 4).
 
 ### Test-Kommandos
 
-`DBSpawnDummy [cm]`, `DBSpawnEnemy [cm]`, `DBDummyAttack`, `DBDummyAutoAttack <s>`, `DBInput <LightAttack|HeavyAttack|Dodge|Block|Sprint> [Halten s]`,
+`DBSpawnDummy [cm]`, `DBSpawnEnemy [cm]`, `DBJump`, `DBDummyAttack`, `DBDummyAutoAttack <s>`, `DBInput <LightAttack|HeavyAttack|Dodge|Block|Sprint> [Halten s]`,
 `DBLockOn`, `DBAfter <s> <Kommando>`, `DBDumpCombat`. Beispiel (headless, Karte mit Boden):
 
 Koop-Tests: Server mit `?listen` und `-DBCheats`, Client mit `-DBAutoExec="DBAfter 3 DBSpawnDummy 180|DBAfter 5 DBInput LightAttack|…"`

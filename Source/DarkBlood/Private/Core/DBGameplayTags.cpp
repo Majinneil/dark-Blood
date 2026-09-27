@@ -31,6 +31,16 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_StaminaRegenDelay, "State.StaminaRegenDelay", "Stamina was just spent; regeneration paused.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_PoiseRecoverDelay, "State.PoiseRecoverDelay", "Poise was just damaged; recovery paused.");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_DodgeRecovery, "State.DodgeRecovery", "Just finished a dodge: an attack now is a dash attack.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Movement_DoubleJump, "Movement.DoubleJump", "Double jump unlocked.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Hit, "GameplayCue.Combat.Hit", "A hit dealt damage.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Blocked, "GameplayCue.Combat.Blocked", "A hit was blocked.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Parried, "GameplayCue.Combat.Parried", "A hit was perfectly parried.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Stagger, "GameplayCue.Combat.Stagger", "Poise broken / hit reaction.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Dodge, "GameplayCue.Combat.Dodge", "Dodge started.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack, "Ability.Attack", "Any attack.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack_Light, "Ability.Attack.Light", "Light attack / combo.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack_Heavy, "Ability.Attack.Heavy", "Heavy / charged attack.");
