@@ -9,9 +9,15 @@ Texturen und Modelle von [Poly Haven](https://polyhaven.com), Lizenz CC0 (https:
   reed_roof_04, japanese_stone_wall, mossy_rock, lichen_rock, rock_pitted_mossy, grey_stone_path, forest_leaves_04,
   rocky_trail_02, japanese_cedar_bark, sakura_bark, burned_ground_01
 - Modelle: tree_small_02, dead_tree_trunk_02, shrub_02, shrub_04, fern_02, moss_01, rock_moss_set_01,
-  rock_moss_set_02, boulder_01, tree_stump_01
+  rock_moss_set_02, boulder_01, tree_stump_01, island_tree_02, fir_sapling_medium
 
 CC0 verlangt keine Nennung; sie steht hier als Dank und zur Herkunftsdokumentation.
+
+## ambientCG (CC0)
+
+Materialien von [ambientCG](https://ambientcg.com), Lizenz CC0 (https://docs.ambientcg.com/license/), geladen über
+`Tools/UE58/ambientcg_fetch.py`: PaintedWood003, PaintedWood005, Paper001, Paper004, Fabric036, Fabric026, Fabric023,
+Metal009, Metal035, Bamboo002A.
 
 ## Unreal Engine
 

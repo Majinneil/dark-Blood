@@ -6,8 +6,9 @@ nach 18_CLAUDE_VISUAL_CHARACTER_TASK.md und 01_CLAUDE_MASTER_TASK.md. Technik: [
 **Kurzfassung:** Das komplette Fundament (Daten, Systeme, Materialsystem, modularer Baukasten, Vegetationsregeln,
 Licht, Visual Slice) ist gebaut und getestet. **Poly-Haven-CC0-Assets sind integriert** (17 Textursets, 10 Modelle:
 Laubbaum, toter Stamm, Büsche, Farne, Moos, Felsen, Findling, Baumstumpf). Die Welt hat damit echte Materialien und
-Vegetation. Es fehlen noch MetaHumans, Animationen, Kirsch-/Bambus-Modelle und Architektur-Module (Fab/Epic, vom
-Nutzer zu beziehen) – dafür sind die Slots vorbereitet; es muss nichts neu programmiert werden.
+Vegetation; dazu **ambientCG-CC0-Materialien** (Lackholz rot/schwarz, Shoji-/Laternenpapier, Leinen, rote/indigo Stoffe,
+Eisen, Bronze, Bambus), **Kirschbäume** (Inselbaum-Geometrie mit umgefärbten Blütenblättern) und **Tannen**. Es fehlen noch
+MetaHumans, Animationen und Architektur-Module (Fab/Epic, Konto nötig) – dafür sind die Slots vorbereitet; es muss nichts neu programmiert werden.
 
 ## ✅ Integriert
 
@@ -24,13 +25,13 @@ Nutzer zu beziehen) – dafür sind die Slots vorbereitet; es muss nichts neu pr
 | Licht | Tag, Dämmerung, Nacht, Dämonennacht: Sonne/Mond, Skylight, volumetrischer Nebel, Grading, Laternenlicht |
 | Visual Slice | Hauptstadt-Hof, Straße, Dorf mit Taverne und Innenraum, Wald, Bach mit Brücke, Dungeon-Eingang, Schrein |
 | Poly Haven (CC0) | Texturen: weathered_planks, hinoki_planks, old_planks_02, plastered_wall_02, clay_plaster, grey_roof_01, reed_roof_04, japanese_stone_wall, mossy_rock, lichen_rock, rock_pitted_mossy, grey_stone_path, forest_leaves_04, rocky_trail_02, japanese_cedar_bark, sakura_bark, burned_ground_01 (2K) → 22 Material-Instanzen; Modelle (1K, Nanite): tree_small_02, dead_tree_trunk_02, shrub_02/04, fern_02, moss_01, rock_moss_set_01/02, boulder_01, tree_stump_01 → Wald, Wegränder, Bachufer, Dungeon-Hügel |
-| Werkzeuge | Setup-Skripte, Material-Generator, Poly-Haven-Download + Import, Ordner-Setup, Audit (Paket + `DBVisualAudit`), `DBPerfSnapshot`, `DBView` |
+| ambientCG (CC0) | PaintedWood003/005, Paper001/004, Fabric036/026/023, Metal009, Metal035, Bamboo002A (2K) → 12 Instanzen; Poly Haven zusätzlich island_tree_02 (Wald + Kirschbaum mit `MI_DB_Foliage_Sakura_Leaves`), fir_sapling_medium (Bergwald) |
+| Werkzeuge | Setup-Skripte, Material-Generator, Poly-Haven- und ambientCG-Download + Import, Ordner-Setup, Audit (Paket + `DBVisualAudit`), `DBPerfSnapshot`, `DBView` |
 
 ## 🟡 Vorbereitet (Slot da, Inhalt fehlt)
 
 - Kit-Module (`DBBuildingKit`) – wartet auf echte Gebäudemodule (Fab-Torii/Laterne, eigene Blender-Module).
-- Kirschbäume, Glyzinie, Bambus, Nadelbäume: noch DEV-Stellvertreter (kein brauchbares CC0-Modell in vertretbarer Größe;
-  Poly-Haven-Fichte/-Kiefer sind 0,5–1 GB) → Fab/Megascans oder eigene Modelle in `Plants` eintragen.
+- Bambus: Halme aus Primitiven mit ambientCG-Bambustextur (kein CC0-Bambusmodell ohne Konto); Glyzinie fehlt.
 - MetaHuman-Profile (Hero/NPC/Crowd), Haar-/Bart-Teile, Haut-/Haar-/Augen-Parameter.
 - Eigene AnimBPs auf `UDBAnimInstance` (Motion Matching, Kampf-Locomotion, Fuß-IK, Motion Warping auf Ziele).
 - Landschaft (`M_DB_Landscape_Master`) – es gibt noch kein Landscape; die Hauptwelt kommt in Phase 6.
@@ -38,7 +39,7 @@ Nutzer zu beziehen) – dafür sind die Slots vorbereitet; es muss nichts neu pr
 
 ## ⬜ Fehlt wegen Asset
 
-Kirschbaum/Bambus/Nadelbaum-Modelle, Torii-/Laternen-/Statuen-Modelle, Dachziegel-Module, MetaHumans, Haare,
+Bambus-/Glyzinien-Modelle, Torii-/Laternen-/Statuen-Modelle, Dachziegel-Module, MetaHumans, Haare,
 Kleidung, Rüstungen, Waffen-Meshes, Katana-Animationen, Gesichtsanimation, VFX (Niagara), Wasser-Shader, HDRIs.
 Bis dahin: Baukasten-Bauteile mit echten Materialien + Engine-Mannequin (klar als DEV markiert).
 
@@ -98,7 +99,7 @@ Noch nicht gemessen: Texture-Pool/VRAM (keine Texturen), HLOD/World-Partition-St
 ## Nächste Schritte
 
 1. Fab-Free-Assets (Torii, Wandlaterne, Statuen, European Forest) → Kit-Module und Scatter-Einträge.
-2. Kirsch-/Bambus-/Nadelbaum-Modelle → `Plants` der Biome CherryGrove/ShrineGarden/Bamboo/MountainForest.
+2. Bambus-Modell (Megascans Giant Bamboo, NO-AI → manuell) → `Plants` des Bioms Bamboo.
 3. Game Animation Sample → AnimBP auf `UDBAnimInstance`, Set `AS_Player` statt Mannequin-DEV-Set.
 4. MetaHumans → Profile `CV_Player_TypeA/B`, `CV_NPC_King`, Crowd.
 5. Danach Abnahme nach 19_VISUAL_ACCEPTANCE_CHECKLIST.md und erst dann Phase 6 (Open World, NavMesh, Landscape).

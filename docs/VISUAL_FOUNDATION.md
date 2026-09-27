@@ -14,6 +14,7 @@ Gameplay liest nichts davon. Fehlt ein Asset, bleibt der Greybox-Ersatz stehen. 
 | Materialsystem neu erzeugen | `UnrealEditor-Cmd DarkBlood.uproject -run=pythonscript -script=Tools/UE58/db_create_material_foundation.py` | Master-Materialien + Instanzen (liegen bereits im Repo) |
 | Ordnerstruktur | `Tools/UE58/setup_darkblood_visual_folders.py` | `/Game/DarkBlood/...` laut Paket 06 |
 | Poly-Haven-Assets laden | `python Tools/UE58/polyhaven_fetch.py` | CC0-Texturen/-Modelle nach `SourceArt/PolyHaven` (nicht im Git) |
+| ambientCG-Materialien laden | `python Tools/UE58/ambientcg_fetch.py` | CC0-Materialien nach `SourceArt/AmbientCG` (nicht im Git) |
 | Poly-Haven importieren | `UnrealEditor-Cmd DarkBlood.uproject -run=pythonscript -script=Tools/UE58/db_import_polyhaven.py` | Texturen, Modelle (Nanite), Foliage-Materialien, Instanzen auf Texturweg – **nach** dem Material-Generator ausführen |
 | Asset-Audit (Editor) | `Tools/UE58/audit_visual_assets.py` | listet DEV/Platzhalter-Assets |
 
@@ -63,7 +64,8 @@ Emissive, Wind (Foliage). 40 Instanzen, z. B. `MI_DB_Wood_Weathered_Dark`, `MI_D
 
 Poly-Haven-Texturen sind eingebunden (Tabelle in VISUAL_FOUNDATION_STATUS.md). Neue Texturen: in der Instanz
 `UseTextures` an, `T_BaseColor/T_Normal/T_ORM` setzen, fertig – das ganze Viertel wechselt mit. Foliage-Master hat
-zusätzlich `T_Opacity`. Code greift nur über `EDBArtMaterial`-Slots zu (`UDBArtMaterialSubsystem`).
+zusätzlich `T_Opacity`. `TextureDesaturation` + `TextureTint` färben Texturen um (Kirschblüten aus grünem Laub),
+`SeparateRoughness` nimmt eine reine Rauheitskarte (ambientCG) statt ARM. Code greift nur über `EDBArtMaterial`-Slots zu (`UDBArtMaterialSubsystem`).
 
 ## Architektur
 

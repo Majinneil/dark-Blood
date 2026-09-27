@@ -56,6 +56,8 @@ namespace
 			{TEXT("DarkBlood/MI_DB_DarkBlood_Stone"), FLinearColor(0.1f, 0.085f, 0.085f)},
 			{TEXT("Instances/MI_DB_Bark_Cedar"), FLinearColor(0.12f, 0.08f, 0.06f)},
 			{TEXT("Instances/MI_DB_Bark_Sakura"), FLinearColor(0.14f, 0.09f, 0.08f)},
+			{TEXT("Instances/MI_DB_Bamboo"), FLinearColor(0.35f, 0.4f, 0.15f)},
+			{TEXT("Instances/MI_DB_Foliage_Sakura_Leaves"), FLinearColor(0.8f, 0.45f, 0.55f)},
 			{nullptr, FLinearColor(0.004f, 0.004f, 0.004f)},
 		};
 		static_assert(UE_ARRAY_COUNT(Infos) == static_cast<int32>(EDBArtMaterial::Count), "EDBArtMaterial and slot table out of sync");
@@ -66,7 +68,8 @@ namespace
 	const TArray<const TCHAR*>& GetMeshNames(EDBArtMeshSet Set)
 	{
 		static const TArray<const TCHAR*> Sets[] = {
-			{TEXT("tree_small_02/tree_small_02_1k/StaticMeshes/tree_small_02_1k")},
+			{TEXT("tree_small_02/tree_small_02_1k/StaticMeshes/tree_small_02_1k"), TEXT("tree_small_02/tree_small_02_1k/StaticMeshes/tree_small_02_1k"),
+				TEXT("island_tree_02/island_tree_02_1k/StaticMeshes/island_tree_02_1k")},
 			{TEXT("dead_tree_trunk_02/dead_tree_trunk_02_1k/StaticMeshes/dead_tree_trunk_02_1k")},
 			{TEXT("shrub_02/shrub_02_1k/StaticMeshes/shrub_02_a"), TEXT("shrub_02/shrub_02_1k/StaticMeshes/shrub_02_b"),
 				TEXT("shrub_02/shrub_02_1k/StaticMeshes/shrub_02_c"), TEXT("shrub_02/shrub_02_1k/StaticMeshes/shrub_02_d"),
@@ -91,6 +94,10 @@ namespace
 				TEXT("rock_moss_set_02/rock_moss_set_02_1k/StaticMeshes/rock_moss_set_02_rock13")},
 			{TEXT("boulder_01/boulder_01_1k/StaticMeshes/boulder_01_1k")},
 			{TEXT("tree_stump_01/tree_stump_01_1k/StaticMeshes/tree_stump_01_1k")},
+			{TEXT("island_tree_02/island_tree_02_1k/StaticMeshes/island_tree_02_1k")},
+			{TEXT("fir_sapling_medium/fir_sapling_medium_1k/StaticMeshes/fir_sapling_medium_a_LOD0"),
+				TEXT("fir_sapling_medium/fir_sapling_medium_1k/StaticMeshes/fir_sapling_medium_b_LOD0"),
+				TEXT("fir_sapling_medium/fir_sapling_medium_1k/StaticMeshes/fir_sapling_medium_c_LOD0")},
 		};
 		static_assert(UE_ARRAY_COUNT(Sets) == static_cast<int32>(EDBArtMeshSet::Count), "EDBArtMeshSet and mesh table out of sync");
 		return Sets[static_cast<int32>(Set)];

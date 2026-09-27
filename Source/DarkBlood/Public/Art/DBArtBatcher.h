@@ -38,12 +38,15 @@ public:
 	/** Authored kit mesh (keeps its own materials when Material is null). */
 	void Mesh(UStaticMesh* Mesh, UMaterialInterface* Material, const FTransform& LocalTransform);
 
+	/** Authored mesh with one material slot replaced (e.g. blossom leaves on a tree). */
+	void MeshWithSlot(UStaticMesh* Mesh, int32 Slot, UMaterialInterface* Material, const FTransform& LocalTransform);
+
 	int32 GetInstanceCount() const { return InstanceCount; }
 
 	static UStaticMesh* GetShapeMesh(EShape Shape);
 
 private:
-	UInstancedStaticMeshComponent* FindOrCreate(UStaticMesh* Mesh, UMaterialInterface* Material);
+	UInstancedStaticMeshComponent* FindOrCreate(UStaticMesh* Mesh, UMaterialInterface* Material, int32 Slot = 0);
 
 	AActor& Owner;
 	USceneComponent& Parent;

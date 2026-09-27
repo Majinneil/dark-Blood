@@ -100,7 +100,7 @@ for asset in sorted(os.listdir(model_dir)) if os.path.isdir(model_dir) else []:
         if isinstance(loaded, unreal.StaticMesh):
             settings = loaded.get_editor_property("nanite_settings")
             settings.set_editor_property("enabled", True)
-            if asset.startswith(("tree", "shrub", "fern", "moss")):
+            if asset.startswith(("tree", "island", "fir", "pine", "shrub", "fern", "moss")):
                 # Foliage cards: keep their area when Nanite simplifies, otherwise leaves vanish at distance.
                 settings.set_editor_property("shape_preservation", unreal.NaniteShapePreservation.PRESERVE_AREA)
             loaded.set_editor_property("nanite_settings", settings)
@@ -118,7 +118,10 @@ FOLIAGE = [
     ("shrub_02", "shrub_02", "shrub_02"),
     ("shrub_04", "shrub_04", "shrub_04"),
     ("fern_02", "fern_02", "fern_02"),
+    ("island_tree_02", "island_tree_02_leaves", "island_tree_02_leaves"),
+    ("fir_sapling_medium", "fir_sapling_medium_twigs", "fir_sapling_medium_twigs"),
 ]
+foliage_maps = {}
 foliage_master = unreal.load_asset("/Game/DarkBlood/Art/Materials/Master/M_DB_Foliage_Master")
 for asset, material_name, prefix in FOLIAGE:
     folder = os.path.join(model_dir, asset, "textures")
@@ -149,6 +152,7 @@ for asset, material_name, prefix in FOLIAGE:
     if len(maps) < 4:
         unreal.log_warning("DBPH foliage maps for %s incomplete (%s)" % (asset, ",".join(maps)))
         continue
+    foliage_maps[prefix] = maps
     name = "MI_DB_Foliage_" + prefix
     path = destination + "/" + name
     if library.does_asset_exist(path):
@@ -183,6 +187,59 @@ for asset, material_name, prefix in FOLIAGE:
             library.save_loaded_asset(mesh, False)
     log("foliage %s -> %s (%d slots)" % (asset, name, replaced))
 
+# ---- 2c. Cherry blossom leaves: the island tree's leaf cards recolored (no free CC0 cherry model exists) ------
+blossom = foliage_maps.get("island_tree_02_leaves")
+if blossom and foliage_master:
+    name = "MI_DB_Foliage_Sakura_Leaves"
+    path = INSTANCES + "/" + name
+    if library.does_asset_exist(path):
+        library.delete_asset(path)
+    instance = tools.create_asset(name, INSTANCES, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
+    mel.set_material_instance_parent(instance, foliage_master)
+    mel.set_material_instance_static_switch_parameter_value(instance, "UseTextures", True)
+    mel.set_material_instance_static_switch_parameter_value(instance, "WorldAligned", False)
+    mel.set_material_instance_texture_parameter_value(instance, "T_BaseColor", blossom["D"])
+    mel.set_material_instance_texture_parameter_value(instance, "T_Normal", blossom["N"])
+    mel.set_material_instance_texture_parameter_value(instance, "T_ORM", blossom["ARM"])
+    mel.set_material_instance_texture_parameter_value(instance, "T_Opacity", blossom["A"])
+    mel.set_material_instance_scalar_parameter_value(instance, "TextureDesaturation", 1.0)
+    mel.set_material_instance_vector_parameter_value(instance, "TextureTint", unreal.LinearColor(2.6, 1.25, 1.55, 1.0))
+    mel.set_material_instance_vector_parameter_value(instance, "SubsurfaceColor", unreal.LinearColor(0.6, 0.22, 0.3, 1.0))
+    mel.set_material_instance_scalar_parameter_value(instance, "MacroStrength", 0.25)
+    mel.set_material_instance_scalar_parameter_value(instance, "WindIntensity", 0.12)
+    mel.update_material_instance(instance)
+    library.save_loaded_asset(instance, False)
+    log("sakura leaves " + name)
+
+# ---- 2d. ambientCG materials (CC0) -------------------------------------------------------------------------
+ACG_SOURCE = os.path.join(PROJECT, "SourceArt", "AmbientCG")
+ACG_ROOT = "/Game/DarkBlood/Art/Textures/AmbientCG"
+for asset in sorted(os.listdir(ACG_SOURCE)) if os.path.isdir(ACG_SOURCE) else []:
+    folder = os.path.join(ACG_SOURCE, asset)
+    if not os.path.isdir(folder):
+        continue
+    maps = {}
+    for filename in sorted(os.listdir(folder)):
+        kind = "D" if "_diff_" in filename else "N" if "_nor_gl_" in filename else "ARM" if "_rough_" in filename else None
+        if kind is None:
+            continue
+        imported = [a for a in import_file(os.path.join(folder, filename), ACG_ROOT + "/" + asset, "T_%s_%s" % (asset, kind)) if isinstance(a, unreal.Texture2D)]
+        if not imported:
+            continue
+        texture = imported[0]
+        texture.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_WORLD)
+        if kind == "N":
+            texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
+            texture.set_editor_property("srgb", False)
+            texture.set_editor_property("flip_green_channel", True)
+        elif kind == "ARM":
+            texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT)
+            texture.set_editor_property("srgb", False)
+        library.save_loaded_asset(texture, False)
+        maps[kind] = texture
+    textures["acg:" + asset] = maps
+    log("ambientCG %s (%d maps)" % (asset, len(maps)))
+
 # ---- 3. Material instances -> texture path ---------------------------------------------------------------
 # instance, folder, poly haven id, world size (cm), texture tint, extra scalars
 ASSIGN = [
@@ -208,13 +265,25 @@ ASSIGN = [
     ("MI_DB_Bark_Sakura", INSTANCES, "sakura_bark", 140.0, (1.0, 1.0, 1.0), {}),
     ("MI_DB_DarkBlood_Soil", DARKBLOOD, "burned_ground_01", 380.0, (0.6, 0.5, 0.48), {}),
     ("MI_DB_DarkBlood_Stone", DARKBLOOD, "lichen_rock", 320.0, (0.3, 0.25, 0.25), {}),
+    # ambientCG (roughness map instead of packed ARM -> SeparateRoughness)
+    ("MI_DB_Wood_Lacquer_Red", INSTANCES, "acg:PaintedWood003", 160.0, (0.85, 0.42, 0.36), {}),
+    ("MI_DB_Wood_Lacquer_Black", INSTANCES, "acg:PaintedWood005", 160.0, (0.55, 0.52, 0.5), {}),
+    ("MI_DB_Paper_Shoji", INSTANCES, "acg:Paper001", 90.0, (0.95, 0.92, 0.84), {}),
+    ("MI_DB_Paper_Shoji_Lit", INSTANCES, "acg:Paper001", 90.0, (1.0, 0.92, 0.78), {}),
+    ("MI_DB_Lantern_Paper", INSTANCES, "acg:Paper004", 60.0, (1.0, 0.85, 0.65), {}),
+    ("MI_DB_Fabric_Linen", INSTANCES, "acg:Fabric036", 70.0, (1.0, 0.97, 0.9), {}),
+    ("MI_DB_Fabric_Crimson", INSTANCES, "acg:Fabric026", 70.0, (0.8, 0.55, 0.55), {}),
+    ("MI_DB_Fabric_Indigo", INSTANCES, "acg:Fabric023", 70.0, (0.6, 0.6, 0.8), {}),
+    ("MI_DB_Metal_Iron_Dark", INSTANCES, "acg:Metal009", 90.0, (0.3, 0.3, 0.3), {}),
+    ("MI_DB_Metal_Bronze", INSTANCES, "acg:Metal035", 60.0, (0.8, 0.65, 0.5), {}),
+    ("MI_DB_Bamboo", INSTANCES, "acg:Bamboo002A", 70.0, (0.42, 0.55, 0.3), {}),
 ]
 wood_master = unreal.load_asset("/Game/DarkBlood/Art/Materials/Master/M_DB_Wood_Master")
 for name, folder, asset, world_size, tint, scalars in ASSIGN:
     path = folder + "/" + name
     instance = unreal.load_asset(path)
     if instance is None:
-        # Bark instances are new; they derive from the wood master.
+        # Bark / bamboo instances are new; they derive from the wood master.
         instance = tools.create_asset(name, folder, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
         mel.set_material_instance_parent(instance, wood_master)
     maps = textures.get(asset)
@@ -223,6 +292,7 @@ for name, folder, asset, world_size, tint, scalars in ASSIGN:
         continue
     mel.set_material_instance_static_switch_parameter_value(instance, "UseTextures", True)
     mel.set_material_instance_static_switch_parameter_value(instance, "WorldAligned", True)
+    mel.set_material_instance_static_switch_parameter_value(instance, "SeparateRoughness", asset.startswith("acg:"))
     mel.set_material_instance_texture_parameter_value(instance, "T_BaseColor", maps["D"])
     mel.set_material_instance_texture_parameter_value(instance, "T_Normal", maps["N"])
     mel.set_material_instance_texture_parameter_value(instance, "T_ORM", maps["ARM"])

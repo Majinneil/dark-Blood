@@ -23,6 +23,9 @@ enum class EDBArtMeshSet : uint8
 	Rock,
 	Boulder,
 	Stump,
+	/** Blossoming cherry: island tree geometry with the sakura leaf material. */
+	SakuraTree,
+	Conifer,
 	Count UMETA(Hidden)
 };
 
@@ -77,6 +80,8 @@ enum class EDBArtMaterial : uint8
 	DarkBloodStone,
 	BarkCedar,
 	BarkSakura,
+	Bamboo,
+	FoliageSakuraLeaves,
 	Void,
 	Count UMETA(Hidden)
 };

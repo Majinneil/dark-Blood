@@ -47,6 +47,34 @@ namespace
 		return true;
 	}
 
+	/** Blossoming cherry: the island tree with its leaf slot switched to the sakura material. */
+	bool PlaceSakura(FDBArtBatcher& Batcher, FRandomStream& Random, const FVector& Location, float Scale)
+	{
+		UStaticMesh* Mesh = UDBArtMaterialSubsystem::PickMesh(EDBArtMeshSet::SakuraTree, Random);
+		UMaterialInterface* Blossom = UDBArtMaterialSubsystem::IsAuthored(EDBArtMaterial::FoliageSakuraLeaves)
+			? UDBArtMaterialSubsystem::Get(EDBArtMaterial::FoliageSakuraLeaves) : nullptr;
+		if (!Mesh || !Blossom)
+		{
+			return false;
+		}
+		int32 LeafSlot = INDEX_NONE;
+		const TArray<FStaticMaterial>& Slots = Mesh->GetStaticMaterials();
+		for (int32 Index = 0; Index < Slots.Num(); ++Index)
+		{
+			if (Slots[Index].MaterialSlotName.ToString().Contains(TEXT("leaves")))
+			{
+				LeafSlot = Index;
+			}
+		}
+		if (LeafSlot == INDEX_NONE)
+		{
+			return false;
+		}
+		Batcher.SetCollision(true);
+		Batcher.MeshWithSlot(Mesh, LeafSlot, Blossom, FTransform(FRotator(0.f, Random.FRandRange(0.f, 360.f), 0.f), Location, FVector(Scale)));
+		return true;
+	}
+
 	/** Authored mesh at its natural size times Scale. */
 	bool PlaceSetMeshScaled(FDBArtBatcher& Batcher, EDBArtMeshSet Set, FRandomStream& Random, const FVector& Location, float Scale, bool bCollision)
 	{
@@ -199,7 +227,7 @@ void ADBLantern::Build(FDBArtBatcher& Batcher)
 		Put(Batcher, EShape::Sphere, StoneMaterial, Identity, FVector(0.f, 0.f, 222.f), FVector(22.f, 22.f, 26.f));
 		if (bLit)
 		{
-			AddLight(FVector(0.f, 0.f, 151.f), 700.f, 600.f, Warm);
+			AddLight(FVector(0.f, 0.f, 175.f), 260.f, 550.f, Warm); // above the fire box: glow without blowing out the stone
 		}
 		return;
 	}
@@ -311,7 +339,7 @@ void ADBSplineDressing::Build(FDBArtBatcher& Batcher)
 			const FVector B = At(D1);
 			for (const float RailZ : {Height * 0.35f, Height * 0.8f})
 			{
-				Beam(Batcher, bBamboo ? M::WoodLight : M::WoodDark, Identity, A + FVector(0.f, 0.f, RailZ), B + FVector(0.f, 0.f, RailZ), 6.f, 8.f);
+				Beam(Batcher, bBamboo ? M::Bamboo : M::WoodDark, Identity, A + FVector(0.f, 0.f, RailZ), B + FVector(0.f, 0.f, RailZ), 6.f, 8.f);
 			}
 			if (bBamboo)
 			{
@@ -319,7 +347,7 @@ void ADBSplineDressing::Build(FDBArtBatcher& Batcher)
 				const FVector Dir = (B - A).GetSafeNormal();
 				for (float T = 8.f; T < (B - A).Size() - 4.f; T += 8.f)
 				{
-					Put(Batcher, EShape::Cylinder, M::WoodLight, Identity, A + Dir * T + FVector(0.f, 3.f, Height * 0.5f), FVector(6.f, 6.f, Height - Random.FRandRange(0.f, 12.f)));
+					Put(Batcher, EShape::Cylinder, M::Bamboo, Identity, A + Dir * T + FVector(0.f, 3.f, Height * 0.5f), FVector(6.f, 6.f, Height - Random.FRandRange(0.f, 12.f)));
 				}
 			}
 		}
@@ -581,9 +609,20 @@ void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Loca
 	// Imported CC0 meshes for the biome first (Poly Haven set); cherry and bamboo have no CC0 model yet.
 	switch (Biome)
 	{
+	case EDBBiome::CherryGrove:
+		if (PlaceSakura(Batcher, Random, Local, Scale * Random.FRandRange(0.85f, 1.2f)))
+		{
+			return;
+		}
+		break;
+	case EDBBiome::MountainForest:
+		if (PlaceSetMeshScaled(Batcher, EDBArtMeshSet::Conifer, Random, Local, Scale * Random.FRandRange(1.3f, 2.1f), true))
+		{
+			return;
+		}
+		[[fallthrough]];
 	case EDBBiome::TemperateForest:
 	case EDBBiome::WetForest:
-	case EDBBiome::MountainForest:
 	case EDBBiome::Roadside:
 		if (Biome != EDBBiome::WetForest && Random.FRand() < 0.08f && PlaceSetMeshScaled(Batcher, EDBArtMeshSet::DeadTree, Random, Local, Scale, true))
 		{
@@ -601,7 +640,7 @@ void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Loca
 		}
 		break;
 	case EDBBiome::ShrineGarden:
-		if (Random.FRand() < 0.35f && PlaceSetMeshScaled(Batcher, EDBArtMeshSet::Tree, Random, Local, Scale, true))
+		if (Random.FRand() < 0.7f ? PlaceSakura(Batcher, Random, Local, Scale) : PlaceSetMeshScaled(Batcher, EDBArtMeshSet::Tree, Random, Local, Scale, true))
 		{
 			return;
 		}
@@ -621,7 +660,7 @@ void ADBScatterVolume::PlaceDevPlant(FDBArtBatcher& Batcher, const FVector& Loca
 		{
 			const FVector Offset(Random.FRandRange(-60.f, 60.f), Random.FRandRange(-60.f, 60.f), 0.f);
 			const float Height = Random.FRandRange(700.f, 1100.f) * Scale;
-			Put(Batcher, EShape::Cylinder, M::FoliageLeaves, Identity, Local + Offset + FVector(0.f, 0.f, Height * 0.5f), FVector(9.f, 9.f, Height),
+			Put(Batcher, EShape::Cylinder, M::Bamboo, Identity, Local + Offset + FVector(0.f, 0.f, Height * 0.5f), FVector(9.f, 9.f, Height),
 				FRotator(Random.FRandRange(-4.f, 4.f), 0.f, Random.FRandRange(-4.f, 4.f)));
 		}
 		return;

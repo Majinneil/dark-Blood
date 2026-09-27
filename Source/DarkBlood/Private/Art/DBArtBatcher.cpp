@@ -29,9 +29,9 @@ UStaticMesh* FDBArtBatcher::GetShapeMesh(EShape Shape)
 	return Cached[Index].Get();
 }
 
-UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UMaterialInterface* Material)
+UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UMaterialInterface* Material, int32 Slot)
 {
-	const FString Key = FString::Printf(TEXT("%p|%p|%d"), Mesh, Material, bCollision ? 1 : 0);
+	const FString Key = FString::Printf(TEXT("%p|%p|%d|%d"), Mesh, Material, Slot, bCollision ? 1 : 0);
 	if (UInstancedStaticMeshComponent** Found = ByKey.Find(Key))
 	{
 		return *Found;
@@ -41,7 +41,7 @@ UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UM
 	Component->SetStaticMesh(Mesh);
 	if (Material)
 	{
-		Component->SetMaterial(0, Material);
+		Component->SetMaterial(Slot, Material);
 	}
 	Component->SetMobility(EComponentMobility::Static);
 	Component->SetCollisionEnabled(bCollision ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
@@ -69,6 +69,16 @@ void FDBArtBatcher::Mesh(UStaticMesh* InMesh, UMaterialInterface* Material, cons
 		return;
 	}
 	FindOrCreate(InMesh, Material)->AddInstance(LocalTransform, /*bWorldSpace*/ false);
+	++InstanceCount;
+}
+
+void FDBArtBatcher::MeshWithSlot(UStaticMesh* InMesh, int32 Slot, UMaterialInterface* Material, const FTransform& LocalTransform)
+{
+	if (!InMesh)
+	{
+		return;
+	}
+	FindOrCreate(InMesh, Material, Slot)->AddInstance(LocalTransform, /*bWorldSpace*/ false);
 	++InstanceCount;
 }
 

@@ -233,14 +233,21 @@ def build_surface_master(name, d):
     tex_color = g.switch("WorldAligned", False, "04 Textures", wa_color, uv_color, "XYZ Texture", "RGB")
     tex_orm = g.switch("WorldAligned", False, "04 Textures", wa_orm, uv_orm, "XYZ Texture", "RGB")
     tex_normal = g.switch("WorldAligned", False, "04 Textures", wa_normal_tangent, uv_normal, "", "RGB")
-    textured_color = g.mul(g.mul(tex_color, texture_tint), g.lerp(1.0, 0.72, macro_alpha))
-    textured_rough = g.mask(tex_orm, g=True)
+    # TextureDesaturation recolors a texture through TextureTint (e.g. green leaves -> cherry blossom).
+    desaturated = g.node(E.MaterialExpressionDesaturation)
+    g.link(tex_color, desaturated, "")
+    g.link(g.scalar("TextureDesaturation", 0.0, "04 Textures"), desaturated, "Fraction")
+    textured_color = g.mul(g.mul(desaturated, texture_tint), g.lerp(1.0, 0.72, macro_alpha))
+    # SeparateRoughness: T_ORM holds a plain roughness map (ambientCG) instead of packed AO/Rough/Metal (Poly Haven).
+    separate_rough = g.switch("SeparateRoughness", False, "04 Textures", g.mask(tex_orm, r=True), g.mask(tex_orm, g=True))
+    textured_rough = separate_rough
 
     flat_normal = g.node(E.MaterialExpressionConstant3Vector, constant=color(0, 0, 1))
     surface_color = g.switch("UseTextures", False, "04 Textures", textured_color, procedural_color)
     roughness = g.switch("UseTextures", False, "04 Textures", textured_rough, procedural_rough)
     normal = g.switch("UseTextures", False, "04 Textures", tex_normal, flat_normal)
-    ao = g.switch("UseTextures", False, "04 Textures", g.mask(tex_orm, r=True), g.node(E.MaterialExpressionConstant, r=1.0))
+    texture_ao = g.switch("SeparateRoughness", False, "04 Textures", g.node(E.MaterialExpressionConstant, r=1.0), g.mask(tex_orm, r=True))
+    ao = g.switch("UseTextures", False, "04 Textures", texture_ao, g.node(E.MaterialExpressionConstant, r=1.0))
 
     # --- dirt (cavity-like, from inverted detail) and moss on upward faces (world-aligned blend)
     dirt_amount = g.scalar("DirtAmount", d.get("dirt", 0.0), "05 Weathering")

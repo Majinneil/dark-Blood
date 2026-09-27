@@ -45,6 +45,8 @@ MODELS = [
     "tree_stump_01",
     "dead_tree_trunk_02",
     "tree_small_02",  # ~100 MB; fir_tree_01 / pine_tree_01 are 0.5-1 GB each and left out
+    "island_tree_02",  # gnarled old tree: forest variety and (with blossom leaves) the cherry tree
+    "fir_sapling_medium",  # young firs for mountain forests
 ]
 
 
