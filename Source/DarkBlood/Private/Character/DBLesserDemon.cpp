@@ -16,6 +16,7 @@ ADBLesserDemon::ADBLesserDemon(const FObjectInitializer& ObjectInitializer)
 	Armor = 20.f;
 	AttackPower = 5.f;
 	XpReward = 45;
+	LootTableId = TEXT("LT_LesserDemon");
 	AttackAbility = UDBAbility_DemonClaw::StaticClass();
 	RespawnSeconds = 6.f; // corpse lifetime
 

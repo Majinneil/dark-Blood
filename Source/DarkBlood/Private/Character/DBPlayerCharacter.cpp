@@ -214,13 +214,13 @@ void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 		Interaction->TryInteract();
 		return;
 	}
-	if (InputTag == DBTags::Input_UI_SkillTree)
+	if (InputTag == DBTags::Input_UI_SkillTree || InputTag == DBTags::Input_UI_Inventory)
 	{
 		if (const APlayerController* PC = GetController<APlayerController>())
 		{
 			if (ADBGameHUD* GameHUD = PC->GetHUD<ADBGameHUD>())
 			{
-				GameHUD->ToggleSkillTree();
+				InputTag == DBTags::Input_UI_SkillTree ? GameHUD->ToggleSkillTree() : GameHUD->ToggleInventory();
 			}
 		}
 		return;

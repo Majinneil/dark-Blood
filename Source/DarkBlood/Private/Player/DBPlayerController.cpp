@@ -276,3 +276,12 @@ void ADBPlayerController::ClientShowNotification_Implementation(const FText& Tex
 		GameHUD->ShowNotification(Text);
 	}
 }
+
+void ADBPlayerController::ClientOpenCrafting_Implementation(AActor* Station)
+{
+	UE_LOG(LogDarkBlood, Display, TEXT("Crafting opened: %s"), *GetNameSafe(Station));
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->ShowCrafting(Station);
+	}
+}

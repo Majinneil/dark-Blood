@@ -11,6 +11,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/DBPlayerState.h"
 
+#include "DarkBloodRules/Equipment.h"
+
 namespace R = DarkBlood::Rules;
 
 UDBProgressionComponent::UDBProgressionComponent()
@@ -127,24 +129,36 @@ void UDBProgressionComponent::RecalculateAttributes(bool bRestoreVitals)
 	}
 
 	const R::FPrimaryStats Primary = R::ComputePrimaryStats(ClassDefinition->GetGrowth(), State.Level);
-	// Equipment stat bonuses are added here in Phase 5.
 	const R::FDerivedStats Derived = R::ComputeDerivedStats(Primary, R::FDerivedStatFormula());
 
-	ASC->SetNumericAttributeBase(UDBAttributeSet::GetMaxHealthAttribute(), Derived.MaxHealth);
-	ASC->SetNumericAttributeBase(UDBAttributeSet::GetMaxStaminaAttribute(), Derived.MaxStamina);
-	ASC->SetNumericAttributeBase(UDBAttributeSet::GetMaxManaAttribute(), Derived.MaxMana);
+	// Equipment bonuses (broken items count nothing).
+	R::FItemStats Gear;
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	if (const UDBInventoryComponent* GearInventory = PlayerState->GetInventory(); GearInventory && Data)
+	{
+		Gear = R::ComputeEquipmentStats(GearInventory->GetRulesEquipment(), Data->GetItemCatalog());
+	}
+
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetMaxHealthAttribute(), Derived.MaxHealth + Gear.MaxHealth);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetMaxStaminaAttribute(), Derived.MaxStamina + Gear.MaxStamina);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetMaxManaAttribute(), Derived.MaxMana + Gear.MaxMana);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetArmorAttribute(), Gear.Armor);
+	for (int32 Index = 1; Index < static_cast<int32>(R::EDamageType::Count); ++Index)
+	{
+		ASC->SetNumericAttributeBase(UDBAttributeSet::GetResistanceAttribute(Index), Gear.Resistances[Index]);
+	}
 	ASC->SetNumericAttributeBase(UDBAttributeSet::GetHealthRegenAttribute(), Derived.HealthRegen);
 	ASC->SetNumericAttributeBase(UDBAttributeSet::GetStaminaRegenAttribute(), Derived.StaminaRegen);
 	ASC->SetNumericAttributeBase(UDBAttributeSet::GetManaRegenAttribute(), Derived.ManaRegen);
-	ASC->SetNumericAttributeBase(UDBAttributeSet::GetAttackPowerAttribute(), Derived.AttackPower);
-	ASC->SetNumericAttributeBase(UDBAttributeSet::GetSpellPowerAttribute(), Derived.SpellPower);
-	ASC->SetNumericAttributeBase(UDBAttributeSet::GetCritChanceAttribute(), Derived.CritChance);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetAttackPowerAttribute(), Derived.AttackPower + Gear.AttackPower);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetSpellPowerAttribute(), Derived.SpellPower + Gear.SpellPower);
+	ASC->SetNumericAttributeBase(UDBAttributeSet::GetCritChanceAttribute(), Derived.CritChance + Gear.CritChance);
 
 	if (bRestoreVitals)
 	{
-		ASC->SetNumericAttributeBase(UDBAttributeSet::GetHealthAttribute(), Derived.MaxHealth);
-		ASC->SetNumericAttributeBase(UDBAttributeSet::GetStaminaAttribute(), Derived.MaxStamina);
-		ASC->SetNumericAttributeBase(UDBAttributeSet::GetManaAttribute(), Derived.MaxMana);
+		ASC->SetNumericAttributeBase(UDBAttributeSet::GetHealthAttribute(), Derived.MaxHealth + Gear.MaxHealth);
+		ASC->SetNumericAttributeBase(UDBAttributeSet::GetStaminaAttribute(), Derived.MaxStamina + Gear.MaxStamina);
+		ASC->SetNumericAttributeBase(UDBAttributeSet::GetManaAttribute(), Derived.MaxMana + Gear.MaxMana);
 	}
 
 	if (const UDBInventoryComponent* Inventory = PlayerState->GetInventory())

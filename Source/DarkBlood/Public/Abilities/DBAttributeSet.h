@@ -49,6 +49,16 @@ public:
 	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, Poise);
 	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, MaxPoise);
 	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, IncomingPoiseDamage);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistFire);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistFrost);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistLightning);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistShadow);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistPoison);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistSpirit);
+	DB_ATTRIBUTE_ACCESSORS(UDBAttributeSet, ResistDarkBlood);
+
+	/** Resistance attribute for a damage type (invalid for physical). */
+	static FGameplayAttribute GetResistanceAttribute(int32 DamageTypeIndex);
 
 	/** Seconds without poise damage before poise refills (rules core value). */
 	static float GetPoiseRecoverDelaySeconds();
@@ -69,6 +79,14 @@ protected:
 	UFUNCTION() void OnRep_Armor(const FGameplayAttributeData& OldValue);
 	UFUNCTION() void OnRep_Poise(const FGameplayAttributeData& OldValue);
 	UFUNCTION() void OnRep_MaxPoise(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistFire(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistFrost(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistLightning(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistShadow(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistPoison(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistSpirit(const FGameplayAttributeData& OldValue);
+	UFUNCTION() void OnRep_ResistDarkBlood(const FGameplayAttributeData& OldValue);
+
 
 private:
 	void ClampToMax(const FGameplayAttribute& Attribute, float& NewValue) const;
@@ -128,6 +146,23 @@ private:
 	/** Meta attribute written by the damage execution. Not replicated. */
 	UPROPERTY(BlueprintReadOnly, Category = "Meta", meta = (AllowPrivateAccess = true))
 	FGameplayAttributeData IncomingPoiseDamage;
+
+	// Elemental resistances (fractions, from gear and effects); physical damage uses Armor.
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistFire, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistFire;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistFrost, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistFrost;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistLightning, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistLightning;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistShadow, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistShadow;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistPoison, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistPoison;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistSpirit, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistSpirit;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ResistDarkBlood, Category = "Resistances", meta = (AllowPrivateAccess = true))
+	FGameplayAttributeData ResistDarkBlood;
+
 
 	bool bOutOfHealth = false;
 };

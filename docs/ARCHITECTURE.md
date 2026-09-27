@@ -122,6 +122,9 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBDialogueChoose <n>` | Dialogoption wählen (lokal) |
 | `DBCreateCharacter <Klasse> <Name>` | Charaktererstellung abschließen (lokal) |
 | `DBUnlockSkill <Knoten>` | Skilltree-Knoten lernen (normale Regeln) |
+| `DBUse <Item>`, `DBEquipById <Item>` | Verbrauchsgut benutzen / Ausrüstung anlegen |
+| `DBCraft <Rezept>`, `DBRepair` | An der nächsten Station herstellen / reparieren |
+| `DBGrantLoot <Tabelle>` | Beutetabelle für den Spieler würfeln |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
 Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),

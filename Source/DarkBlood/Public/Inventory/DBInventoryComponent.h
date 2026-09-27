@@ -8,6 +8,7 @@
 #include "Core/DBTypes.h"
 #include "Net/Serialization/FastArraySerializer.h"
 
+#include "DarkBloodRules/Crafting.h"
 #include "DarkBloodRules/Equipment.h"
 
 #include "DBInventoryComponent.generated.h"
@@ -136,6 +137,12 @@ public:
 	/** Applies the moderate death penalty. Inventory items are never lost. Returns the currency lost. */
 	int64 ApplyDeathPenalty();
 
+	/** Server: rolls a loot table for this player and delivers it (full bags -> pending deliveries). */
+	void GrantLootTable(FName LootTableId, const FString& SourceName);
+
+	/** Server: delivers already rolled loot and tells the player what they got. */
+	void GrantLoot(const DarkBlood::Rules::FLootResult& Loot, const FString& SourceName);
+
 	void RestoreFromRecord(const DarkBlood::Rules::FInventory& InInventory, const DarkBlood::Rules::FEquipment& InEquipment, int64 InCurrency,
 		const std::vector<DarkBlood::Rules::FItemStack>& InPendingDeliveries);
 	const std::vector<DarkBlood::Rules::FItemStack>& GetPendingDeliveries() const { return PendingDeliveries; }
@@ -160,6 +167,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Inventory")
 	void RequestUnequipItem(EDBEquipSlot Slot) { ServerUnequipItem(Slot); }
 
+	/** Eat / drink a consumable. */
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Inventory")
+	void RequestUseItem(FDBSlotRef Slot) { ServerUseItem(Slot); }
+
+	/** Craft at a station (the server checks distance and station id). */
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Inventory")
+	void RequestCraft(FName RecipeId, AActor* Station) { ServerCraft(RecipeId, Station); }
+
+	/** Repair all equipped gear at a station (as far as the Mon last). */
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Inventory")
+	void RequestRepairAll(AActor* Station) { ServerRepairAll(Station); }
+
 	// ---- Replicated view ----------------------------------------------------------------------
 
 	UFUNCTION(BlueprintPure, Category = "Dark Blood|Inventory")
@@ -183,6 +202,9 @@ public:
 	/** Average item level of equipped gear (works on server and clients). */
 	float ComputeGearScore() const;
 
+	/** Player level (for recipe requirements). */
+	int32 GetOwnerLevel() const;
+
 	UPROPERTY(BlueprintAssignable, Category = "Dark Blood|Inventory")
 	FDBOnInventoryChanged OnInventoryChanged;
 
@@ -197,6 +219,14 @@ private:
 	UFUNCTION(Server, Reliable) void ServerUnequipBag(EDBBagKind Kind);
 	UFUNCTION(Server, Reliable) void ServerEquipItem(FDBSlotRef From, EDBEquipSlot Slot);
 	UFUNCTION(Server, Reliable) void ServerUnequipItem(EDBEquipSlot Slot);
+	UFUNCTION(Server, Reliable) void ServerUseItem(FDBSlotRef Slot);
+	UFUNCTION(Server, Reliable) void ServerCraft(FName RecipeId, AActor* Station);
+	UFUNCTION(Server, Reliable) void ServerRepairAll(AActor* Station);
+
+	/** Station id if Station is a crafting station within reach of the owner's pawn; None otherwise. */
+	FName ValidateStation(AActor* Station) const;
+	void NotifyOwner(const FText& Text) const;
+	void RecalculateOwnerStats() const;
 
 	UFUNCTION(Client, Reliable) void ClientRequestFailed(FName Operation, const FString& Reason);
 

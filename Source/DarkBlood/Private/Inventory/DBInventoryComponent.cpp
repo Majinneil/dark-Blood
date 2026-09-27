@@ -7,6 +7,15 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/DBPlayerState.h"
 #include "Player/DBProgressionComponent.h"
+#include "Abilities/DBCombatEffects.h"
+#include "AbilitySystemComponent.h"
+#include "Core/DBGameplayTags.h"
+#include "Data/DBEconomyDefinitions.h"
+#include "Data/DBItemDefinition.h"
+#include "Player/DBPlayerController.h"
+#include "World/DBEconomyActors.h"
+
+#include "DarkBloodRules/Crafting.h"
 
 namespace R = DarkBlood::Rules;
 
@@ -239,6 +248,7 @@ int64 UDBInventoryComponent::ApplyDeathPenalty()
 	}
 	const R::FDeathPenaltyResult Result = R::ApplyDeathPenalty(ServerCurrency, Equipment, *Catalog);
 	SyncReplicatedView();
+	RecalculateOwnerStats(); // a worn item may just have broken
 	return Result.CurrencyLost;
 }
 
@@ -439,4 +449,164 @@ float UDBInventoryComponent::ComputeGearScore() const
 		View.GetMutable(static_cast<R::EEquipSlot>(SlotIndex)) = DBBridge::MakeStack(Equipped[SlotIndex].ItemId, Equipped[SlotIndex].Count);
 	}
 	return View.ComputeGearScore(*Catalog);
+}
+
+// ---- Economy (Phase 5) -------------------------------------------------------------------------
+
+int32 UDBInventoryComponent::GetOwnerLevel() const
+{
+	const ADBPlayerState* PlayerState = Cast<ADBPlayerState>(GetOwner());
+	return PlayerState && PlayerState->GetProgression() ? PlayerState->GetProgression()->GetLevel() : 1;
+}
+
+void UDBInventoryComponent::RecalculateOwnerStats() const
+{
+	if (const ADBPlayerState* PlayerState = Cast<ADBPlayerState>(GetOwner()))
+	{
+		if (UDBProgressionComponent* Progression = PlayerState->GetProgression())
+		{
+			Progression->RecalculateAttributes(false);
+		}
+	}
+}
+
+void UDBInventoryComponent::NotifyOwner(const FText& Text) const
+{
+	const ADBPlayerState* PlayerState = Cast<ADBPlayerState>(GetOwner());
+	if (ADBPlayerController* Controller = PlayerState ? Cast<ADBPlayerController>(PlayerState->GetOwner()) : nullptr)
+	{
+		Controller->ClientShowNotification(Text);
+	}
+}
+
+FName UDBInventoryComponent::ValidateStation(AActor* Station) const
+{
+	const ADBCraftingStation* Crafting = Cast<ADBCraftingStation>(Station);
+	const ADBPlayerState* PlayerState = Cast<ADBPlayerState>(GetOwner());
+	const APawn* Pawn = PlayerState ? PlayerState->GetPawn() : nullptr;
+	if (!Crafting || !Pawn || FVector::Dist2D(Pawn->GetActorLocation(), Crafting->GetActorLocation()) > 600.f)
+	{
+		return NAME_None;
+	}
+	return Crafting->GetStationId();
+}
+
+void UDBInventoryComponent::ServerUseItem_Implementation(FDBSlotRef Slot)
+{
+	const R::FItemCatalog* Catalog = GetCatalog();
+	const ADBPlayerState* PlayerState = Cast<ADBPlayerState>(GetOwner());
+	UAbilitySystemComponent* ASC = PlayerState ? PlayerState->GetAbilitySystemComponent() : nullptr;
+	if (!Catalog || !ASC)
+	{
+		return;
+	}
+	const R::FItemStack* Stack = Inventory.GetSlot(DBBridge::ToRules(Slot));
+	const FString ItemName = Stack ? FString(Stack->ItemId.c_str()) : FString();
+	const R::FConsumableEffect Effect = R::ConsumeItem(Inventory, *Catalog, DBBridge::ToRules(Slot));
+	if (Effect.IsEmpty())
+	{
+		ClientRequestFailed(TEXT("UseItem"), TEXT("NotConsumable"));
+		return;
+	}
+	auto Apply = [ASC](TSubclassOf<UGameplayEffect> EffectClass, const FGameplayTag& Tag, float Magnitude)
+	{
+		if (Magnitude > 0.f)
+		{
+			const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, 1.f, ASC->MakeEffectContext());
+			Spec.Data->SetSetByCallerMagnitude(Tag, Magnitude);
+			ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+		}
+	};
+	Apply(UDBHealEffect::StaticClass(), DBTags::SetByCaller_Magnitude, Effect.Heal);
+	Apply(UDBStaminaCostEffect::StaticClass(), DBTags::SetByCaller_StaminaCost, Effect.Stamina);
+	Apply(UDBManaChangeEffect::StaticClass(), DBTags::SetByCaller_Magnitude, Effect.Mana);
+	UE_LOG(LogDarkBlood, Log, TEXT("%s uses %s (heal %.0f, stamina %.0f, mana %.0f)"), *PlayerState->GetPlayerName(), *ItemName, Effect.Heal,
+		Effect.Stamina, Effect.Mana);
+	FinishRequest(TEXT("UseItem"), R::EInventoryResult::Ok, false);
+}
+
+void UDBInventoryComponent::ServerCraft_Implementation(FName RecipeId, AActor* Station)
+{
+	const R::FItemCatalog* Catalog = GetCatalog();
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	const UDBRecipeDefinition* Recipe = Data ? Data->FindRecipe(RecipeId) : nullptr;
+	if (!Catalog || !Recipe)
+	{
+		ClientRequestFailed(TEXT("Craft"), TEXT("InvalidRecipe"));
+		return;
+	}
+	const FName StationId = ValidateStation(Station);
+	const R::ECraftResult Result = R::Craft(Recipe->ToRules(), Inventory, ServerCurrency, *Catalog, GetOwnerLevel(),
+		StationId.IsNone() ? std::string() : DBBridge::ToStd(StationId), DBBridge::NewInstanceId());
+	if (Result != R::ECraftResult::Ok)
+	{
+		UE_LOG(LogDarkBlood, Log, TEXT("Craft %s refused: %hs"), *RecipeId.ToString(), R::ToString(Result));
+		ClientRequestFailed(TEXT("Craft"), FString(ANSI_TO_TCHAR(R::ToString(Result))));
+		return;
+	}
+	const UDBItemDefinition* Output = Data->FindItem(Recipe->OutputItemId);
+	UE_LOG(LogDarkBlood, Log, TEXT("Crafted %s"), *Recipe->OutputItemId.ToString());
+	NotifyOwner(FText::Format(NSLOCTEXT("DarkBlood", "Crafted", "Hergestellt: {0}"), Output ? Output->DisplayName : FText::FromName(Recipe->OutputItemId)));
+	FinishRequest(TEXT("Craft"), R::EInventoryResult::Ok, false);
+}
+
+void UDBInventoryComponent::ServerRepairAll_Implementation(AActor* Station)
+{
+	const R::FItemCatalog* Catalog = GetCatalog();
+	if (!Catalog || ValidateStation(Station).IsNone())
+	{
+		ClientRequestFailed(TEXT("Repair"), TEXT("WrongStation"));
+		return;
+	}
+	R::ECraftResult Result = R::ECraftResult::Ok;
+	const int64 Spent = R::RepairEquipment(Equipment, ServerCurrency, *Catalog, &Result);
+	if (Result != R::ECraftResult::Ok)
+	{
+		ClientRequestFailed(TEXT("Repair"), FString(ANSI_TO_TCHAR(R::ToString(Result))));
+		return;
+	}
+	UE_LOG(LogDarkBlood, Log, TEXT("Repaired gear for %lld Mon"), Spent);
+	NotifyOwner(FText::Format(NSLOCTEXT("DarkBlood", "Repaired", "Ausruestung repariert ({0} Mon)"), FText::AsNumber(Spent)));
+	FinishRequest(TEXT("Repair"), R::EInventoryResult::Ok, true);
+}
+
+void UDBInventoryComponent::GrantLootTable(FName LootTableId, const FString& SourceName)
+{
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	const UDBLootTableDefinition* Table = Data ? Data->FindLootTable(LootTableId) : nullptr;
+	if (!GetOwner()->HasAuthority() || !Table)
+	{
+		return;
+	}
+	R::FLootRandom Random((static_cast<uint64>(FMath::Rand()) << 32) ^ static_cast<uint64>(FPlatformTime::Cycles64()));
+	GrantLoot(R::RollLoot(Table->ToRules(), Random), SourceName);
+}
+
+void UDBInventoryComponent::GrantLoot(const R::FLootResult& Loot, const FString& SourceName)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	TArray<FString> Parts;
+	for (const R::FItemStack& Item : Loot.Items)
+	{
+		const FName ItemId = DBBridge::ToFName(Item.ItemId);
+		DeliverItem(ItemId, Item.Count);
+		const UDBItemDefinition* Definition = Data ? Data->FindItem(ItemId) : nullptr;
+		const FString Name = Definition ? Definition->DisplayName.ToString() : ItemId.ToString();
+		Parts.Add(Item.Count > 1 ? FString::Printf(TEXT("%dx %s"), Item.Count, *Name) : Name);
+	}
+	if (Loot.Currency > 0)
+	{
+		AddCurrency(Loot.Currency);
+		Parts.Add(FString::Printf(TEXT("%lld Mon"), Loot.Currency));
+	}
+	if (!Parts.IsEmpty())
+	{
+		const FString Text = FString::Printf(TEXT("Beute (%s): %s"), *SourceName, *FString::Join(Parts, TEXT(", ")));
+		UE_LOG(LogDarkBlood, Log, TEXT("%s"), *Text);
+		NotifyOwner(FText::FromString(Text));
+	}
 }

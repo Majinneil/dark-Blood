@@ -158,4 +158,20 @@ namespace DarkBlood::Rules
 		}
 		return Result;
 	}
+
+	FItemStats ComputeEquipmentStats(const FEquipment& Equipment, const FItemCatalog& Catalog)
+	{
+		FItemStats Total;
+		for (int32 Index = 1; Index < FEquipment::NumSlots; ++Index)
+		{
+			const FItemStack& Stack = Equipment.Get(static_cast<EEquipSlot>(Index));
+			const FItemDefinition* Definition = Stack.IsEmpty() ? nullptr : Catalog.Find(Stack.ItemId);
+			if (!Definition || (Definition->MaxDurability > 0 && Stack.Durability == 0))
+			{
+				continue;
+			}
+			Total += Definition->Stats;
+		}
+		return Total;
+	}
 }

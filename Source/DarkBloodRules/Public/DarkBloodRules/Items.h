@@ -1,6 +1,7 @@
 // DARK BLOOD - Rules Core: item definitions and item stacks.
 #pragma once
 
+#include "DarkBloodRules/Damage.h"
 #include "DarkBloodRules/RulesCore.h"
 
 #include <string>
@@ -79,6 +80,33 @@ namespace DarkBlood::Rules
 		FCategoryMask AcceptedCategories = AllCategories;
 	};
 
+	/** Stat bonuses of an equippable item (added to the character's derived stats). */
+	struct FItemStats
+	{
+		float AttackPower = 0.f;
+		float SpellPower = 0.f;
+		float Armor = 0.f;
+		float MaxHealth = 0.f;
+		float MaxStamina = 0.f;
+		float MaxMana = 0.f;
+		float CritChance = 0.f;
+		/** Fractional resistance per damage type (see FDefenseSnapshot). */
+		float Resistances[static_cast<int32>(EDamageType::Count)] = {};
+
+		DARKBLOODRULES_API FItemStats& operator+=(const FItemStats& Other);
+		DARKBLOODRULES_API bool IsZero() const;
+	};
+
+	/** What using a consumable does (applied by the server). */
+	struct FConsumableEffect
+	{
+		float Heal = 0.f;
+		float Stamina = 0.f;
+		float Mana = 0.f;
+
+		bool IsEmpty() const { return Heal <= 0.f && Stamina <= 0.f && Mana <= 0.f; }
+	};
+
 	struct FItemDefinition
 	{
 		std::string Id;
@@ -93,6 +121,10 @@ namespace DarkBlood::Rules
 		std::vector<std::string> AllowedClasses;
 		bool bIsBag = false;
 		FBagSpec Bag;
+		/** Base trade value in Mon (repair costs scale with it). */
+		int32 BaseValue = 0;
+		FItemStats Stats;
+		FConsumableEffect Consumable;
 	};
 
 	/** Lookup of item definitions. In UE this is filled from item data assets. */

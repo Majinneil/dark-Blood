@@ -27,4 +27,31 @@ namespace DarkBlood::Rules
 	{
 		return ItemId == Other.ItemId && InstanceId == 0 && Other.InstanceId == 0 && Durability == Other.Durability;
 	}
+
+	FItemStats& FItemStats::operator+=(const FItemStats& Other)
+	{
+		AttackPower += Other.AttackPower;
+		SpellPower += Other.SpellPower;
+		Armor += Other.Armor;
+		MaxHealth += Other.MaxHealth;
+		MaxStamina += Other.MaxStamina;
+		MaxMana += Other.MaxMana;
+		CritChance += Other.CritChance;
+		for (int32 Index = 0; Index < static_cast<int32>(EDamageType::Count); ++Index)
+		{
+			Resistances[Index] += Other.Resistances[Index];
+		}
+		return *this;
+	}
+
+	bool FItemStats::IsZero() const
+	{
+		bool bZero = AttackPower == 0.f && SpellPower == 0.f && Armor == 0.f && MaxHealth == 0.f && MaxStamina == 0.f && MaxMana == 0.f &&
+			CritChance == 0.f;
+		for (const float Resistance : Resistances)
+		{
+			bZero = bZero && Resistance == 0.f;
+		}
+		return bZero;
+	}
 }

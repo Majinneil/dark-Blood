@@ -31,6 +31,9 @@ namespace DarkBlood::Rules
 	/** True if an item authored for DefinitionSlot may be placed into TargetSlot. */
 	DARKBLOODRULES_API bool IsCompatibleEquipSlot(EEquipSlot DefinitionSlot, EEquipSlot TargetSlot);
 
+	/** Sum of the stat bonuses of all equipped items. Broken items (durability 0) contribute nothing. */
+	DARKBLOODRULES_API FItemStats ComputeEquipmentStats(const FEquipment& Equipment, const FItemCatalog& Catalog);
+
 	DARKBLOODRULES_API EInventoryResult CanEquip(const FItemDefinition& Definition, EEquipSlot TargetSlot, const FEquipContext& Context);
 
 	/** Moves one item from the inventory into an equipment slot; a previously equipped item goes back into the inventory. Atomic. */

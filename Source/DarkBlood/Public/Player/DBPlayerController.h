@@ -62,6 +62,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerInteract(AActor* Target);
 
+	/** Server -> client: open the crafting window of a station. */
+	UFUNCTION(Client, Reliable)
+	void ClientOpenCrafting(AActor* Station);
+
 	/** Server -> client: short on-screen message (quest started/completed ...). */
 	UFUNCTION(Client, Reliable)
 	void ClientShowNotification(const FText& Text);

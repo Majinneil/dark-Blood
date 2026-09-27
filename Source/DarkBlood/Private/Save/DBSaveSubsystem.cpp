@@ -2,6 +2,8 @@
 
 #include "Misc/App.h"
 
+#include "DarkBloodRules/Equipment.h"
+
 #include "Core/DBGameSettings.h"
 #include "Core/DBRulesBridge.h"
 #include "DarkBlood.h"
@@ -97,6 +99,20 @@ bool UDBSaveSubsystem::BuildNewCharacter(const FString& Name, FName ClassId, con
 				? DBBridge::MakeStack(Grant.ItemId, 1, DBBridge::NewInstanceId(), Item->MaxDurability)
 				: DBBridge::MakeStack(Grant.ItemId, Grant.Count);
 			Record.Inventory.Add(Catalog, Stack);
+		}
+	}
+
+	// Start with the class weapon (and any other starting gear) in hand instead of in the bag.
+	R::FEquipContext Context;
+	Context.CharacterLevel = 1;
+	Context.ClassId = DBBridge::ToStd(ClassId);
+	for (int32 Index = Record.Inventory.GetSection(R::FInventory::BasePouchSection).Capacity() - 1; Index >= 0; --Index)
+	{
+		const R::FItemStack* Stack = Record.Inventory.GetSlot({R::FInventory::BasePouchSection, Index});
+		const R::FItemDefinition* Item = Stack && !Stack->IsEmpty() ? Catalog.Find(Stack->ItemId) : nullptr;
+		if (Item && Item->EquipSlot != R::EEquipSlot::None && Record.Equipment.Get(Item->EquipSlot).IsEmpty())
+		{
+			R::EquipFromInventory(Record.Inventory, Record.Equipment, Catalog, {R::FInventory::BasePouchSection, Index}, Item->EquipSlot, Context);
 		}
 	}
 

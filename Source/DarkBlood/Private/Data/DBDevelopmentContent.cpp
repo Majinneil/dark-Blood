@@ -7,6 +7,7 @@
 #include "Core/DBGameplayTags.h"
 #include "Data/DBClassDefinition.h"
 #include "Data/DBDialogueDefinition.h"
+#include "Data/DBEconomyDefinitions.h"
 #include "Data/DBGameDataSubsystem.h"
 #include "Data/DBItemDefinition.h"
 #include "Data/DBQuestDefinition.h"
@@ -114,7 +115,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	};
 
 	AddClass(TEXT("Warrior"), DBTags::Class_Warrior, TEXT("Krieger"), Stats(14, 8, 3, 5, 14, 12), Stats(2.0f, 0.8f, 0.2f, 0.5f, 2.0f, 1.5f),
-		{Grant(TEXT("Katana_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
+		{Grant(TEXT("Katana_Dev"), 1), Grant(TEXT("RiceBall"), 5), Grant(TEXT("HealingDraught"), 2)},
 		TEXT("Schwertkaempfer der Frontlinie. Viel Leben und Ausdauer, starke Haltungen, haelt Treffer aus, die andere umwerfen."),
 		CreateClassKit(&Data, UDBAbility_LightCombo::StaticClass(), UDBAbility_HeavyAttack::StaticClass()),
 		{
@@ -130,7 +131,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 				5, 2, UDBAbility_Breakthrough::StaticClass(), DBTags::Input_Ability2),
 		});
 	AddClass(TEXT("Shadowrunner"), DBTags::Class_Shadowrunner, TEXT("Schattenlaeufer"), Stats(8, 15, 5, 6, 9, 14),
-		Stats(0.9f, 2.2f, 0.4f, 0.6f, 1.2f, 1.8f), {Grant(TEXT("Kunai_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
+		Stats(0.9f, 2.2f, 0.4f, 0.6f, 1.2f, 1.8f), {Grant(TEXT("Kunai_Dev"), 1), Grant(TEXT("RiceBall"), 5), Grant(TEXT("HealingDraught"), 2)},
 		TEXT("Schneller Kaempfer aus den Schatten. Kunai, Schattenmal und Teleport, hohe Kritchance, wenig Ruestung."),
 		CreateClassKit(&Data, UDBAbility_KunaiCombo::StaticClass(), UDBAbility_HeavyAttack::StaticClass()),
 		{
@@ -145,7 +146,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 				5, 1, UDBAbility_SmokeVeil::StaticClass(), DBTags::Input_Ability2),
 		});
 	AddClass(TEXT("Mage"), DBTags::Class_Mage, TEXT("Magier"), Stats(3, 6, 16, 12, 8, 8), Stats(0.2f, 0.6f, 2.4f, 1.6f, 1.0f, 1.0f),
-		{Grant(TEXT("Staff_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
+		{Grant(TEXT("Staff_Dev"), 1), Grant(TEXT("RiceBall"), 5), Grant(TEXT("HealingDraught"), 2)},
 		TEXT("Gelehrter der alten Zauber. Elementarmagie, Schutzkreis und Flug - maechtig auf Distanz, verletzlich im Nahkampf."),
 		CreateClassKit(&Data, UDBAbility_MagicBolt::StaticClass(), UDBAbility_FrostLance::StaticClass()),
 		{
@@ -159,7 +160,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 				6, 1, UDBAbility_Flight::StaticClass(), DBTags::Input_Ability2),
 		});
 	AddClass(TEXT("Monk"), DBTags::Class_Monk, TEXT("Moench"), Stats(11, 12, 4, 12, 11, 13), Stats(1.4f, 1.4f, 0.3f, 1.4f, 1.4f, 1.6f),
-		{Grant(TEXT("Handwraps_Dev"), 1), Grant(TEXT("RiceBall"), 5)},
+		{Grant(TEXT("Handwraps_Dev"), 1), Grant(TEXT("RiceBall"), 5), Grant(TEXT("HealingDraught"), 2)},
 		TEXT("Kriegermoench mit blossen Faeusten. Konter, Luftkampf und geistige Kraft gegen Daemonen."),
 		CreateClassKit(&Data, UDBAbility_FistCombo::StaticClass(), UDBAbility_PalmStrike::StaticClass()),
 		{
@@ -199,7 +200,11 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 			D.EquipSlot = EDBEquipSlot::MainHand;
 			D.ItemLevel = 1;
 			D.MaxDurability = 100;
+			D.BaseValue = 60;
 			D.AllowedClasses = {ClassId};
+			// Training weapons: a small bonus to the class' main power.
+			D.Stats.AttackPower = ClassId == TEXT("Mage") ? 0.f : 4.f;
+			D.Stats.SpellPower = ClassId == TEXT("Mage") ? 5.f : 0.f;
 		});
 	};
 	Weapon(TEXT("Katana_Dev"), TEXT("Uebungskatana"), TEXT("Warrior"));
@@ -207,9 +212,64 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	Weapon(TEXT("Staff_Dev"), TEXT("Uebungsstab"), TEXT("Mage"));
 	Weapon(TEXT("Handwraps_Dev"), TEXT("Faustbandagen"), TEXT("Monk"));
 
+	// Forged class weapons (Phase 5): better stats, crafted at the forge.
+	auto Forged = [&](FName Id, const TCHAR* Name, FName ClassId, int32 Level, TFunctionRef<void(FDBItemStats&)> SetStats)
+	{
+		AddItem(Id, Name, EDBItemCategory::Weapon, 1, [&](UDBItemDefinition& D)
+		{
+			D.EquipSlot = EDBEquipSlot::MainHand;
+			D.ItemLevel = Level;
+			D.RequiredLevel = Level;
+			D.MaxDurability = 160;
+			D.BaseValue = 400;
+			D.Rarity = EDBItemRarity::Uncommon;
+			D.AllowedClasses = {ClassId};
+			SetStats(D.Stats);
+		});
+	};
+	Forged(TEXT("Katana_Tamahagane"), TEXT("Tamahagane-Katana"), TEXT("Warrior"), 5, [](FDBItemStats& S) { S.AttackPower = 14.f; S.CritChance = 0.02f; });
+	Forged(TEXT("Kunai_Shadowsteel"), TEXT("Schattenstahl-Kunai"), TEXT("Shadowrunner"), 5, [](FDBItemStats& S) { S.AttackPower = 10.f; S.CritChance = 0.06f; });
+	Forged(TEXT("Staff_Ember"), TEXT("Glutstab"), TEXT("Mage"), 5, [](FDBItemStats& S) { S.SpellPower = 16.f; S.FireResistance = 0.1f; S.MaxMana = 20.f; });
+	Forged(TEXT("Handwraps_Iron"), TEXT("Eisenbandagen"), TEXT("Monk"), 5, [](FDBItemStats& S) { S.AttackPower = 11.f; S.SpiritResistance = 0.1f; });
+
+	// Armor (all classes)
+	auto Armor = [&](FName Id, const TCHAR* Name, EDBEquipSlot Slot, int32 Level, TFunctionRef<void(FDBItemStats&)> SetStats)
+	{
+		AddItem(Id, Name, EDBItemCategory::Armor, 1, [&](UDBItemDefinition& D)
+		{
+			D.EquipSlot = Slot;
+			D.ItemLevel = Level;
+			D.RequiredLevel = Level;
+			D.MaxDurability = 120;
+			D.BaseValue = 150;
+			SetStats(D.Stats);
+		});
+	};
+	Armor(TEXT("Helm_Ashigaru"), TEXT("Ashigaru-Helm"), EDBEquipSlot::Head, 1, [](FDBItemStats& S) { S.Armor = 8.f; S.MaxHealth = 15.f; });
+	Armor(TEXT("Do_Ashigaru"), TEXT("Ashigaru-Brustpanzer"), EDBEquipSlot::Chest, 3, [](FDBItemStats& S) { S.Armor = 18.f; S.MaxHealth = 30.f; });
+	Armor(TEXT("Kote_Leather"), TEXT("Lederne Kote"), EDBEquipSlot::Hands, 2, [](FDBItemStats& S) { S.Armor = 5.f; S.CritChance = 0.01f; });
+	Armor(TEXT("Suneate_Iron"), TEXT("Eisen-Suneate"), EDBEquipSlot::Legs, 3, [](FDBItemStats& S) { S.Armor = 10.f; });
+	Armor(TEXT("Waraji"), TEXT("Waraji-Sandalen"), EDBEquipSlot::Feet, 1, [](FDBItemStats& S) { S.Armor = 3.f; S.MaxStamina = 12.f; });
+	AddItem(TEXT("Amulet_Ward"), TEXT("Schutzamulett"), EDBItemCategory::Armor, 1, [](UDBItemDefinition& D)
+	{
+		D.EquipSlot = EDBEquipSlot::Accessory1;
+		D.ItemLevel = 6;
+		D.RequiredLevel = 6;
+		D.BaseValue = 300;
+		D.Rarity = EDBItemRarity::Rare;
+		D.Stats.SpiritResistance = 0.15f;
+		D.Stats.ShadowResistance = 0.1f;
+		D.Stats.MaxMana = 20.f;
+	});
+
 	AddItem(TEXT("Tamahagane"), TEXT("Tamahagane"), EDBItemCategory::Material, 99, [](UDBItemDefinition&) {});
 	AddItem(TEXT("DemonOre"), TEXT("Daemonenerz"), EDBItemCategory::Material, 99, [](UDBItemDefinition& D) { D.Rarity = EDBItemRarity::Rare; });
-	AddItem(TEXT("RiceBall"), TEXT("Onigiri"), EDBItemCategory::Food, 20, [](UDBItemDefinition&) {});
+	AddItem(TEXT("DemonHorn"), TEXT("Daemonenhorn"), EDBItemCategory::Material, 99, [](UDBItemDefinition& D) { D.Rarity = EDBItemRarity::Uncommon; });
+	AddItem(TEXT("Leather"), TEXT("Leder"), EDBItemCategory::Material, 99, [](UDBItemDefinition&) {});
+	AddItem(TEXT("SpiritPaper"), TEXT("Geisterpapier"), EDBItemCategory::Material, 99, [](UDBItemDefinition&) {});
+	AddItem(TEXT("RiceBall"), TEXT("Onigiri"), EDBItemCategory::Food, 20, [](UDBItemDefinition& D) { D.HealAmount = 40.f; D.StaminaAmount = 30.f; });
+	AddItem(TEXT("HealingDraught"), TEXT("Heiltrank"), EDBItemCategory::Potion, 10, [](UDBItemDefinition& D) { D.HealAmount = 120.f; D.BaseValue = 25; });
+	AddItem(TEXT("ManaTea"), TEXT("Geistertee"), EDBItemCategory::Potion, 10, [](UDBItemDefinition& D) { D.ManaAmount = 60.f; D.BaseValue = 25; });
 	AddItem(TEXT("KingsSeal"), TEXT("Siegel des Koenigs"), EDBItemCategory::Quest, 1, [](UDBItemDefinition&) {});
 
 	auto Bag = [&](FName Id, const TCHAR* Name, EDBBagKind Kind, int32 Capacity, int32 Mask)
@@ -267,6 +327,77 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	}
 	AddRegion(TEXT("TheEnd"), TEXT("Das Ende"), TEXT("Dunkles Blut"), EDBRegionKind::FinalRegion, 62, 70);
 	AddRegion(TEXT("Paradise"), TEXT("Das Paradies"), TEXT("Epilog"), EDBRegionKind::Epilogue, 1, 100);
+
+	// ---- Recipes (forge) and loot tables ----------------------------------------------------------
+	auto Recipe = [&](FName Id, FName Output, int32 OutputCount, TArray<FDBRecipeIngredient> Inputs, int64 Mon, int32 Level, FName Station)
+	{
+		if (Data.FindRecipe(Id))
+		{
+			return;
+		}
+		UDBRecipeDefinition* Def = NewObject<UDBRecipeDefinition>(&Data, NAME_None, RF_Transient);
+		Def->RecipeId = Id;
+		Def->OutputItemId = Output;
+		Def->OutputCount = OutputCount;
+		Def->Inputs = MoveTemp(Inputs);
+		Def->CurrencyCost = Mon;
+		Def->RequiredLevel = Level;
+		Def->StationId = Station;
+		Data.RegisterRecipe(Def);
+		bAddedAny = true;
+	};
+	auto In = [](const TCHAR* ItemId, int32 Count)
+	{
+		FDBRecipeIngredient Ingredient;
+		Ingredient.ItemId = ItemId;
+		Ingredient.Count = Count;
+		return Ingredient;
+	};
+	const FName Forge(TEXT("Forge"));
+	Recipe(TEXT("R_Katana_Tamahagane"), TEXT("Katana_Tamahagane"), 1, {In(TEXT("Tamahagane"), 6), In(TEXT("DemonHorn"), 2)}, 80, 5, Forge);
+	Recipe(TEXT("R_Kunai_Shadowsteel"), TEXT("Kunai_Shadowsteel"), 1, {In(TEXT("Tamahagane"), 4), In(TEXT("DemonOre"), 2)}, 70, 5, Forge);
+	Recipe(TEXT("R_Staff_Ember"), TEXT("Staff_Ember"), 1, {In(TEXT("SpiritPaper"), 3), In(TEXT("DemonHorn"), 2)}, 70, 5, Forge);
+	Recipe(TEXT("R_Handwraps_Iron"), TEXT("Handwraps_Iron"), 1, {In(TEXT("Leather"), 3), In(TEXT("Tamahagane"), 2)}, 60, 5, Forge);
+	Recipe(TEXT("R_Helm_Ashigaru"), TEXT("Helm_Ashigaru"), 1, {In(TEXT("Tamahagane"), 3), In(TEXT("Leather"), 1)}, 40, 1, Forge);
+	Recipe(TEXT("R_Do_Ashigaru"), TEXT("Do_Ashigaru"), 1, {In(TEXT("Tamahagane"), 5), In(TEXT("Leather"), 3)}, 70, 3, Forge);
+	Recipe(TEXT("R_Waraji"), TEXT("Waraji"), 1, {In(TEXT("Leather"), 2)}, 15, 1, Forge);
+	Recipe(TEXT("R_Amulet_Ward"), TEXT("Amulet_Ward"), 1, {In(TEXT("DemonOre"), 3), In(TEXT("SpiritPaper"), 2)}, 120, 6, Forge);
+	// Simple brewing works anywhere.
+	Recipe(TEXT("R_HealingDraught"), TEXT("HealingDraught"), 2, {In(TEXT("SpiritPaper"), 1), In(TEXT("RiceBall"), 1)}, 0, 1, NAME_None);
+
+	auto Loot = [&](FName Id, TArray<FDBItemGrant> Guaranteed, TArray<FDBLootEntry> Entries, int32 Rolls, int32 Nothing, int64 MonMin, int64 MonMax)
+	{
+		if (Data.FindLootTable(Id))
+		{
+			return;
+		}
+		UDBLootTableDefinition* Def = NewObject<UDBLootTableDefinition>(&Data, NAME_None, RF_Transient);
+		Def->LootTableId = Id;
+		Def->Guaranteed = MoveTemp(Guaranteed);
+		Def->Entries = MoveTemp(Entries);
+		Def->Rolls = Rolls;
+		Def->NothingWeight = Nothing;
+		Def->CurrencyMin = MonMin;
+		Def->CurrencyMax = MonMax;
+		Data.RegisterLootTable(Def);
+		bAddedAny = true;
+	};
+	auto LootEntry = [](const TCHAR* ItemId, int32 Weight, int32 Min, int32 Max)
+	{
+		FDBLootEntry Result;
+		Result.ItemId = ItemId;
+		Result.Weight = Weight;
+		Result.MinCount = Min;
+		Result.MaxCount = Max;
+		return Result;
+	};
+	Loot(TEXT("LT_LesserDemon"), {Grant(TEXT("DemonHorn"), 1)},
+		{LootEntry(TEXT("Tamahagane"), 3, 1, 2), LootEntry(TEXT("Leather"), 2, 1, 2), LootEntry(TEXT("SpiritPaper"), 2, 1, 1), LootEntry(TEXT("DemonOre"), 1, 1, 1),
+			LootEntry(TEXT("HealingDraught"), 1, 1, 1)},
+		2, 1, 5, 15);
+	Loot(TEXT("LT_TrainingDummy"), {}, {LootEntry(TEXT("Leather"), 1, 1, 1), LootEntry(TEXT("Tamahagane"), 1, 1, 1)}, 1, 2, 0, 3);
+	Loot(TEXT("LT_Chest_Courtyard"), {Grant(TEXT("Helm_Ashigaru"), 1), Grant(TEXT("HealingDraught"), 2), Grant(TEXT("Tamahagane"), 3)},
+		{LootEntry(TEXT("Leather"), 1, 1, 2)}, 1, 0, 40, 60);
 
 	// ---- Quests (story slice: courtyard -> east gate) ------------------------------------------
 	auto Objective = [](const TCHAR* Id, EDBObjectiveKind Kind, const TCHAR* Target, int32 Required, const TCHAR* Description)

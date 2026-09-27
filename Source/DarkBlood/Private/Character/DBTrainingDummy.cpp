@@ -13,6 +13,7 @@ ADBTrainingDummy::ADBTrainingDummy(const FObjectInitializer& ObjectInitializer)
 	MaxHealth = 60.f;
 	MaxPoise = 30.f;
 	XpReward = 20;
+	LootTableId = TEXT("LT_TrainingDummy");
 	AttackAbility = UDBAbility_EnemySwing::StaticClass();
 	bRespawnInPlace = true;
 	RespawnSeconds = 3.f;

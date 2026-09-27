@@ -71,6 +71,11 @@ UDBDamageExecution::UDBDamageExecution()
 	RelevantAttributesToCapture.Add(DamageStatics().SpellPowerDef);
 	RelevantAttributesToCapture.Add(DamageStatics().CritChanceDef);
 	RelevantAttributesToCapture.Add(DamageStatics().ArmorDef);
+	for (int32 Index = 1; Index < static_cast<int32>(DarkBlood::Rules::EDamageType::Count); ++Index)
+	{
+		RelevantAttributesToCapture.Add(
+			FGameplayEffectAttributeCaptureDefinition(UDBAttributeSet::GetResistanceAttribute(Index), EGameplayEffectAttributeCaptureSource::Target, false));
+	}
 }
 
 void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams,
@@ -132,7 +137,17 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 			Defense.State = R::EDefenseState::Blocking;
 		}
 	}
-	// Elemental resistances become attributes in Phase 5 (gear); until then they are zero.
+	// Elemental resistances (gear, effects) of the target.
+	for (int32 Index = 1; Index < static_cast<int32>(R::EDamageType::Count); ++Index)
+	{
+		const FGameplayAttribute Attribute = UDBAttributeSet::GetResistanceAttribute(Index);
+		if (Attribute.IsValid())
+		{
+			ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(
+				FGameplayEffectAttributeCaptureDefinition(Attribute, EGameplayEffectAttributeCaptureSource::Target, false), EvaluationParameters,
+				Defense.Resistances[Index]);
+		}
+	}
 
 	const R::FDamageResult Result = R::ResolveDamage(Request, Defense);
 	if (Result.FinalDamage > 0.f)

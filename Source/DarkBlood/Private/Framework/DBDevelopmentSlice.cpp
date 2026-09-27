@@ -6,6 +6,7 @@
 #include "DarkBlood.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "World/DBEconomyActors.h"
 #include "World/DBEncounterSpawner.h"
 
 namespace DBDevelopmentSlice
@@ -45,6 +46,15 @@ namespace DBDevelopmentSlice
 		for (int32 Index = 0; Index < 3; ++Index)
 		{
 			SpawnAt<ADBTrainingDummy>(World, Origin, FVector(350.f, 550.f + 200.f * static_cast<float>(Index), 0.f));
+		}
+		// Forge and a supply chest in the courtyard.
+		if (ADBCraftingStation* Forge = SpawnAt<ADBCraftingStation>(World, Origin, FVector(300.f, -500.f, -40.f)))
+		{
+			Forge->Setup(TEXT("Forge"), FText::FromString(TEXT("Schmiede [DEV]")));
+		}
+		if (ADBLootChest* Chest = SpawnAt<ADBLootChest>(World, Origin, FVector(-250.f, -350.f, -60.f)))
+		{
+			Chest->Setup(TEXT("LT_Chest_Courtyard"));
 		}
 
 		// East gate: the captain and the first demon encounter (appears once MQ02 is active).

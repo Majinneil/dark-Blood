@@ -31,5 +31,32 @@ DarkBlood::Rules::FItemDefinition UDBItemDefinition::ToRules() const
 	Out.Bag.Capacity = BagCapacity;
 	Out.Bag.AcceptedCategories = BagKind == EDBBagKind::General ? R::AllCategories
 		: static_cast<R::FCategoryMask>(BagAcceptedCategories) & R::AllCategories;
+	Out.BaseValue = BaseValue;
+	Out.Stats = Stats.ToRules();
+	Out.Consumable.Heal = HealAmount;
+	Out.Consumable.Stamina = StaminaAmount;
+	Out.Consumable.Mana = ManaAmount;
+	return Out;
+}
+
+DarkBlood::Rules::FItemStats FDBItemStats::ToRules() const
+{
+	namespace R = DarkBlood::Rules;
+	R::FItemStats Out;
+	Out.AttackPower = AttackPower;
+	Out.SpellPower = SpellPower;
+	Out.Armor = Armor;
+	Out.MaxHealth = MaxHealth;
+	Out.MaxStamina = MaxStamina;
+	Out.MaxMana = MaxMana;
+	Out.CritChance = CritChance;
+	auto Set = [&Out](R::EDamageType Type, float Value) { Out.Resistances[static_cast<int32>(Type)] = Value; };
+	Set(R::EDamageType::Fire, FireResistance);
+	Set(R::EDamageType::Frost, FrostResistance);
+	Set(R::EDamageType::Lightning, LightningResistance);
+	Set(R::EDamageType::Shadow, ShadowResistance);
+	Set(R::EDamageType::Poison, PoisonResistance);
+	Set(R::EDamageType::Spirit, SpiritResistance);
+	Set(R::EDamageType::DarkBlood, DarkBloodResistance);
 	return Out;
 }

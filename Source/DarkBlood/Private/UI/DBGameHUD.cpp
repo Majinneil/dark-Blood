@@ -10,6 +10,7 @@
 #include "UI/SDBCharacterCreatorWidget.h"
 #include "UI/SDBDialogueWidget.h"
 #include "UI/SDBGameHudWidget.h"
+#include "UI/SDBInventoryWidget.h"
 #include "UI/SDBSkillTreeWidget.h"
 #include "Widgets/SWeakWidget.h"
 
@@ -58,6 +59,14 @@ void ADBGameHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		if (SkillTreeRoot.IsValid())
 		{
 			Viewport->RemoveViewportWidgetContent(SkillTreeRoot.ToSharedRef());
+		}
+		if (InventoryRoot.IsValid())
+		{
+			Viewport->RemoveViewportWidgetContent(InventoryRoot.ToSharedRef());
+		}
+		if (CraftingWidget.IsValid())
+		{
+			Viewport->RemoveViewportWidgetContent(CraftingWidget.ToSharedRef());
 		}
 	}
 	if (ADBPlayerController* Controller = Cast<ADBPlayerController>(GetOwningPlayerController()))
@@ -146,6 +155,67 @@ void ADBGameHUD::ToggleSkillTree()
 	UpdateInputMode();
 }
 
+void ADBGameHUD::ToggleInventory()
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	if (!bUIReady || !Viewport || CreatorRoot.IsValid())
+	{
+		return;
+	}
+	if (InventoryRoot.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(InventoryRoot.ToSharedRef());
+		InventoryRoot.Reset();
+	}
+	else
+	{
+		InventoryRoot = SNew(SDBInventoryWidget).Owner(GetOwningPlayerController());
+		Viewport->AddViewportWidgetContent(InventoryRoot.ToSharedRef(), 50);
+	}
+	UpdateInputMode();
+}
+
+void ADBGameHUD::ShowCrafting(AActor* Station)
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	if (!bUIReady || !Viewport || CreatorRoot.IsValid())
+	{
+		return;
+	}
+	HideCrafting();
+	CraftingWidget = SNew(SDBCraftingWidget)
+		.Owner(GetOwningPlayerController())
+		.Station(Station)
+		.OnClose(FSimpleDelegate::CreateUObject(this, &ADBGameHUD::HideCrafting));
+	Viewport->AddViewportWidgetContent(CraftingWidget.ToSharedRef(), 55);
+	UpdateInputMode();
+}
+
+void ADBGameHUD::HideCrafting()
+{
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport(); Viewport && CraftingWidget.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(CraftingWidget.ToSharedRef());
+	}
+	CraftingWidget.Reset();
+	UpdateInputMode();
+}
+
+void ADBGameHUD::DrawHUD()
+{
+	Super::DrawHUD();
+	// Walking away from the station closes its window.
+	if (CraftingWidget.IsValid())
+	{
+		const APawn* Pawn = GetOwningPawn();
+		const AActor* Station = CraftingWidget->GetStation();
+		if (!Pawn || !Station || FVector::Dist2D(Pawn->GetActorLocation(), Station->GetActorLocation()) > 700.f)
+		{
+			HideCrafting();
+		}
+	}
+}
+
 void ADBGameHUD::OnDialogueChanged()
 {
 	if (DialogueWidget.IsValid())
@@ -162,7 +232,7 @@ void ADBGameHUD::UpdateInputMode()
 	{
 		return;
 	}
-	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid())
+	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || CraftingWidget.IsValid())
 	{
 		// Mouse for the option buttons; keys 1-4 and E keep working through game input.
 		FInputModeGameAndUI Mode;

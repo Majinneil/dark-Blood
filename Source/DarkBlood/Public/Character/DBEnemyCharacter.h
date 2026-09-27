@@ -75,6 +75,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy|Rewards", meta = (ClampMin = 0))
 	int32 XpReward = 10;
 
+	/** Personal loot: every player nearby rolls this table on its own (co-op friendly, no loot stealing). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy|Rewards")
+	FName LootTableId;
+
 	/** Abilities granted on spawn (a hit reaction is always granted). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy|Abilities")
 	TArray<TSubclassOf<UDBGameplayAbility>> Abilities;

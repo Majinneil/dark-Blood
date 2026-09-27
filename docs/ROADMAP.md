@@ -9,7 +9,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 2 | Character & Combat Vertical Slice | ✅ Gameplay (Platzhalter, headless + Koop getestet) · 🟡 Animationen/VFX/Audio (Assets fehlen) |
 | 3 | Erster Story Vertical Slice | ✅ Gameplay (Dialoge, Quests, Charaktererstellung, Slate-UI; headless + Koop getestet) · 🟡 Präsentation (Assets) |
 | 4 | Klassen & Skilltrees | ✅ Gameplay (4 Kits, 8 Signaturfähigkeiten, Skilltrees, UI; headless getestet) · 🟡 Animationen/VFX |
-| 5 | Inventar / Loot / Crafting | ⬜ (Inventar-, Taschen- und Equipment-Regeln aus Phase 1 vorhanden) |
+| 5 | Inventar / Loot / Crafting | ✅ Gameplay (Werte, Resistenzen, Verbrauch, Beute, Crafting, Reparatur, UI; headless getestet) · 🟡 Icons/Meshes |
 | 6 | Open World | ⬜ (Regionen, Gefahrenstufen, Entdeckung als Basis vorhanden) |
 | 7 | NPC- und Siedlungssimulation | ⬜ |
 | 8 | Reise / Pferde / Kutschen / Survival | ⬜ |
@@ -202,3 +202,14 @@ Fähigkeitenleiste.
 
 **BEKANNT**: Die einfache Nahkampf-KI steuert direkt und bleibt an Hindernissen hängen → Navigation mit der
 Hauptwelt (Phase 6).
+
+## Abschlussbericht Phase 5 – Inventar, Loot, Crafting
+
+**ERSTELLT**: Regelkern `Crafting.h` + `FItemStats`/`FConsumableEffect` (4 neue Tests, 44/44); Resistenz-Attribute;
+Ausrüstungswerte in den Charakterwerten; Benutzen/Craften/Reparieren im Inventar; Datenassets `DBRecipe`/`DBLootTable`;
+Schmiede und Truhe; persönliche Gegner-Beute; Inventar-UI `[I]` und Schmiede-Fenster; neue Charaktere tragen ihre
+Startwaffe. Details: ITEMS_AND_CRAFTING.md.
+
+**GETESTET (headless)**: Waffe anlegen (AP 60→64), Truhe (Helm, Tränke, Material, Mon; einmal pro Charakter), Helm
+(+8 Rüstung, +15 Leben), Tamahagane-Katana schmieden (Zutaten und 80 Mon abgezogen, zweiter Versuch abgelehnt,
+AP →74), Heiltrank (+120), Tod → Haltbarkeit −5 %, Reparatur 7 Mon, Dämonenbeute. Gerendert: Inventar und Schmiede.

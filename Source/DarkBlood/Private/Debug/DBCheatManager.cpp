@@ -9,6 +9,8 @@
 #include "Combat/DBCombatStatics.h"
 #include "Combat/DBLockOnComponent.h"
 #include "Dialogue/DBDialogueComponent.h"
+#include "Data/DBGameDataSubsystem.h"
+#include "Data/DBItemDefinition.h"
 #include "EngineUtils.h"
 #include "GameplayTagsManager.h"
 #include "TimerManager.h"
@@ -25,6 +27,7 @@
 #include "Player/DBProgressionComponent.h"
 #include "Quest/DBQuestComponent.h"
 #include "Quest/DBQuestSubsystem.h"
+#include "World/DBEconomyActors.h"
 #include "World/DBWorldStateComponent.h"
 
 namespace
@@ -244,6 +247,14 @@ void UDBCheatManager::DBDumpCharacter()
 		Progression->GetXpIntoLevel(), Progression->GetXpToNextLevel(), Progression->GetUnspentSkillPoints(), Progression->GetPowerRating());
 	UE_LOG(LogDarkBlood, Display, TEXT("Currency %lld Mon, pending deliveries %d, region %s"), Inventory->GetCurrency(),
 		Inventory->GetPendingDeliveryCount(), *PlayerState->GetCurrentRegionId().ToString());
+	if (const UAbilitySystemComponent* ASC = PlayerState->GetAbilitySystemComponent())
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("Stats: HP %.0f  AP %.1f  SP %.1f  Armor %.1f  Crit %.2f  FireRes %.2f  SpiritRes %.2f"),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetAttackPowerAttribute()),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetSpellPowerAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetArmorAttribute()),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetCritChanceAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetResistFireAttribute()),
+			ASC->GetNumericAttribute(UDBAttributeSet::GetResistSpiritAttribute()));
+	}
 	for (const FDBInventoryEntry& Entry : Inventory->GetEntries())
 	{
 		UE_LOG(LogDarkBlood, Display, TEXT("  [%d:%d] %s x%d (dur %d)"), Entry.Section, Entry.SlotIndex, *Entry.Stack.ItemId.ToString(),
@@ -443,7 +454,7 @@ void UDBCheatManager::DBGoto(const FString& Target)
 	}
 	AActor* Best = nullptr;
 	float BestDistance = TNumericLimits<float>::Max();
-	for (TActorIterator<ADBCharacterBase> It(GetWorld()); It; ++It)
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
 	{
 		FString Id;
 		if (const ADBNpcCharacter* Npc = Cast<ADBNpcCharacter>(*It))
@@ -453,6 +464,14 @@ void UDBCheatManager::DBGoto(const FString& Target)
 		else if (const ADBEnemyCharacter* Enemy = Cast<ADBEnemyCharacter>(*It); Enemy && !Enemy->IsDead())
 		{
 			Id = Enemy->GetEnemyId().ToString();
+		}
+		else if (const ADBCraftingStation* Station = Cast<ADBCraftingStation>(*It))
+		{
+			Id = Station->GetStationId().ToString();
+		}
+		else if (Cast<ADBLootChest>(*It))
+		{
+			Id = TEXT("Chest");
 		}
 		const float Distance = FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation());
 		if (!Id.IsEmpty() && Id.Contains(Target) && Distance < BestDistance)
@@ -498,5 +517,109 @@ void UDBCheatManager::DBUnlockSkill(FName NodeId)
 	if (ADBPlayerState* PlayerState = GetDBPlayerState())
 	{
 		PlayerState->GetProgression()->RequestUnlockSkill(NodeId);
+	}
+}
+
+// ---- Economy ----------------------------------------------------------------------------------
+
+namespace
+{
+	AActor* FindNearestStation(const APawn* Pawn)
+	{
+		AActor* Best = nullptr;
+		float BestDistance = TNumericLimits<float>::Max();
+		for (TActorIterator<ADBCraftingStation> It(Pawn->GetWorld()); It; ++It)
+		{
+			const float Distance = FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation());
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				Best = *It;
+			}
+		}
+		return Best;
+	}
+}
+
+void UDBCheatManager::DBUseItem(int32 Section, int32 Index)
+{
+	if (ADBPlayerState* PlayerState = GetDBPlayerState())
+	{
+		FDBSlotRef Slot;
+		Slot.Section = Section;
+		Slot.Index = Index;
+		PlayerState->GetInventory()->RequestUseItem(Slot);
+	}
+}
+
+void UDBCheatManager::DBCraft(FName RecipeId)
+{
+	ADBPlayerState* PlayerState = GetDBPlayerState();
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (PlayerState && Pawn)
+	{
+		PlayerState->GetInventory()->RequestCraft(RecipeId, FindNearestStation(Pawn));
+	}
+}
+
+void UDBCheatManager::DBRepair()
+{
+	ADBPlayerState* PlayerState = GetDBPlayerState();
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (PlayerState && Pawn)
+	{
+		PlayerState->GetInventory()->RequestRepairAll(FindNearestStation(Pawn));
+	}
+}
+
+void UDBCheatManager::DBGrantLoot(FName LootTableId)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBGrantLoot %s"), *LootTableId.ToString()))) return;
+	if (ADBPlayerState* PlayerState = GetDBPlayerState())
+	{
+		PlayerState->GetInventory()->GrantLootTable(LootTableId, TEXT("DEV"));
+	}
+}
+
+namespace
+{
+	bool FindCarried(const UDBInventoryComponent* Inventory, FName ItemId, FDBSlotRef& OutSlot)
+	{
+		for (const FDBInventoryEntry& Entry : Inventory->GetEntries())
+		{
+			if (Entry.Section >= 0 && Entry.Stack.ItemId == ItemId)
+			{
+				OutSlot.Section = Entry.Section;
+				OutSlot.Index = Entry.SlotIndex;
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
+void UDBCheatManager::DBEquipById(FName ItemId)
+{
+	ADBPlayerState* PlayerState = GetDBPlayerState();
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	const UDBItemDefinition* Definition = Data ? Data->FindItem(ItemId) : nullptr;
+	FDBSlotRef Slot;
+	if (PlayerState && Definition && FindCarried(PlayerState->GetInventory(), ItemId, Slot))
+	{
+		PlayerState->GetInventory()->RequestEquipItem(Slot, Definition->EquipSlot);
+	}
+	else
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBEquipById: %s not carried"), *ItemId.ToString());
+	}
+}
+
+void UDBCheatManager::DBUse(FName ItemId)
+{
+	ADBPlayerState* PlayerState = GetDBPlayerState();
+	FDBSlotRef Slot;
+	if (PlayerState && FindCarried(PlayerState->GetInventory(), ItemId, Slot))
+	{
+		PlayerState->GetInventory()->RequestUseItem(Slot);
 	}
 }

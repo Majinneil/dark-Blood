@@ -8,6 +8,7 @@
 
 class SDBCharacterCreatorWidget;
 class SDBDialogueWidget;
+class SDBCraftingWidget;
 class SDBGameHudWidget;
 class SWidget;
 
@@ -28,6 +29,12 @@ public:
 	void ToggleSkillTree();
 	bool IsSkillTreeVisible() const { return SkillTreeRoot.IsValid(); }
 
+	void ToggleInventory();
+	void ShowCrafting(AActor* Station);
+	void HideCrafting();
+
+	virtual void DrawHUD() override;
+
 private:
 	void OnDialogueChanged();
 	void UpdateInputMode();
@@ -37,6 +44,8 @@ private:
 	TSharedPtr<SDBCharacterCreatorWidget> CreatorWidget;
 	TSharedPtr<SWidget> CreatorRoot;
 	TSharedPtr<SWidget> SkillTreeRoot;
+	TSharedPtr<SWidget> InventoryRoot;
+	TSharedPtr<SDBCraftingWidget> CraftingWidget;
 	FDelegateHandle DialogueHandle;
 	bool bUIReady = false;
 };

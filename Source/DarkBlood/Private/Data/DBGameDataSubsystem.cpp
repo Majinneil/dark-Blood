@@ -5,6 +5,7 @@
 #include "Data/DBDevelopmentContent.h"
 #include "Data/DBItemDefinition.h"
 #include "Data/DBDialogueDefinition.h"
+#include "Data/DBEconomyDefinitions.h"
 #include "Data/DBQuestDefinition.h"
 #include "Data/DBRegionDefinition.h"
 
@@ -52,9 +53,20 @@ void UDBGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	LoadAllOfType<UDBQuestDefinition>(UDBQuestDefinition::AssetType, [this](UDBQuestDefinition* D) { RegisterQuest(D); });
 	LoadAllOfType<UDBRegionDefinition>(UDBRegionDefinition::AssetType, [this](UDBRegionDefinition* D) { RegisterRegion(D); });
 	LoadAllOfType<UDBDialogueDefinition>(UDBDialogueDefinition::AssetType, [this](UDBDialogueDefinition* D) { RegisterDialogue(D); });
+	LoadAllOfType<UDBRecipeDefinition>(UDBRecipeDefinition::AssetType, [this](UDBRecipeDefinition* D) { RegisterRecipe(D); });
+	LoadAllOfType<UDBLootTableDefinition>(UDBLootTableDefinition::AssetType, [this](UDBLootTableDefinition* D) { RegisterLootTable(D); });
 
 	// Missing content is filled with clearly marked development definitions so the game stays runnable.
 	bUsingDevelopmentContent = FDBDevelopmentContent::RegisterMissing(*this);
+
+	// Loot tables reference items; validate once everything is registered.
+	for (const TPair<FName, TObjectPtr<UDBLootTableDefinition>>& Pair : LootTables)
+	{
+		if (!DarkBlood::Rules::ValidateLootTable(Pair.Value->ToRules(), ItemCatalog))
+		{
+			UE_LOG(LogDarkBlood, Error, TEXT("Loot table %s references unknown items or has invalid weights"), *Pair.Key.ToString());
+		}
+	}
 
 	UE_LOG(LogDarkBlood, Log, TEXT("Game data: %d classes, %d items, %d quests, %d regions, %d dialogues%s"), Classes.Num(), Items.Num(),
 		Quests.Num(), Regions.Num(), Dialogues.Num(), bUsingDevelopmentContent ? TEXT(" (includes DEVELOPMENT content)") : TEXT(""));
@@ -107,6 +119,45 @@ void UDBGameDataSubsystem::RegisterDialogue(UDBDialogueDefinition* Definition)
 		return;
 	}
 	Dialogues.Add(Definition->DialogueId, Definition);
+}
+
+void UDBGameDataSubsystem::RegisterRecipe(UDBRecipeDefinition* Definition)
+{
+	if (Definition && !Definition->RecipeId.IsNone())
+	{
+		Recipes.Add(Definition->RecipeId, Definition);
+	}
+}
+
+void UDBGameDataSubsystem::RegisterLootTable(UDBLootTableDefinition* Definition)
+{
+	if (Definition && !Definition->LootTableId.IsNone())
+	{
+		LootTables.Add(Definition->LootTableId, Definition);
+	}
+}
+
+UDBRecipeDefinition* UDBGameDataSubsystem::FindRecipe(FName RecipeId) const
+{
+	const TObjectPtr<UDBRecipeDefinition>* Found = Recipes.Find(RecipeId);
+	return Found ? Found->Get() : nullptr;
+}
+
+UDBLootTableDefinition* UDBGameDataSubsystem::FindLootTable(FName LootTableId) const
+{
+	const TObjectPtr<UDBLootTableDefinition>* Found = LootTables.Find(LootTableId);
+	return Found ? Found->Get() : nullptr;
+}
+
+TArray<UDBRecipeDefinition*> UDBGameDataSubsystem::GetAllRecipes() const
+{
+	TArray<UDBRecipeDefinition*> Result;
+	for (const TPair<FName, TObjectPtr<UDBRecipeDefinition>>& Pair : Recipes)
+	{
+		Result.Add(Pair.Value.Get());
+	}
+	Result.Sort([](const UDBRecipeDefinition& A, const UDBRecipeDefinition& B) { return A.RequiredLevel < B.RequiredLevel; });
+	return Result;
 }
 
 UDBDialogueDefinition* UDBGameDataSubsystem::FindDialogue(FName DialogueId) const

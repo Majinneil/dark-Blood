@@ -66,6 +66,20 @@ public:
 	/** Unlocks one rank of a skill node (normal rules: points, level, prerequisites). */
 	UFUNCTION(Exec) void DBUnlockSkill(FName NodeId);
 
+	// ---- Economy (Phase 5) ----
+	/** Uses the consumable in Section/Index. */
+	UFUNCTION(Exec) void DBUseItem(int32 Section, int32 Index);
+	/** Crafts RecipeId at the nearest crafting station (within reach). */
+	UFUNCTION(Exec) void DBCraft(FName RecipeId);
+	/** Repairs equipped gear at the nearest station. */
+	UFUNCTION(Exec) void DBRepair();
+	/** Rolls a loot table for the player. */
+	UFUNCTION(Exec) void DBGrantLoot(FName LootTableId);
+	/** Equips the first carried item with this id in its default slot. */
+	UFUNCTION(Exec) void DBEquipById(FName ItemId);
+	/** Uses the first carried consumable with this id. */
+	UFUNCTION(Exec) void DBUse(FName ItemId);
+
 private:
 	/** On clients: sends the command to the server and returns true. */
 	bool ForwardToServer(const FString& Command) const;

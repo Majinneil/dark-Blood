@@ -15,6 +15,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Player/DBPlayerState.h"
 #include "Player/DBProgressionComponent.h"
+#include "Inventory/DBInventoryComponent.h"
 #include "Quest/DBQuestSubsystem.h"
 #include "TimerManager.h"
 
@@ -155,6 +156,17 @@ void ADBEnemyCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* Dama
 	if (Killer)
 	{
 		Killer->GetProgression()->AwardXp(XpReward);
+	}
+	if (!LootTableId.IsNone())
+	{
+		for (TActorIterator<ADBCharacterBase> It(GetWorld()); It; ++It)
+		{
+			ADBPlayerState* Looter = It->GetTeam() == EDBTeam::Players ? It->GetPlayerState<ADBPlayerState>() : nullptr;
+			if (Looter && FVector::Dist(It->GetActorLocation(), GetActorLocation()) < 6000.f)
+			{
+				Looter->GetInventory()->GrantLootTable(LootTableId, GetCombatDisplayName());
+			}
+		}
 	}
 	if (UDBQuestSubsystem* Quests = UDBQuestSubsystem::Get(this); Quests && !EnemyId.IsNone())
 	{

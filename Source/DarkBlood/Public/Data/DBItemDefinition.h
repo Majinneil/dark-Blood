@@ -13,6 +13,30 @@ class UStaticMesh;
 class USkeletalMesh;
 class UTexture2D;
 
+/** Equipment stat bonuses (see DarkBlood::Rules::FItemStats). Resistances are fractions (0.1 = 10 %). */
+USTRUCT(BlueprintType)
+struct FDBItemStats
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float AttackPower = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float SpellPower = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float Armor = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float MaxHealth = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float MaxStamina = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float MaxMana = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats") float CritChance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float FireResistance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float FrostResistance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float LightningResistance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float ShadowResistance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float PoisonResistance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float SpiritResistance = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float DarkBloodResistance = 0.f;
+
+	DarkBlood::Rules::FItemStats ToRules() const;
+};
+
 UCLASS(BlueprintType, Const)
 class DARKBLOOD_API UDBItemDefinition : public UPrimaryDataAsset
 {
@@ -64,6 +88,14 @@ public:
 	/** Class ids that may equip this item; empty = all classes. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
 	TArray<FName> AllowedClasses;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
+	FDBItemStats Stats;
+
+	/** Consumables: restored when used. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float HealAmount = 0.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float StaminaAmount = 0.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float ManaAmount = 0.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bag")
 	bool bIsBag = false;

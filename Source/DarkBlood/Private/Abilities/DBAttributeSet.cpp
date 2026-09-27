@@ -8,6 +8,7 @@
 #include "Net/UnrealNetwork.h"
 
 #include "DarkBloodRules/Combat.h"
+#include "DarkBloodRules/Damage.h"
 
 namespace R = DarkBlood::Rules;
 
@@ -50,6 +51,14 @@ void UDBAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, SpellPower, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, CritChance, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, Armor, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistFire, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistFrost, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistLightning, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistShadow, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistPoison, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistSpirit, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UDBAttributeSet, ResistDarkBlood, COND_OwnerOnly, REPNOTIFY_Always);
+
 }
 
 void UDBAttributeSet::ClampToMax(const FGameplayAttribute& Attribute, float& NewValue) const
@@ -225,3 +234,25 @@ void UDBAttributeSet::OnRep_CritChance(const FGameplayAttributeData& OldValue) {
 void UDBAttributeSet::OnRep_Armor(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, Armor, OldValue); }
 void UDBAttributeSet::OnRep_Poise(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, Poise, OldValue); }
 void UDBAttributeSet::OnRep_MaxPoise(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, MaxPoise, OldValue); }
+void UDBAttributeSet::OnRep_ResistFire(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistFire, OldValue); }
+void UDBAttributeSet::OnRep_ResistFrost(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistFrost, OldValue); }
+void UDBAttributeSet::OnRep_ResistLightning(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistLightning, OldValue); }
+void UDBAttributeSet::OnRep_ResistShadow(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistShadow, OldValue); }
+void UDBAttributeSet::OnRep_ResistPoison(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistPoison, OldValue); }
+void UDBAttributeSet::OnRep_ResistSpirit(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistSpirit, OldValue); }
+void UDBAttributeSet::OnRep_ResistDarkBlood(const FGameplayAttributeData& OldValue) { GAMEPLAYATTRIBUTE_REPNOTIFY(UDBAttributeSet, ResistDarkBlood, OldValue); }
+
+FGameplayAttribute UDBAttributeSet::GetResistanceAttribute(int32 DamageTypeIndex)
+{
+	switch (static_cast<R::EDamageType>(DamageTypeIndex))
+	{
+	case R::EDamageType::Fire: return GetResistFireAttribute();
+	case R::EDamageType::Frost: return GetResistFrostAttribute();
+	case R::EDamageType::Lightning: return GetResistLightningAttribute();
+	case R::EDamageType::Shadow: return GetResistShadowAttribute();
+	case R::EDamageType::Poison: return GetResistPoisonAttribute();
+	case R::EDamageType::Spirit: return GetResistSpiritAttribute();
+	case R::EDamageType::DarkBlood: return GetResistDarkBloodAttribute();
+	default: return FGameplayAttribute();
+	}
+}

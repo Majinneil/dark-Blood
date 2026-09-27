@@ -10,6 +10,8 @@
 
 class UDBClassDefinition;
 class UDBDialogueDefinition;
+class UDBLootTableDefinition;
+class UDBRecipeDefinition;
 class UDBItemDefinition;
 class UDBQuestDefinition;
 class UDBRegionDefinition;
@@ -30,6 +32,8 @@ public:
 	void RegisterQuest(UDBQuestDefinition* Definition);
 	void RegisterRegion(UDBRegionDefinition* Definition);
 	void RegisterDialogue(UDBDialogueDefinition* Definition);
+	void RegisterRecipe(UDBRecipeDefinition* Definition);
+	void RegisterLootTable(UDBLootTableDefinition* Definition);
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBClassDefinition* FindClass(FName ClassId) const;
@@ -45,6 +49,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBDialogueDefinition* FindDialogue(FName DialogueId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
+	UDBRecipeDefinition* FindRecipe(FName RecipeId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
+	UDBLootTableDefinition* FindLootTable(FName LootTableId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
+	TArray<UDBRecipeDefinition*> GetAllRecipes() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	TArray<UDBClassDefinition*> GetAllClasses() const;
@@ -79,6 +92,12 @@ private:
 
 	UPROPERTY(Transient)
 	TMap<FName, TObjectPtr<UDBDialogueDefinition>> Dialogues;
+
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UDBRecipeDefinition>> Recipes;
+
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UDBLootTableDefinition>> LootTables;
 
 	DarkBlood::Rules::FItemCatalog ItemCatalog;
 	DarkBlood::Rules::FQuestDatabase QuestDatabase;
