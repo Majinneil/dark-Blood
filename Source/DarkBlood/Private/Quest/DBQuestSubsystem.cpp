@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "Framework/DBGameState.h"
 #include "Inventory/DBInventoryComponent.h"
+#include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
 #include "Player/DBProgressionComponent.h"
 #include "Quest/DBQuestComponent.h"
@@ -68,6 +69,11 @@ bool UDBQuestSubsystem::StartQuest(FName QuestId, APlayerState* ForPlayer)
 
 	const R::EQuestResult Result = Log->StartQuest(QuestId, GetStoryFlags());
 	UE_LOG(LogDBQuest, Log, TEXT("StartQuest %s: %hs"), *QuestId.ToString(), R::ToString(Result));
+	if (Result == R::EQuestResult::Ok)
+	{
+		Notify(FText::Format(NSLOCTEXT("DarkBlood", "QuestStarted", "Neue Quest: {0}"), GetQuestTitle(QuestId)),
+			Definition->Scope == EDBQuestScope::Shared ? nullptr : Cast<ADBPlayerState>(ForPlayer));
+	}
 	return Result == R::EQuestResult::Ok;
 }
 
@@ -138,6 +144,7 @@ void UDBQuestSubsystem::GrantCompletion(FName QuestId, ADBPlayerState* PersonalO
 		return;
 	}
 	UE_LOG(LogDBQuest, Log, TEXT("Quest completed: %s"), *QuestId.ToString());
+	Notify(FText::Format(NSLOCTEXT("DarkBlood", "QuestCompleted", "Quest abgeschlossen: {0}"), GetQuestTitle(QuestId)), PersonalOwner);
 
 	if (PersonalOwner)
 	{
@@ -185,6 +192,33 @@ void UDBQuestSubsystem::GrantReward(const R::FQuestReward& Reward, ADBPlayerStat
 		for (const R::FItemStack& Item : Reward.Items)
 		{
 			Inventory->DeliverItem(DBBridge::ToFName(Item.ItemId), Item.Count);
+		}
+	}
+}
+
+FText UDBQuestSubsystem::GetQuestTitle(FName QuestId) const
+{
+	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+	const UDBQuestDefinition* Definition = Data ? Data->FindQuest(QuestId) : nullptr;
+	return Definition && !Definition->Title.IsEmpty() ? Definition->Title : FText::FromName(QuestId);
+}
+
+void UDBQuestSubsystem::Notify(const FText& Text, ADBPlayerState* OnlyFor) const
+{
+	const AGameStateBase* GameState = GetWorld()->GetGameState();
+	if (!GameState)
+	{
+		return;
+	}
+	for (APlayerState* Candidate : GameState->PlayerArray)
+	{
+		if (OnlyFor && Candidate != OnlyFor)
+		{
+			continue;
+		}
+		if (ADBPlayerController* Controller = Cast<ADBPlayerController>(Candidate->GetOwner()))
+		{
+			Controller->ClientShowNotification(Text);
 		}
 	}
 }

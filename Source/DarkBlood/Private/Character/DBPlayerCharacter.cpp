@@ -3,6 +3,8 @@
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Combat/DBLockOnComponent.h"
+#include "Dialogue/DBDialogueComponent.h"
+#include "Interaction/DBInteractionComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -22,6 +24,7 @@ ADBPlayerCharacter::ADBPlayerCharacter(const FObjectInitializer& ObjectInitializ
 {
 	PrimaryActorTick.bCanEverTick = true;
 	Team = EDBTeam::Players;
+	PlaceholderColor = FLinearColor(0.2f, 0.35f, 0.75f);
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -50,6 +53,7 @@ ADBPlayerCharacter::ADBPlayerCharacter(const FObjectInitializer& ObjectInitializ
 	FollowCamera->bUsePawnControlRotation = false;
 
 	LockOn = CreateDefaultSubobject<UDBLockOnComponent>(TEXT("LockOn"));
+	Interaction = CreateDefaultSubobject<UDBInteractionComponent>(TEXT("Interaction"));
 
 	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
 	Nameplate->SetupAttachment(RootComponent);
@@ -184,6 +188,29 @@ void ADBPlayerCharacter::Input_Look(const FInputActionValue& Value)
 
 void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 {
+	// In a conversation: 1-4 pick options, E continues; combat input is ignored.
+	if (const ADBPlayerController* DBController = GetController<ADBPlayerController>(); DBController && DBController->GetDialogue()->IsDialogueOpen())
+	{
+		UDBDialogueComponent* Dialogue = DBController->GetDialogue();
+		const FGameplayTag Options[] = {DBTags::Input_Ability1, DBTags::Input_Ability2, DBTags::Input_Ability3, DBTags::Input_Ability4};
+		for (int32 Index = 0; Index < UE_ARRAY_COUNT(Options); ++Index)
+		{
+			if (InputTag == Options[Index])
+			{
+				Dialogue->Choose(Index);
+			}
+		}
+		if (InputTag == DBTags::Input_Interact && Dialogue->GetView().bEnds)
+		{
+			Dialogue->Choose(0);
+		}
+		return;
+	}
+	if (InputTag == DBTags::Input_Interact)
+	{
+		Interaction->TryInteract();
+		return;
+	}
 	// Lock-on is a camera/targeting feature, not an ability.
 	if (InputTag == DBTags::Input_LockOn)
 	{

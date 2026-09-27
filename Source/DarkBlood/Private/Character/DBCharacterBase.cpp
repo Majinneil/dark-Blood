@@ -6,6 +6,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Core/DBGameplayTags.h"
 #include "Engine/StaticMesh.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
@@ -26,6 +28,11 @@ ADBCharacterBase::ADBCharacterBase(const FObjectInitializer& ObjectInitializer)
 		// Engine cylinder is 100x100x100 and centered: scale it to the default capsule.
 		PlaceholderBody->SetRelativeScale3D(FVector(0.8f, 0.8f, 1.8f));
 	}
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> ShapeMaterial(TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+	if (ShapeMaterial.Succeeded())
+	{
+		PlaceholderBody->SetMaterial(0, ShapeMaterial.Object);
+	}
 }
 
 void ADBCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -39,6 +46,13 @@ void ADBCharacterBase::BeginPlay()
 	Super::BeginPlay();
 	const bool bHasRealMesh = GetMesh() && GetMesh()->GetSkeletalMeshAsset() != nullptr;
 	PlaceholderBody->SetHiddenInGame(bHasRealMesh);
+	if (!bHasRealMesh)
+	{
+		if (UMaterialInstanceDynamic* Material = PlaceholderBody->CreateDynamicMaterialInstance(0))
+		{
+			Material->SetVectorParameterValue(TEXT("Color"), PlaceholderColor);
+		}
+	}
 }
 
 UAbilitySystemComponent* ADBCharacterBase::GetAbilitySystemComponent() const

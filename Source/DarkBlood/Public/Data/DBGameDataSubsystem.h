@@ -9,6 +9,7 @@
 #include "DBGameDataSubsystem.generated.h"
 
 class UDBClassDefinition;
+class UDBDialogueDefinition;
 class UDBItemDefinition;
 class UDBQuestDefinition;
 class UDBRegionDefinition;
@@ -28,6 +29,7 @@ public:
 	void RegisterItem(UDBItemDefinition* Definition);
 	void RegisterQuest(UDBQuestDefinition* Definition);
 	void RegisterRegion(UDBRegionDefinition* Definition);
+	void RegisterDialogue(UDBDialogueDefinition* Definition);
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBClassDefinition* FindClass(FName ClassId) const;
@@ -40,6 +42,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBRegionDefinition* FindRegion(FName RegionId) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
+	UDBDialogueDefinition* FindDialogue(FName DialogueId) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	TArray<UDBClassDefinition*> GetAllClasses() const;
@@ -71,6 +76,9 @@ private:
 
 	UPROPERTY(Transient)
 	TMap<FName, TObjectPtr<UDBRegionDefinition>> Regions;
+
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UDBDialogueDefinition>> Dialogues;
 
 	DarkBlood::Rules::FItemCatalog ItemCatalog;
 	DarkBlood::Rules::FQuestDatabase QuestDatabase;

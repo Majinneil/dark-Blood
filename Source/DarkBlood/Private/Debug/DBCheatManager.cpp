@@ -3,10 +3,12 @@
 #include "Abilities/DBAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Character/DBLesserDemon.h"
+#include "Character/DBNpcCharacter.h"
 #include "Character/DBPlayerCharacter.h"
 #include "Character/DBTrainingDummy.h"
 #include "Combat/DBCombatStatics.h"
 #include "Combat/DBLockOnComponent.h"
+#include "Dialogue/DBDialogueComponent.h"
 #include "EngineUtils.h"
 #include "GameplayTagsManager.h"
 #include "TimerManager.h"
@@ -14,6 +16,7 @@
 #include "GameplayEffect.h"
 #include "UObject/Package.h"
 #include "Engine/World.h"
+#include "Framework/DBDevelopmentSlice.h"
 #include "Framework/DBGameMode.h"
 #include "Framework/DBGameState.h"
 #include "Inventory/DBInventoryComponent.h"
@@ -415,5 +418,76 @@ void UDBCheatManager::DBDumpCombat()
 			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetStaminaAttribute()),
 			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxStaminaAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetPoiseAttribute()),
 			ASC->GetNumericAttribute(UDBAttributeSet::GetMaxPoiseAttribute()), *Tags.ToStringSimple());
+	}
+}
+
+// ---- Story ------------------------------------------------------------------------------------
+
+void UDBCheatManager::DBSetupSlice()
+{
+	if (ForwardToServer(TEXT("DBSetupSlice"))) return;
+	if (const APawn* Pawn = GetOuterAPlayerController()->GetPawn())
+	{
+		DBDevelopmentSlice::Spawn(GetWorld(), FTransform(FRotator(0.f, Pawn->GetActorRotation().Yaw, 0.f), Pawn->GetActorLocation()));
+	}
+}
+
+void UDBCheatManager::DBGoto(const FString& Target)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBGoto %s"), *Target))) return;
+	APlayerController* Controller = GetOuterAPlayerController();
+	APawn* Pawn = Controller->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	AActor* Best = nullptr;
+	float BestDistance = TNumericLimits<float>::Max();
+	for (TActorIterator<ADBCharacterBase> It(GetWorld()); It; ++It)
+	{
+		FString Id;
+		if (const ADBNpcCharacter* Npc = Cast<ADBNpcCharacter>(*It))
+		{
+			Id = Npc->GetNpcId().ToString();
+		}
+		else if (const ADBEnemyCharacter* Enemy = Cast<ADBEnemyCharacter>(*It); Enemy && !Enemy->IsDead())
+		{
+			Id = Enemy->GetEnemyId().ToString();
+		}
+		const float Distance = FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation());
+		if (!Id.IsEmpty() && Id.Contains(Target) && Distance < BestDistance)
+		{
+			BestDistance = Distance;
+			Best = *It;
+		}
+	}
+	if (!Best)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBGoto: nothing matches '%s'"), *Target);
+		return;
+	}
+	const FVector Forward = Best->GetActorForwardVector();
+	const FVector Destination = Best->GetActorLocation() + Forward * 170.f;
+	const FRotator Facing(0.f, (-Forward).Rotation().Yaw, 0.f);
+	Pawn->TeleportTo(Destination, Facing);
+	Controller->ClientSetRotation(Facing);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBGoto: %s"), *DBCombat::GetCombatName(Best));
+}
+
+void UDBCheatManager::DBDialogueChoose(int32 Index)
+{
+	if (const ADBPlayerController* Controller = Cast<ADBPlayerController>(GetOuterAPlayerController()))
+	{
+		Controller->GetDialogue()->Choose(Index);
+	}
+}
+
+void UDBCheatManager::DBCreateCharacter(FName ClassId, const FString& Name)
+{
+	if (ADBPlayerController* Controller = Cast<ADBPlayerController>(GetOuterAPlayerController()))
+	{
+		FString Error;
+		const bool bOk = Controller->SubmitCharacterCreation(Name, ClassId, FDBAppearance(), Error);
+		UE_LOG(LogDarkBlood, Display, TEXT("DBCreateCharacter: %s"), bOk ? TEXT("ok") : *Error);
 	}
 }

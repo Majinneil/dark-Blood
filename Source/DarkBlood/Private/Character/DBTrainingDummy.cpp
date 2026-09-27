@@ -20,6 +20,7 @@ ADBTrainingDummy::ADBTrainingDummy(const FObjectInitializer& ObjectInitializer)
 	// Stationary and anchored: it only turns and swings.
 	GetCharacterMovement()->MaxWalkSpeed = 0.f;
 	KnockbackScale = 0.f;
+	PlaceholderColor = FLinearColor(0.45f, 0.32f, 0.2f); // straw/wood
 }
 
 void ADBTrainingDummy::BeginPlay()

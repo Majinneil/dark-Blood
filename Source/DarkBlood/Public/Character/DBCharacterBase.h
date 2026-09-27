@@ -94,6 +94,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Visuals")
 	TObjectPtr<UStaticMeshComponent> PlaceholderBody;
 
+	/** Tint of the placeholder body (players blue, enemies red, NPCs gold). */
+	UPROPERTY(EditDefaultsOnly, Category = "Dark Blood|Visuals")
+	FLinearColor PlaceholderColor = FLinearColor(0.5f, 0.5f, 0.5f);
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsDead)
 	bool bIsDead = false;
 

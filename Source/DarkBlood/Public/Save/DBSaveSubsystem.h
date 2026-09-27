@@ -44,6 +44,12 @@ public:
 	DarkBlood::Rules::ELoadResult LoadCharacter(const FString& SlotKey, DarkBlood::Rules::FCharacterRecord& OutRecord) const;
 	bool DoesCharacterExist(const FString& SlotKey) const;
 
+	/** The UI creator can be shown (rendering, not unattended, no -DBCharacterName / -DBSkipCreator). */
+	bool CanShowCharacterCreator() const;
+
+	/** Local characters: the active slot is empty and the creator can be shown. */
+	bool ShouldUseCharacterCreator() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Save")
 	TArray<FDBCharacterSlotInfo> ListCharacters() const;
 

@@ -1,5 +1,8 @@
 #include "Framework/DBGameMode.h"
 
+#include "Framework/DBDevelopmentSlice.h"
+#include "UI/DBGameHUD.h"
+
 #include "Character/DBPlayerCharacter.h"
 #include "Core/DBGameSettings.h"
 #include "Core/DBRulesBridge.h"
@@ -28,7 +31,7 @@ ADBGameMode::ADBGameMode()
 	PlayerStateClass = ADBPlayerState::StaticClass();
 	PlayerControllerClass = ADBPlayerController::StaticClass();
 	DefaultPawnClass = ADBPlayerCharacter::StaticClass();
-	HUDClass = ADBDebugHUD::StaticClass();
+	HUDClass = ADBGameHUD::StaticClass();
 }
 
 void ADBGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -81,6 +84,19 @@ void ADBGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	GetWorldTimerManager().SetTimer(AutosaveTimer, this, &ADBGameMode::SaveAll, UDBGameSettings::Get().AutosaveIntervalSeconds, true);
+
+#if !UE_BUILD_SHIPPING
+	if (FParse::Param(FCommandLine::Get(), TEXT("DBDevSlice")))
+	{
+		FTransform Origin = FTransform::Identity;
+		for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+		{
+			Origin = FTransform(FRotator(0.f, It->GetActorRotation().Yaw, 0.f), It->GetActorLocation());
+			break;
+		}
+		DBDevelopmentSlice::Spawn(GetWorld(), Origin);
+	}
+#endif
 }
 
 void ADBGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -113,7 +129,14 @@ void ADBGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewP
 		if (PersistenceMode == EDBPersistenceMode::LocalCharacters)
 		{
 			// The host (or a standalone player) loads directly; remote clients upload from their controller.
-			if (NewPlayer->IsLocalController())
+			if (NewPlayer->IsLocalController() && Saves->ShouldUseCharacterCreator())
+			{
+				if (ADBPlayerController* DBController = Cast<ADBPlayerController>(NewPlayer))
+				{
+					DBController->ClientRequestCharacterCreation(); // local: opens the creator
+				}
+			}
+			else if (NewPlayer->IsLocalController())
 			{
 				R::FCharacterRecord Record;
 				FString Error;

@@ -1,5 +1,5 @@
 // DEVELOPMENT overlay drawn with the canvas (no UMG assets needed). Toggle with the console command DBToggleDebugHUD.
-// The real game UI (UMG/CommonUI) replaces this in Phase 3; the overlay stays available for testing.
+// The game UI lives in ADBGameHUD (Slate); this overlay stays available for testing (off by default).
 #pragma once
 
 #include "GameFramework/HUD.h"
@@ -19,5 +19,5 @@ public:
 private:
 	void DrawLine(const FString& Text, float& Y, const FLinearColor& Color = FLinearColor::White);
 
-	bool bShowOverlay = true;
+	bool bShowOverlay = false;
 };

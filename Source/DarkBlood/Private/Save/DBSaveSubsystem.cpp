@@ -1,5 +1,7 @@
 #include "Save/DBSaveSubsystem.h"
 
+#include "Misc/App.h"
+
 #include "Core/DBGameSettings.h"
 #include "Core/DBRulesBridge.h"
 #include "DarkBlood.h"
@@ -23,6 +25,19 @@ void UDBSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		ActiveCharacterSlot = Slot;
 	}
+}
+
+bool UDBSaveSubsystem::CanShowCharacterCreator() const
+{
+	FString Name;
+	const bool bScriptedName = FParse::Value(FCommandLine::Get(), TEXT("DBCharacterName="), Name) && !Name.IsEmpty();
+	return !bScriptedName && !FParse::Param(FCommandLine::Get(), TEXT("DBSkipCreator")) && !FApp::IsUnattended() && FApp::CanEverRender() &&
+		!IsRunningDedicatedServer();
+}
+
+bool UDBSaveSubsystem::ShouldUseCharacterCreator() const
+{
+	return CanShowCharacterCreator() && !DoesCharacterExist(ActiveCharacterSlot);
 }
 
 FString UDBSaveSubsystem::GetDevelopmentCharacterName() const

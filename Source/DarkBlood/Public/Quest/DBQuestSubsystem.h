@@ -44,4 +44,8 @@ private:
 	DarkBlood::Rules::FStoryFlags GetStoryFlags() const;
 	void GrantCompletion(FName QuestId, ADBPlayerState* PersonalOwner);
 	void GrantReward(const DarkBlood::Rules::FQuestReward& Reward, ADBPlayerState* Player) const;
+
+	/** On-screen message for one player, or for everyone when OnlyFor is null. */
+	void Notify(const FText& Text, ADBPlayerState* OnlyFor) const;
+	FText GetQuestTitle(FName QuestId) const;
 };

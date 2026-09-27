@@ -5,6 +5,9 @@
 #include "DarkBlood.h"
 #include "Debug/DBCheatManager.h"
 #include "Debug/DBDebugHUD.h"
+#include "Dialogue/DBDialogueComponent.h"
+#include "Interaction/DBInteractionComponent.h"
+#include "UI/DBGameHUD.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "Framework/DBGameMode.h"
@@ -15,6 +18,7 @@
 ADBPlayerController::ADBPlayerController()
 {
 	CheatClass = UDBCheatManager::StaticClass();
+	Dialogue = CreateDefaultSubobject<UDBDialogueComponent>(TEXT("Dialogue"));
 }
 
 const UDBInputConfig* ADBPlayerController::GetInputConfig() const
@@ -50,7 +54,15 @@ void ADBPlayerController::BeginPlay()
 		// Remote clients bring their own character into the host's world.
 		if (!HasAuthority() && UDBGameSettings::Get().GetEffectivePersistenceMode() == EDBPersistenceMode::LocalCharacters)
 		{
-			UploadLocalCharacter();
+			const UDBSaveSubsystem* Saves = GetGameInstance()->GetSubsystem<UDBSaveSubsystem>();
+			if (Saves && Saves->ShouldUseCharacterCreator())
+			{
+				RequestLocalCharacterCreation();
+			}
+			else
+			{
+				UploadLocalCharacter();
+			}
 		}
 		RunAutoExecScript();
 	}
@@ -166,8 +178,13 @@ void ADBPlayerController::ClientCharacterRejected_Implementation(const FString& 
 
 void ADBPlayerController::ClientRequestCharacterCreation_Implementation()
 {
-	// Phase 3 opens the character creator here. Until then a development character is requested.
 	UDBSaveSubsystem* Saves = GetGameInstance()->GetSubsystem<UDBSaveSubsystem>();
+	if (Saves && Saves->CanShowCharacterCreator())
+	{
+		RequestLocalCharacterCreation();
+		return;
+	}
+	// Headless / scripted runs: create a development character without UI.
 	const FString Name = Saves ? Saves->GetDevelopmentCharacterName() : TEXT("Wanderer");
 	UE_LOG(LogDBSave, Warning, TEXT("Server has no character for this player - creating DEVELOPMENT character '%s'"), *Name);
 	ServerCreateCharacter(Name, UDBGameSettings::Get().DevelopmentDefaultClass, FDBAppearance());
@@ -196,5 +213,66 @@ void ADBPlayerController::DBToggleDebugHUD()
 	if (ADBDebugHUD* DebugHUD = GetHUD<ADBDebugHUD>())
 	{
 		DebugHUD->ToggleDebugOverlay();
+	}
+}
+
+void ADBPlayerController::RequestLocalCharacterCreation()
+{
+	bCreationPending = true;
+	UE_LOG(LogDBSave, Log, TEXT("Opening character creator"));
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->ShowCharacterCreator(); // otherwise the HUD opens it in its BeginPlay
+	}
+}
+
+bool ADBPlayerController::SubmitCharacterCreation(const FString& CharacterName, FName ClassId, const FDBAppearance& Appearance, FString& OutError)
+{
+	if (UDBGameSettings::Get().GetEffectivePersistenceMode() == EDBPersistenceMode::ServerAuthoritative)
+	{
+		// The server validates and stores; a rejection comes back through ClientCharacterRejected.
+		ServerCreateCharacter(CharacterName, ClassId, Appearance);
+	}
+	else
+	{
+		UDBSaveSubsystem* Saves = GetGameInstance()->GetSubsystem<UDBSaveSubsystem>();
+		DarkBlood::Rules::FCharacterRecord Record;
+		if (!Saves || !Saves->CreateCharacter(Saves->GetActiveCharacterSlot(), CharacterName, ClassId, Appearance, Record, OutError))
+		{
+			return false;
+		}
+		if (HasAuthority())
+		{
+			ADBGameMode* GameMode = GetWorld()->GetAuthGameMode<ADBGameMode>();
+			if (!GameMode || !GameMode->AcceptCharacterRecord(this, Record, OutError))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			UploadLocalCharacter();
+		}
+	}
+	UE_LOG(LogDBSave, Log, TEXT("Character created: '%s' (%s)"), *CharacterName, *ClassId.ToString());
+	bCreationPending = false;
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->HideCharacterCreator();
+	}
+	return true;
+}
+
+void ADBPlayerController::ServerInteract_Implementation(AActor* Target)
+{
+	UDBInteractionComponent::ServerValidateAndInteract(this, Target);
+}
+
+void ADBPlayerController::ClientShowNotification_Implementation(const FText& Text)
+{
+	UE_LOG(LogDarkBlood, Display, TEXT("Notification: %s"), *Text.ToString());
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->ShowNotification(Text);
 	}
 }

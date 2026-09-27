@@ -22,6 +22,7 @@ ADBEnemyCharacter::ADBEnemyCharacter(const FObjectInitializer& ObjectInitializer
 {
 	PrimaryActorTick.bCanEverTick = true;
 	Team = EDBTeam::Demons;
+	PlaceholderColor = FLinearColor(0.6f, 0.08f, 0.08f);
 	bUseControllerRotationYaw = false;
 	// Spawned enemies get an AI controller; movement (knockback, gravity) must also run without one.
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;

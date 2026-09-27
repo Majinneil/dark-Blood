@@ -44,7 +44,12 @@ UWorld
  │   ├─ UDBProgressionComponent  Level, XP, Skillpunkte, Skill-Ränge, Gear-Score
  │   ├─ UDBInventoryComponent    Inventar, Taschen, Equipment, Währung, Nachlieferungen
  │   └─ UDBQuestComponent        persönliche Quests
- ├─ ADBPlayerCharacter     Kamera, Bewegung, Input → Tags, Platzhalterkörper, Namensschild
+ ├─ ADBPlayerController    + UDBDialogueComponent (Gespräche, serverseitig)
+ ├─ ADBPlayerCharacter     Kamera, Bewegung, Input → Tags, Lock-On, Interaktion, Platzhalterkörper
+ ├─ ADBEnemyCharacter      eigener ASC; ADBLesserDemon (+ UDBMeleeAIComponent), ADBTrainingDummy
+ ├─ ADBNpcCharacter        Dialog-NPCs (IDBInteractable)
+ ├─ ADBEncounterSpawner    Gegnergruppen nach Quest/Story-Flag
+ ├─ ADBGameHUD             Slate-UI: HUD, Dialog, Charaktererstellung (+ Debug-Overlay)
  ├─ ADBRegionVolume        Regionserkennung (immer geladen)
  └─ ADBDebugHUD            Entwicklungs-Overlay
 ```
@@ -106,6 +111,18 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBSaveAll` | Alle Charaktere und die Welt speichern |
 | `DBDumpCharacter` / `DBDumpWorld` | Zustand ins Log |
 | `DBToggleDebugHUD` | Debug-Overlay ein/aus (lokal) |
+| `DBSpawnDummy` / `DBSpawnEnemy [cm]` | Trainingspuppe / niederen Dämon vor dem Spieler erzeugen |
+| `DBInput <Aktion> [s]` | Eingabe drücken/halten (`LightAttack`, `HeavyAttack`, `Dodge`, `Block`, `Sprint`, `Interact`, `Ability.1` …) |
+| `DBJump`, `DBLockOn` | Springen / Zielerfassung (lokal) |
+| `DBAfter <s> <Kommando>` | Kommando zeitversetzt ausführen (Testskripte) |
+| `DBDummyAttack`, `DBDummyAutoAttack <s>` | Trainingspuppen schlagen zu |
+| `DBDumpCombat` | Leben/Ausdauer/Poise/Tags aller Kämpfer |
+| `DBSetupSlice` | Story-Slice um den Spieler aufbauen |
+| `DBGoto <Id>` | Zum NPC/Gegner teleportieren (`NPC_King`, `TrainingDummy`, `LesserDemon` …) |
+| `DBDialogueChoose <n>` | Dialogoption wählen (lokal) |
+| `DBCreateCharacter <Klasse> <Name>` | Charaktererstellung abschließen (lokal) |
 
-Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"`;
+Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
+Charaktererstellung), `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),
+`-DBAutoExec="Cmd|Cmd"` (Skript nach dem Verbinden, auch auf Clients);
 URL-Optionen: `?World=<Slot>`, `?Character=<Index>` (Dedicated Server).

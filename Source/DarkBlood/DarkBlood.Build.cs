@@ -18,6 +18,8 @@ public class DarkBlood : ModuleRules
 			"GameplayTasks",
 			"NetCore",
 			"CoreOnline",
+			"Slate",
+			"SlateCore",
 			"DeveloperSettings",
 			"DarkBloodRules",
 		});

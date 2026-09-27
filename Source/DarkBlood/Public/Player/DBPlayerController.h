@@ -6,6 +6,7 @@
 
 #include "DBPlayerController.generated.h"
 
+class UDBDialogueComponent;
 class UDBInputConfig;
 
 UCLASS()
@@ -47,6 +48,24 @@ public:
 
 	bool HasUploadedCharacter() const { return bCharacterUploaded; }
 
+	/** Local: result of the character creator. Returns false (with a reason) if the character was not created. */
+	bool SubmitCharacterCreation(const FString& CharacterName, FName ClassId, const FDBAppearance& Appearance, FString& OutError);
+
+	/** Local: the character creator should be shown (the HUD may not exist yet when this is requested). */
+	bool IsCharacterCreationPending() const { return bCreationPending; }
+
+	// ---- Interaction, dialogue, notifications -------------------------------------------------
+
+	UDBDialogueComponent* GetDialogue() const { return Dialogue; }
+
+	/** Client -> server: use an interactable (validated: range, conditions). */
+	UFUNCTION(Server, Reliable)
+	void ServerInteract(AActor* Target);
+
+	/** Server -> client: short on-screen message (quest started/completed ...). */
+	UFUNCTION(Client, Reliable)
+	void ClientShowNotification(const FText& Text);
+
 	// ---- Development --------------------------------------------------------------------------
 
 	/** Forwards a DB* developer command to the server's cheat manager (dev builds only). */
@@ -64,11 +83,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Dark Blood|Input")
 	int32 MappingContextPriority = 0;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dark Blood|Dialogue")
+	TObjectPtr<UDBDialogueComponent> Dialogue;
+
 private:
 	void UploadLocalCharacter();
+	void RequestLocalCharacterCreation();
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDBInputConfig> RuntimeInputConfig;
 
 	bool bCharacterUploaded = false;
+	bool bCreationPending = false;
 };

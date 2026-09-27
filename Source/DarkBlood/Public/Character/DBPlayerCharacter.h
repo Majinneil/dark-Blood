@@ -8,6 +8,7 @@
 
 class ADBPlayerState;
 class UCameraComponent;
+class UDBInteractionComponent;
 class UDBLockOnComponent;
 class USpringArmComponent;
 class UTextRenderComponent;
@@ -60,6 +61,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dark Blood|Combat")
 	TObjectPtr<UDBLockOnComponent> LockOn;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dark Blood|Interaction")
+	TObjectPtr<UDBInteractionComponent> Interaction;
 
 	/** DEVELOPMENT nameplate (text render). Replaced by a UMG widget with party UI in Phase 3. */
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Visuals")

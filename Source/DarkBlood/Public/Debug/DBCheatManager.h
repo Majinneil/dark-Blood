@@ -52,6 +52,16 @@ public:
 	/** Vitals, poise and combat tags of players and enemies. */
 	UFUNCTION(Exec) void DBDumpCombat();
 
+	// ---- Story (Phase 3) ----
+	/** Spawns the development story slice (king, dummies, captain, demon encounter) around the player. */
+	UFUNCTION(Exec) void DBSetupSlice();
+	/** Teleports the player in front of the nearest NPC / living enemy whose id contains Target (e.g. NPC_King, LesserDemon). */
+	UFUNCTION(Exec) void DBGoto(const FString& Target);
+	/** Local: picks dialogue option Index (0-based, as displayed). */
+	UFUNCTION(Exec) void DBDialogueChoose(int32 Index);
+	/** Local: completes the character creator (e.g. "DBCreateCharacter Warrior Jin Akagi"). */
+	UFUNCTION(Exec) void DBCreateCharacter(FName ClassId, const FString& Name);
+
 private:
 	/** On clients: sends the command to the server and returns true. */
 	bool ForwardToServer(const FString& Command) const;

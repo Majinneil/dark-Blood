@@ -7,7 +7,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 0 | Preproduction: Analyse, Architektur, Struktur, Konventionen, Dokumentation | ✅ |
 | 1 | Technisches Fundament | 🟡 Regelkern ✅ · UE-Schicht kompiliert (UE 5.8.3, Win64), **nicht laufzeitgetestet** |
 | 2 | Character & Combat Vertical Slice | ✅ Gameplay (Platzhalter, headless + Koop getestet) · 🟡 Animationen/VFX/Audio (Assets fehlen) |
-| 3 | Erster Story Vertical Slice | ⬜ |
+| 3 | Erster Story Vertical Slice | ✅ Gameplay (Dialoge, Quests, Charaktererstellung, Slate-UI; headless + Koop getestet) · 🟡 Präsentation (Assets) |
 | 4 | Klassen & Skilltrees | ⬜ |
 | 5 | Inventar / Loot / Crafting | ⬜ (Inventar-, Taschen- und Equipment-Regeln aus Phase 1 vorhanden) |
 | 6 | Open World | ⬜ (Regionen, Gefahrenstufen, Entdeckung als Basis vorhanden) |
@@ -160,3 +160,30 @@ einzeln und im Koop getestet. Dabei behoben: passiver Doppelsprung wurde für Re
 
 **OFFEN (Assets / spätere Phasen)**: Animationen, VFX/Audio (GameplayCue-Notifies), KI mit Navigation/StateTree,
 Balancing mit Klassen-Kits.
+
+## Abschlussbericht Phase 3 – Erster Story Vertical Slice
+
+**ERSTELLT**
+- Regelkern `Dialogue.h`: Dialoggraph mit Einstiegsknoten nach Story-Flags/Queststatus, gefilterten Optionen,
+  Effekten (Story-Flag, Quest starten/abgeben, Talk-Ereignis) und Validierung; der Server lehnt nicht angebotene
+  Optionen ab. 3 neue Tests (39/39 bestanden)
+- `UDBDialogueDefinition` (Asset-Typ `DBDialogue`), `UDBDialogueComponent` (serverseitige Gesprächsführung am
+  PlayerController), `ADBNpcCharacter`, Interaktionssystem (`IDBInteractable`, `UDBInteractionComponent`, `[E]`)
+- `ADBEncounterSpawner` (Gegnergruppen nach Quest/Story-Flag)
+- Oberfläche in Slate (ohne Widget-Assets): HUD (Leben/Ausdauer/Mana, Quest-Tracker, Lock-On-Ziel mit Leben/Poise,
+  Interaktionshinweis, Meldungen), Dialogfenster (Optionen per Klick oder 1–4), Charaktererstellung (Name, Klasse,
+  Körpertyp) – `ADBGameHUD`; Debug-Overlay jetzt standardmäßig aus
+- Charaktererstellung ersetzt den Entwicklungscharakter, wenn gerendert wird und kein Charakter existiert
+  (Host, Client und ServerAuthoritative); Skripte/Headless nutzen weiter `-DBCharacterName`
+- Story-Slice (DEV): König Aoki → MQ01 „Der Ruf des Königs“ (3 Übungspuppen, Abgabe beim König) →
+  MQ02 „Schatten vor dem Osttor“ (Hauptmann Kenji, 3 niedere Dämonen, Abgabe beim Hauptmann);
+  `-DBDevSlice` / `DBSetupSlice` baut ihn in jeder Karte auf
+- Farbige Platzhalter (Spieler blau, Gegner rot, NPCs gold, Puppen holzfarben)
+- Dev-Kommandos: `DBSetupSlice`, `DBGoto <Id>`, `DBDialogueChoose <n>`, `DBCreateCharacter <Klasse> <Name>`
+
+**GETESTET**: kompletter Slice headless (Dialogpfade, Quest-Fortschritt, Abgaben, Encounter, Belohnungen,
+Meldungen) und im Koop (Client führt Dialog und Quests, Server wendet an); gerenderte Screenshots von
+Charaktererstellung, Dialog und HUD.
+
+**OFFEN**: Chronik/Questbuch-Fenster, Inventar-/Ausrüstungs-UI (Phase 5), Gesichter/Haare im Editor (Assets),
+Sprachausgabe/Cinematics (Phase 18), Party-System (Phase 19).

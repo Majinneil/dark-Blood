@@ -1,6 +1,6 @@
 # Questsystem
 
-**Status:** Regeln ✅ (getestet). UE-Anbindung 🟡. Dialoge, Marker und Questgeber-NPCs folgen in Phase 3.
+**Status:** Regeln ✅ (getestet). UE-Anbindung ✅ (headless + Koop getestet). Dialoge und Questgeber-NPCs ✅ (Phase 3). Questmarker auf der Karte folgen mit der Hauptwelt (Phase 6).
 
 ## Bausteine
 
@@ -43,3 +43,28 @@ Gegner-IDs, Phase 2+), Bosse/Vasallen (Weltstatus), Lore-Einträge (Data Assets,
 `MQ01_KingsSummons` („Der Ruf des Königs [DEV]“): Mit dem König sprechen, 3 Trainingspuppen besiegen.
 Belohnung: 250 XP, 100 Mon, 1 Fähigkeitspunkt, kleine Reisetasche, Flag `Story.KingsSummonsDone`.
 Sie startet automatisch in neuen Welten (`InitialSharedQuests`).
+
+## Dialoge (Phase 3)
+
+| Teil | Ort |
+|---|---|
+| Regeln | `DarkBlood::Rules` `Dialogue.h` – Einstieg, Optionen, Effekte, Validierung |
+| Definition | `UDBDialogueDefinition` (Asset-Typ `DBDialogue`, `/Game/DarkBlood/Data/Dialogues`) |
+| Laufzeit | `UDBDialogueComponent` am PlayerController (Server führt, Client zeigt an) |
+| NPC | `ADBNpcCharacter` (`NpcId`, `DialogueId`), Interaktion mit `[E]` |
+| UI | `SDBDialogueWidget` (Optionen per Klick oder 1–4, `[E]` weiter) |
+
+- **Einträge** werden von oben nach unten geprüft; der erste, dessen Bedingungen gelten, eröffnet das Gespräch
+  (z. B. „Quest abgabebereit“ vor „Quest aktiv“ vor „Begrüßung“).
+- **Bedingungen:** Story-Flag vorhanden/fehlt, Queststatus ist/ist nicht (inkl. `Inactive` = nie gestartet).
+- **Effekte:** `SetStoryFlag`, `StartQuest`, `TurnInQuest`, `ReportTalk` (Talk-Ziel für Quests). Knoten-Effekte
+  (`OnEnter`) laufen beim Betreten, Options-Effekte beim Wählen – in dieser Reihenfolge.
+- Der Client sendet nur den Index der angezeigten Option; der Server berechnet die angebotenen Optionen neu und
+  lehnt alles andere ab. Gespräche enden, wenn der Spieler sich mehr als 7 m entfernt.
+
+## Story-Slice (DEV)
+
+`MQ01_KingsSummons` → König Aoki, 3 Übungspuppen, Abgabe beim König (250 XP, 100 Mon, 1 Fähigkeitspunkt, kleine
+Tasche) → startet `MQ02_EastGate`: Hauptmann Kenji am Osttor (Briefing setzt `Story.CaptainBriefed`, dann erscheinen
+3 niedere Dämonen), Abgabe beim Hauptmann (400 XP, 150 Mon, 1 Fähigkeitspunkt, Abenteurertasche,
+`Story.EastGateCleared`). Aufbau mit `-DBDevSlice` oder `DBSetupSlice`.

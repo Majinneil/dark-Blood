@@ -4,6 +4,7 @@
 #include "Data/DBClassDefinition.h"
 #include "Data/DBDevelopmentContent.h"
 #include "Data/DBItemDefinition.h"
+#include "Data/DBDialogueDefinition.h"
 #include "Data/DBQuestDefinition.h"
 #include "Data/DBRegionDefinition.h"
 
@@ -50,12 +51,13 @@ void UDBGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	LoadAllOfType<UDBItemDefinition>(UDBItemDefinition::AssetType, [this](UDBItemDefinition* D) { RegisterItem(D); });
 	LoadAllOfType<UDBQuestDefinition>(UDBQuestDefinition::AssetType, [this](UDBQuestDefinition* D) { RegisterQuest(D); });
 	LoadAllOfType<UDBRegionDefinition>(UDBRegionDefinition::AssetType, [this](UDBRegionDefinition* D) { RegisterRegion(D); });
+	LoadAllOfType<UDBDialogueDefinition>(UDBDialogueDefinition::AssetType, [this](UDBDialogueDefinition* D) { RegisterDialogue(D); });
 
 	// Missing content is filled with clearly marked development definitions so the game stays runnable.
 	bUsingDevelopmentContent = FDBDevelopmentContent::RegisterMissing(*this);
 
-	UE_LOG(LogDarkBlood, Log, TEXT("Game data: %d classes, %d items, %d quests, %d regions%s"), Classes.Num(), Items.Num(),
-		Quests.Num(), Regions.Num(), bUsingDevelopmentContent ? TEXT(" (includes DEVELOPMENT content)") : TEXT(""));
+	UE_LOG(LogDarkBlood, Log, TEXT("Game data: %d classes, %d items, %d quests, %d regions, %d dialogues%s"), Classes.Num(), Items.Num(),
+		Quests.Num(), Regions.Num(), Dialogues.Num(), bUsingDevelopmentContent ? TEXT(" (includes DEVELOPMENT content)") : TEXT(""));
 }
 
 void UDBGameDataSubsystem::RegisterClass(UDBClassDefinition* Definition)
@@ -90,6 +92,27 @@ void UDBGameDataSubsystem::RegisterRegion(UDBRegionDefinition* Definition)
 	{
 		Regions.Add(Definition->RegionId, Definition);
 	}
+}
+
+void UDBGameDataSubsystem::RegisterDialogue(UDBDialogueDefinition* Definition)
+{
+	if (!Definition || Definition->DialogueId.IsNone())
+	{
+		return;
+	}
+	const DarkBlood::Rules::EDialogueValidation Validation = DarkBlood::Rules::ValidateDialogue(Definition->ToRules());
+	if (Validation != DarkBlood::Rules::EDialogueValidation::Ok)
+	{
+		UE_LOG(LogDBQuest, Error, TEXT("Invalid dialogue %s: %hs"), *Definition->DialogueId.ToString(), DarkBlood::Rules::ToString(Validation));
+		return;
+	}
+	Dialogues.Add(Definition->DialogueId, Definition);
+}
+
+UDBDialogueDefinition* UDBGameDataSubsystem::FindDialogue(FName DialogueId) const
+{
+	const TObjectPtr<UDBDialogueDefinition>* Found = Dialogues.Find(DialogueId);
+	return Found ? Found->Get() : nullptr;
 }
 
 void UDBGameDataSubsystem::RebuildItemCatalog()
