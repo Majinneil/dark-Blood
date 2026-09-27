@@ -126,7 +126,8 @@ AActor* UDBLockOnComponent::FindBestTarget(float SideFilter, const AActor* Exclu
 		{
 			continue;
 		}
-		const float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(ViewRotation.Vector(), ToTarget.GetSafeNormal())));
+		// Horizontal angle only: looking at the ground must not prevent locking onto the enemy in front.
+		const float Angle = FMath::Abs(YawOffset);
 		const float Distance = FVector::Dist(Pawn->GetActorLocation(), Candidate->GetActorLocation());
 
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(DBLockOnSight), false, Pawn);
