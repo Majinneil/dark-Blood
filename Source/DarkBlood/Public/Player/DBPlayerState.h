@@ -70,6 +70,9 @@ public:
 	void EnterRegionVolume(ADBRegionVolume* Volume);
 	void ExitRegionVolume(ADBRegionVolume* Volume);
 
+	/** Open world: region of the realm layout at the player's position (volumes win where they overlap). */
+	void SetRealmRegion(FName RegionId);
+
 	UFUNCTION(BlueprintPure, Category = "Dark Blood|World")
 	FName GetCurrentRegionId() const { return CurrentRegionId; }
 
@@ -129,4 +132,6 @@ private:
 	double LoadedAtWorldSeconds = 0.0;
 	FDBAbilitySetHandles ClassAbilityHandles;
 	TArray<TWeakObjectPtr<ADBRegionVolume>> OverlappingRegionVolumes;
+
+	FName RealmRegionId;
 };

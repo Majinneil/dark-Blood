@@ -406,15 +406,19 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	};
 
 	AddRegion(TEXT("Capital"), TEXT("Hauptstadt"), TEXT("Schutzzauber"), EDBRegionKind::Capital, 1, 5);
+	// Names from the world map (docs/VisualPack/Reference/DarkBlood_Weltkarte.png, placed by DBRealmLayout); the vassal themes stay.
 	const TCHAR* Themes[] = {TEXT("Blut"), TEXT("Frost"), TEXT("Schatten"), TEXT("Donner"), TEXT("Feuer / Asche"), TEXT("Knochen / Tod"),
 		TEXT("Gift / Seuche"), TEXT("Wahnsinn / Illusion"), TEXT("Bestien"), TEXT("Eisen"), TEXT("Meer"), TEXT("Wind / Himmel"),
 		TEXT("Finsternis"), TEXT("Schwarze Festung")};
+	const TCHAR* Names[] = {TEXT("Kirschbluetental"), TEXT("Eisoede"), TEXT("Bambuswaelder"), TEXT("Nebelberge"), TEXT("Feuergebirge"),
+		TEXT("Wuestenlande"), TEXT("Flusslande"), TEXT("Wald der Geister"), TEXT("Reisfelder"), TEXT("Grossstadt"), TEXT("Kuestenland"),
+		TEXT("Himmelstempel"), TEXT("Daemonenoede"), TEXT("Vasallenfestung")};
+	static_assert(UE_ARRAY_COUNT(Themes) == UE_ARRAY_COUNT(Names), "one name per vassal region");
 	for (int32 Index = 0; Index < static_cast<int32>(UE_ARRAY_COUNT(Themes)); ++Index)
 	{
 		const int32 Number = Index + 1;
 		const int32 Min = 4 * Number - 1;
-		AddRegion(FName(*FString::Printf(TEXT("Region%02d"), Number)), *FString::Printf(TEXT("Vasallengebiet %d"), Number), Themes[Index],
-			EDBRegionKind::VassalRegion, Min, Min + 6);
+		AddRegion(FName(*FString::Printf(TEXT("Region%02d"), Number)), Names[Index], Themes[Index], EDBRegionKind::VassalRegion, Min, Min + 6);
 	}
 	AddRegion(TEXT("TheEnd"), TEXT("Das Ende"), TEXT("Dunkles Blut"), EDBRegionKind::FinalRegion, 62, 70);
 	AddRegion(TEXT("Paradise"), TEXT("Das Paradies"), TEXT("Epilog"), EDBRegionKind::Epilogue, 1, 100);

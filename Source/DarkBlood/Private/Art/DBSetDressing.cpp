@@ -905,7 +905,9 @@ void ADBAmbientFx::Build(FDBArtBatcher& Batcher)
 	Swarm = nullptr;
 	FRandomStream Random(Seed);
 	const bool bPetal = Kind == EDBAmbientFx::CherryPetals;
-	UStaticMesh* Mesh = bPetal ? LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")) : FDBArtBatcher::GetShapeMesh(FDBArtBatcher::EShape::Sphere);
+	UStaticMesh* Plane = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/DarkBlood/Art/Kit/Shapes/SM_DB_Plane.SM_DB_Plane"), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	UStaticMesh* Mesh = bPetal ? (Plane ? Plane : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")))
+							   : FDBArtBatcher::GetShapeMesh(FDBArtBatcher::EShape::Sphere);
 	const EDBArtMaterial Material = bPetal ? EDBArtMaterial::FoliageSakura
 								  : Kind == EDBAmbientFx::Fireflies ? EDBArtMaterial::LanternPaper
 								  : Kind == EDBAmbientFx::DemonAsh ? EDBArtMaterial::DarkBloodVeins

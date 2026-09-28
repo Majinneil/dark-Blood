@@ -37,7 +37,7 @@ namespace
 		return FTransform(FRotator(0.f, Yaw[Side], 0.f));
 	}
 
-	void Put(FDBArtBatcher& Batcher, EShape Shape, M Material, const FTransform& Parent, const FVector& Center, const FVector& Size,
+	void PutShape(FDBArtBatcher& Batcher, EShape Shape, M Material, const FTransform& Parent, const FVector& Center, const FVector& Size,
 		const FRotator& Rotation = FRotator::ZeroRotator)
 	{
 		Batcher.Shape(Shape, Material, FTransform(Rotation, Center, Size / 100.f) * Parent);
@@ -46,7 +46,7 @@ namespace
 	void PutBox(FDBArtBatcher& Batcher, M Material, const FTransform& Parent, const FVector& Center, const FVector& Size,
 		const FRotator& Rotation = FRotator::ZeroRotator)
 	{
-		Put(Batcher, EShape::Cube, Material, Parent, Center, Size, Rotation);
+		PutShape(Batcher, EShape::Cube, Material, Parent, Center, Size, Rotation);
 	}
 }
 
@@ -349,7 +349,7 @@ void ADBModularBuilding::BuildFloor(FDBArtBatcher& Batcher, FRandomStream& Rando
 			}
 			if (Palette.bRoundPosts)
 			{
-				Put(Batcher, EShape::Cylinder, Palette.Post, Identity, Center, FVector(30.f, 30.f, FloorHeight));
+				PutShape(Batcher, EShape::Cylinder, Palette.Post, Identity, Center, FVector(30.f, 30.f, FloorHeight));
 			}
 			else
 			{
@@ -541,7 +541,7 @@ void ADBModularBuilding::BuildSkirtRoof(FDBArtBatcher& Batcher, const FPalette& 
 			Batcher.SetCollision(false);
 			for (float V = -Length * 0.5f + 15.f; V < Length * 0.5f; V += 30.f)
 			{
-				Put(Batcher, EShape::Cylinder, Palette.Roof, Slab, FVector(0.f, V, 7.f), FVector(11.f, 11.f, Run / Cos), FRotator(90.f, 0.f, 0.f));
+				PutShape(Batcher, EShape::Cylinder, Palette.Roof, Slab, FVector(0.f, V, 7.f), FVector(11.f, 11.f, Run / Cos), FRotator(90.f, 0.f, 0.f));
 			}
 		}
 	}
@@ -582,7 +582,7 @@ void ADBModularBuilding::BuildRoof(FDBArtBatcher& Batcher, FRandomStream& Random
 		{
 			for (float V = -Width * 0.5f + 15.f; V < Width * 0.5f; V += 30.f)
 			{
-				Put(Batcher, EShape::Cylinder, Palette.Roof, SlabFrame, FVector(0.f, V, T * 0.5f + 3.f), FVector(12.f, 12.f, Run / Cos),
+				PutShape(Batcher, EShape::Cylinder, Palette.Roof, SlabFrame, FVector(0.f, V, T * 0.5f + 3.f), FVector(12.f, 12.f, Run / Cos),
 					FRotator(90.f, 0.f, 0.f));
 			}
 		}
@@ -617,7 +617,7 @@ void ADBModularBuilding::BuildRoof(FDBArtBatcher& Batcher, FRandomStream& Random
 				const FVector End(EndHalf + OEnd, Sign * (SlopeHalf + O), WallZ - O * Tan + T * 0.5f);
 				const FVector Mid = (Start + End) * 0.5f;
 				const FVector Dir = End - Start;
-				Put(Batcher, EShape::Cube, Palette.Ridge, SideFrame(Side), Mid, FVector(Dir.Size(), 22.f, 20.f), Dir.Rotation());
+				PutShape(Batcher, EShape::Cube, Palette.Ridge, SideFrame(Side), Mid, FVector(Dir.Size(), 22.f, 20.f), Dir.Rotation());
 			}
 		}
 	}
@@ -641,7 +641,7 @@ void ADBModularBuilding::BuildRoof(FDBArtBatcher& Batcher, FRandomStream& Random
 				const FVector Start(EndHalf + OEnd, 0.f, RidgeZ + T * 0.5f);
 				const FVector End(EndHalf + OEnd, Sign * (SlopeHalf + O), WallZ - O * Tan);
 				const FVector Dir = End - Start;
-				Put(Batcher, EShape::Cube, Palette.Trim, Frame, (Start + End) * 0.5f, FVector(Dir.Size(), 8.f, 26.f), Dir.Rotation());
+				PutShape(Batcher, EShape::Cube, Palette.Trim, Frame, (Start + End) * 0.5f, FVector(Dir.Size(), 8.f, 26.f), Dir.Rotation());
 			}
 		}
 	}
@@ -688,9 +688,9 @@ void ADBModularBuilding::BuildDressing(FDBArtBatcher& Batcher, FRandomStream& Ra
 	const float LanternX = W * 0.5f + (bVeranda ? 110.f : 45.f);
 	for (const float Y : LanternY)
 	{
-		Put(Batcher, EShape::Sphere, M::LanternPaper, Identity, FVector(LanternX, Y, EaveZ), FVector(36.f, 36.f, 50.f));
-		Put(Batcher, EShape::Cylinder, M::WoodLacquerBlack, Identity, FVector(LanternX, Y, EaveZ + 27.f), FVector(24.f, 24.f, 6.f));
-		Put(Batcher, EShape::Cylinder, M::WoodLacquerBlack, Identity, FVector(LanternX, Y, EaveZ - 27.f), FVector(24.f, 24.f, 6.f));
+		PutShape(Batcher, EShape::Sphere, M::LanternPaper, Identity, FVector(LanternX, Y, EaveZ), FVector(36.f, 36.f, 50.f));
+		PutShape(Batcher, EShape::Cylinder, M::WoodLacquerBlack, Identity, FVector(LanternX, Y, EaveZ + 27.f), FVector(24.f, 24.f, 6.f));
+		PutShape(Batcher, EShape::Cylinder, M::WoodLacquerBlack, Identity, FVector(LanternX, Y, EaveZ - 27.f), FVector(24.f, 24.f, 6.f));
 		PutBox(Batcher, M::WoodLacquerBlack, Identity, FVector(LanternX, Y, EaveZ + 45.f), FVector(1.5f, 1.5f, 30.f));
 	}
 	if (LanternY.Num() > 0)
@@ -716,13 +716,13 @@ void ADBModularBuilding::BuildDressing(FDBArtBatcher& Batcher, FRandomStream& Ra
 		PutBox(Batcher, M::WoodLight, Identity, FVector(-W * 0.5f + 70.f, 0.f, FloorZ + 55.f), FVector(60.f, D * 0.6f, 110.f));
 		for (int32 Index = 0; Index < 3; ++Index)
 		{
-			Put(Batcher, EShape::Cylinder, M::WoodLight, Identity, FVector(W * 0.5f + 60.f, D * 0.5f - 50.f - Index * 55.f, FloorZ - 10.f + 45.f),
+			PutShape(Batcher, EShape::Cylinder, M::WoodLight, Identity, FVector(W * 0.5f + 60.f, D * 0.5f - 50.f - Index * 55.f, FloorZ - 10.f + 45.f),
 				FVector(50.f, 50.f, 90.f));
 		}
 		Batcher.SetCollision(false);
 		for (int32 Index = 0; Index < 2; ++Index)
 		{
-			Put(Batcher, EShape::Sphere, M::LanternPaper, Identity, FVector(0.f, (Index - 0.5f) * D * 0.4f, FloorZ + 220.f), FVector(34.f, 34.f, 46.f));
+			PutShape(Batcher, EShape::Sphere, M::LanternPaper, Identity, FVector(0.f, (Index - 0.5f) * D * 0.4f, FloorZ + 220.f), FVector(34.f, 34.f, 46.f));
 		}
 		AddLight(FVector(0.f, 0.f, FloorZ + 200.f), 3000.f, 900.f, Warm);
 		break;
@@ -761,7 +761,7 @@ void ADBModularBuilding::BuildDressing(FDBArtBatcher& Batcher, FRandomStream& Ra
 		Batcher.SetCollision(false);
 		// Shimenawa rope with paper streamers across the front beam, offering box at the entrance.
 		const float RopeZ = FloorZ + WallHeight - 5.f;
-		Put(Batcher, EShape::Cylinder, M::FabricLinen, Identity, FVector(W * 0.5f + 16.f, 0.f, RopeZ), FVector(16.f, 16.f, D * 0.8f), FRotator(0.f, 0.f, 90.f));
+		PutShape(Batcher, EShape::Cylinder, M::FabricLinen, Identity, FVector(W * 0.5f + 16.f, 0.f, RopeZ), FVector(16.f, 16.f, D * 0.8f), FRotator(0.f, 0.f, 90.f));
 		for (int32 Index = -2; Index <= 2; ++Index)
 		{
 			PutBox(Batcher, M::PaperShoji, Identity, FVector(W * 0.5f + 17.f, Index * D * 0.16f, RopeZ - 30.f), FVector(1.f, 10.f, 40.f));
@@ -781,7 +781,7 @@ void ADBModularBuilding::BuildDressing(FDBArtBatcher& Batcher, FRandomStream& Ra
 			{
 				for (int32 Log = 0; Log < 6 - Row; ++Log)
 				{
-					Put(Batcher, EShape::Cylinder, M::WoodDark, Identity, FVector(-W * 0.25f + Log * 22.f + Row * 11.f, D * 0.5f + 60.f, 11.f + Row * 20.f),
+					PutShape(Batcher, EShape::Cylinder, M::WoodDark, Identity, FVector(-W * 0.25f + Log * 22.f + Row * 11.f, D * 0.5f + 60.f, 11.f + Row * 20.f),
 						FVector(20.f, 20.f, 90.f), FRotator(0.f, 0.f, 90.f));
 				}
 			}

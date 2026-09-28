@@ -15,16 +15,18 @@ FDBArtBatcher::FDBArtBatcher(AActor& InOwner, USceneComponent& InParent, TArray<
 UStaticMesh* FDBArtBatcher::GetShapeMesh(EShape Shape)
 {
 	static TWeakObjectPtr<UStaticMesh> Cached[4];
-	static const TCHAR* Paths[] = {
-		TEXT("/Engine/BasicShapes/Cube.Cube"),
-		TEXT("/Engine/BasicShapes/Cylinder.Cylinder"),
-		TEXT("/Engine/BasicShapes/Sphere.Sphere"),
-		TEXT("/Engine/BasicShapes/Cone.Cone"),
+	// Nanite copies (Tools/UE58/db_create_kit_shapes.py) first: thousands of kit pieces must not take the classic path.
+	static const TCHAR* Paths[][2] = {
+		{TEXT("/Game/DarkBlood/Art/Kit/Shapes/SM_DB_Cube.SM_DB_Cube"), TEXT("/Engine/BasicShapes/Cube.Cube")},
+		{TEXT("/Game/DarkBlood/Art/Kit/Shapes/SM_DB_Cylinder.SM_DB_Cylinder"), TEXT("/Engine/BasicShapes/Cylinder.Cylinder")},
+		{TEXT("/Game/DarkBlood/Art/Kit/Shapes/SM_DB_Sphere.SM_DB_Sphere"), TEXT("/Engine/BasicShapes/Sphere.Sphere")},
+		{TEXT("/Game/DarkBlood/Art/Kit/Shapes/SM_DB_Cone.SM_DB_Cone"), TEXT("/Engine/BasicShapes/Cone.Cone")},
 	};
 	const int32 Index = static_cast<int32>(Shape);
 	if (!Cached[Index].IsValid())
 	{
-		Cached[Index] = LoadObject<UStaticMesh>(nullptr, Paths[Index]);
+		UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, Paths[Index][0], nullptr, LOAD_NoWarn | LOAD_Quiet);
+		Cached[Index] = Mesh ? Mesh : LoadObject<UStaticMesh>(nullptr, Paths[Index][1]);
 	}
 	return Cached[Index].Get();
 }

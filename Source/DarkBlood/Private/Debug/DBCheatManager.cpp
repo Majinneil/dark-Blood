@@ -19,7 +19,11 @@
 #include "DarkBlood.h"
 #include "Engine/SkeletalMesh.h"
 #include "RHIStats.h"
+#include "RenderTimer.h"
+#include "PrimitiveSceneProxy.h"
+#include "UObject/UObjectIterator.h"
 #include "Settings/DBGameUserSettings.h"
+#include "World/DBRealmLayout.h"
 #include "Visual/DBAnimationSetDefinition.h"
 #include "Visual/DBCharacterVisualComponent.h"
 #include "Visual/DBCharacterVisualDefinition.h"
@@ -690,6 +694,28 @@ void UDBCheatManager::DBPerfSnapshot()
 	const ADBVisualSliceDirector* Director = ADBVisualSliceDirector::Get(GetWorld());
 	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS perf: %.1f fps, frame %.2f ms, GPU %.2f ms, %d draw calls, %d primitives; characters %d (%d with body); %s"), GAverageFPS,
 		GAverageMS, GpuMs, DrawCalls, Primitives, Characters, WithBody, Director ? *Director->DescribeLocalSlice() : TEXT("no visual slice"));
+	int32 NaniteProxies = 0;
+	int32 ClassicProxies = 0;
+	for (TObjectIterator<UPrimitiveComponent> It; It; ++It)
+	{
+		if (It->GetWorld() == GetWorld() && It->SceneProxy && It->IsVisible())
+		{
+			It->SceneProxy->IsNaniteMesh() ? ++NaniteProxies : ++ClassicProxies;
+			// Which classic primitives use a mesh that has Nanite data (they should have been Nanite)?
+			const UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(*It);
+			static int32 Reported = 0;
+			if (!It->SceneProxy->IsNaniteMesh() && MeshComponent && MeshComponent->GetStaticMesh() && Reported < 12)
+			{
+				++Reported;
+				const UStaticMesh* Mesh = MeshComponent->GetStaticMesh();
+				UE_LOG(LogDarkBlood, Display, TEXT("DBVIS classic: %s (%s) mesh %s nanite-data %d, material %s"), *It->GetClass()->GetName(),
+					*GetNameSafe(It->GetOwner()), *Mesh->GetName(), Mesh->HasValidNaniteData() ? 1 : 0, *GetNameSafe(MeshComponent->GetMaterial(0)));
+			}
+		}
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS threads: game %.2f ms, render %.2f ms, RHI %.2f ms; primitives: %d Nanite, %d classic"),
+		FPlatformTime::ToMilliseconds(GGameThreadTime), FPlatformTime::ToMilliseconds(GRenderThreadTime), FPlatformTime::ToMilliseconds(GRHIThreadTime),
+		NaniteProxies, ClassicProxies);
 	const IConsoleVariable* ScreenPercentage = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ScreenPercentage"));
 	const IConsoleVariable* LumenHardware = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.HardwareRayTracing"));
 	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS graphics: r.ScreenPercentage %.1f, Lumen HWRT %d (available %d); %s"), ScreenPercentage ? ScreenPercentage->GetFloat() : 0.f,
@@ -772,6 +798,45 @@ void UDBCheatManager::DBOrbit(float Yaw, float Pitch, float Distance)
 	Character->GetCameraBoom()->TargetArmLength = Distance;
 	Character->GetCameraBoom()->bDoCollisionTest = false;
 	Controller->SetControlRotation(FRotator(Pitch, Character->GetActorRotation().Yaw + Yaw, 0.f));
+}
+
+void UDBCheatManager::DBTravel(const FString& Region, float OffsetX, float OffsetY)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBTravel %s %f %f"), *Region, OffsetX, OffsetY))) return;
+	APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	// Settlements first (exact name prefix), then regions.
+	for (const FDBRealmSettlement& Site : DBRealm::GetSettlements())
+	{
+		if (Pawn && FString(Site.Name).StartsWith(Region, ESearchCase::IgnoreCase))
+		{
+			const double X = Site.Center.X + OffsetX;
+			const double Y = Site.Center.Y + OffsetY;
+			Pawn->TeleportTo(FVector(X * 100.0, Y * 100.0, FMath::Max(DBRealm::SampleHeight(X, Y), 0.0) * 100.0 + 250.0), Pawn->GetActorRotation());
+			UE_LOG(LogDarkBlood, Display, TEXT("DBTravel: settlement %s at %.0f / %.0f m"), Site.Name, X, Y);
+			return;
+		}
+	}
+	const TArray<FDBRealmRegion>& Regions = DBRealm::GetRegions();
+	const FDBRealmRegion* Target = nullptr;
+	for (int32 Index = 0; Index < Regions.Num(); ++Index)
+	{
+		if (Region == FString::FromInt(Index) || Region.Equals(Regions[Index].RegionId.ToString(), ESearchCase::IgnoreCase)
+			|| FString(Regions[Index].DisplayName).StartsWith(Region, ESearchCase::IgnoreCase))
+		{
+			Target = &Regions[Index];
+			break;
+		}
+	}
+	if (!Pawn || !Target)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBTravel: unknown region '%s'"), *Region);
+		return;
+	}
+	const double X = Target->Center.X + OffsetX;
+	const double Y = Target->Center.Y + OffsetY;
+	const double Ground = FMath::Max(DBRealm::SampleHeight(X, Y), 0.0);
+	Pawn->TeleportTo(FVector(X * 100.0, Y * 100.0, Ground * 100.0 + 250.0), Pawn->GetActorRotation());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBTravel: %s (%s) at %.0f / %.0f m, ground %.0f m"), Target->DisplayName, *Target->RegionId.ToString(), X, Y, Ground);
 }
 
 void UDBCheatManager::DBView(float X, float Y, float Yaw, float Pitch)

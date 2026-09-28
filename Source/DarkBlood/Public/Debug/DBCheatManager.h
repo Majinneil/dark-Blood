@@ -97,6 +97,8 @@ public:
 	UFUNCTION(Exec) void DBView(float X, float Y, float Yaw, float Pitch = -10.f);
 	/** Local camera orbit around your character for visual checks: Yaw relative to its facing (180 = front), arm length in cm. */
 	UFUNCTION(Exec) void DBOrbit(float Yaw, float Pitch = -10.f, float Distance = 250.f);
+	/** Open world: teleport to a region of the realm (id, name or index 0-15), optionally offset in meters. */
+	UFUNCTION(Exec) void DBTravel(const FString& Region, float OffsetX = 0.f, float OffsetY = 0.f);
 
 private:
 	/** On clients: sends the command to the server and returns true. */

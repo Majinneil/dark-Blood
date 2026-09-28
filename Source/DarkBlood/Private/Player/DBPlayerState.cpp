@@ -184,6 +184,15 @@ void ADBPlayerState::ExitRegionVolume(ADBRegionVolume* Volume)
 	UpdateCurrentRegion();
 }
 
+void ADBPlayerState::SetRealmRegion(FName RegionId)
+{
+	if (RealmRegionId != RegionId)
+	{
+		RealmRegionId = RegionId;
+		UpdateCurrentRegion();
+	}
+}
+
 void ADBPlayerState::UpdateCurrentRegion()
 {
 	const ADBRegionVolume* Best = nullptr;
@@ -196,7 +205,7 @@ void ADBPlayerState::UpdateCurrentRegion()
 		}
 	}
 
-	const FName NewRegion = Best ? Best->Region->RegionId : NAME_None;
+	const FName NewRegion = Best ? Best->Region->RegionId : RealmRegionId;
 	if (NewRegion != CurrentRegionId)
 	{
 		CurrentRegionId = NewRegion;

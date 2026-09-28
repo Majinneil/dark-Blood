@@ -38,6 +38,10 @@ TEXTURES = [
     "cliff_side",            # cliffs of the capital plateau / castle rock
     "leafy_grass",           # meadows
     "coast_sand_rocks_02",   # harbor shore
+    # Realm landscape (Tools/UE58/db_create_realm_landscape_material.py)
+    "aerial_sand",           # desert dunes
+    "cracked_red_ground",    # volcanic ground of the fire mountains
+    "forest_ground_04",      # forest floor of the open world
 ]
 TEXTURE_MAPS = {"Diffuse": "diff", "nor_gl": "nor_gl", "arm": "arm"}
 

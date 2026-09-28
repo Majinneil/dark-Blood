@@ -212,6 +212,20 @@ if wet_master is not None:
     library.save_loaded_asset(instance, False)
     log("instance " + name)
 
+# ---- 4b. Sea of the open world: deep blue-green, mirror-smooth (Lumen / ray traced reflections) --------------------
+if wet_master is not None:
+    name = "MI_DB_Water_Sea"
+    instance = unreal.load_asset(INSTANCES + "/" + name) or tools.create_asset(name, INSTANCES, unreal.MaterialInstanceConstant,
+                                                                               unreal.MaterialInstanceConstantFactoryNew())
+    mel.set_material_instance_parent(instance, wet_master)
+    for key, value in {"BaseTint": (0.01, 0.045, 0.06), "TintVariation": (0.015, 0.06, 0.07)}.items():
+        mel.set_material_instance_vector_parameter_value(instance, key, unreal.LinearColor(value[0], value[1], value[2], 1.0))
+    for key, value in {"Wetness": 1.0, "RoughnessMin": 0.02, "RoughnessMax": 0.06, "MacroScale": 20000.0}.items():
+        mel.set_material_instance_scalar_parameter_value(instance, key, value)
+    mel.update_material_instance(instance)
+    library.save_loaded_asset(instance, False)
+    log("instance " + name)
+
 # ---- 5. Demon tree leaves: the island tree's leaf cards, desaturated to a dark blood red with a faint glow -----
 foliage_master = unreal.load_asset("/Game/DarkBlood/Art/Materials/Master/M_DB_Foliage_Master")
 leaf_root = MODEL_ROOT + "/island_tree_02/DB/T_island_tree_02_leaves_"
