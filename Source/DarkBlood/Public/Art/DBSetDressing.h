@@ -143,6 +143,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art", meta = (Units = "cm"))
 	float Width = 300.f;
 
+	/** Streams: the liquid (water, or the glowing blood river of the demon lands). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	EDBArtMaterial Liquid = EDBArtMaterial::Water;
+
 protected:
 	virtual void Build(FDBArtBatcher& Batcher) override;
 
@@ -241,6 +245,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
 	bool bCollision = true;
 
+	/** Place the model as authored around the actor origin (no scaling, no grounding) - e.g. the horizon terrain. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	bool bKeepPivot = false;
+
+	/** Replace every material of the model (Count = keep the authored materials). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	EDBArtMaterial MaterialOverride = EDBArtMaterial::Count;
+
+	/** Slots whose name contains the key get this material instead (checked before MaterialOverride). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	TMap<FString, EDBArtMaterial> SlotMaterials;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	FLinearColor LightColor = FLinearColor(1.f, 0.6f, 0.3f);
+
 	/** Optional light (e.g. a lantern flame) at this local offset above the ground after scaling. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
 	float LightLumens = 0.f;
@@ -258,6 +277,71 @@ private:
 };
 
 UENUM(BlueprintType)
+enum class EDBAmbientFx : uint8
+{
+	/** Pink petals drifting down around cherry trees. */
+	CherryPetals,
+	/** Sparks rising from fires and forges. */
+	Embers,
+	/** Slow blinking lights over meadows and streams (dusk / night only). */
+	Fireflies,
+	/** Red-glowing ash drifting through corrupted land. */
+	DemonAsh,
+};
+
+/**
+ * Ambient particles without a particle system: a few hundred instanced pieces (tiny planes / spheres) moved on the
+ * CPU each frame - falling, rising, wandering, blinking. Only animates while the local camera is near; never
+ * replicated and never simulated on a dedicated server.
+ */
+UCLASS()
+class DARKBLOOD_API ADBAmbientFx : public ADBArtActor
+{
+	GENERATED_BODY()
+
+public:
+	ADBAmbientFx();
+
+	virtual void Tick(float DeltaSeconds) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	EDBAmbientFx Kind = EDBAmbientFx::CherryPetals;
+
+	/** Half size of the box the particles live in (Z = half height, the box sits on the actor origin). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	FVector Extent = FVector(800.f, 800.f, 400.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art", meta = (ClampMin = 1, ClampMax = 2000))
+	int32 Count = 250;
+
+	/** Only visible at dusk and night (fireflies). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	bool bNightOnly = false;
+
+protected:
+	virtual void Build(FDBArtBatcher& Batcher) override;
+
+private:
+	struct FParticle
+	{
+		FVector Base;
+		float Phase;
+		float Speed;
+		float Sway;
+		float SwayRate;
+		float Size;
+	};
+
+	TArray<FParticle> Particles;
+	TArray<FTransform> Transforms;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInstancedStaticMeshComponent> Swarm = nullptr;
+
+	float Time = 0.f;
+};
+
+UENUM(BlueprintType)
 enum class EDBBiome : uint8
 {
 	TemperateForest,
@@ -268,6 +352,8 @@ enum class EDBBiome : uint8
 	Roadside,
 	ShrineGarden,
 	Corrupted,
+	/** Open grassland: grass and a few shrubs and rocks, no trees. */
+	Meadow,
 };
 
 USTRUCT(BlueprintType)
@@ -311,6 +397,10 @@ public:
 	/** Undergrowth / rocks per 100 m2. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Scatter", meta = (ClampMin = 0))
 	float UndergrowthDensity = 10.f;
+
+	/** Grass clumps per m2 (imported CC0 grass; none without it). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Scatter", meta = (ClampMin = 0))
+	float GrassDensity = 0.f;
 
 	/** Density fades to zero over this share of the half extent (soft forest edges). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Scatter", meta = (ClampMin = 0, ClampMax = 1))

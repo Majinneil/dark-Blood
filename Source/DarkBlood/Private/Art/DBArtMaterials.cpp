@@ -58,6 +58,14 @@ namespace
 			{TEXT("Instances/MI_DB_Bark_Sakura"), FLinearColor(0.14f, 0.09f, 0.08f)},
 			{TEXT("Instances/MI_DB_Bamboo"), FLinearColor(0.35f, 0.4f, 0.15f)},
 			{TEXT("Instances/MI_DB_Foliage_Sakura_Leaves"), FLinearColor(0.8f, 0.45f, 0.55f)},
+			{TEXT("Instances/MI_DB_Terrain_Mountain"), FLinearColor(0.3f, 0.3f, 0.32f)},
+			{TEXT("Instances/MI_DB_Terrain_Hills"), FLinearColor(0.12f, 0.16f, 0.08f)},
+			{TEXT("Instances/MI_DB_Terrain_Cliff"), FLinearColor(0.28f, 0.27f, 0.25f)},
+			{TEXT("Instances/MI_DB_Ground_Meadow"), FLinearColor(0.1f, 0.16f, 0.05f)},
+			{TEXT("Instances/MI_DB_Ground_Shore"), FLinearColor(0.45f, 0.4f, 0.33f)},
+			{TEXT("Instances/MI_DB_Terrain_Snow"), FLinearColor(0.85f, 0.87f, 0.9f)},
+			{TEXT("DarkBlood/MI_DB_Blood_River"), FLinearColor(0.35f, 0.01f, 0.01f)},
+			{TEXT("DarkBlood/MI_DB_Foliage_Demon_Leaves"), FLinearColor(0.3f, 0.02f, 0.02f)},
 			{nullptr, FLinearColor(0.004f, 0.004f, 0.004f)},
 		};
 		static_assert(UE_ARRAY_COUNT(Infos) == static_cast<int32>(EDBArtMaterial::Count), "EDBArtMaterial and slot table out of sync");
@@ -98,6 +106,20 @@ namespace
 			{TEXT("fir_sapling_medium/fir_sapling_medium_1k/StaticMeshes/fir_sapling_medium_a_LOD0"),
 				TEXT("fir_sapling_medium/fir_sapling_medium_1k/StaticMeshes/fir_sapling_medium_b_LOD0"),
 				TEXT("fir_sapling_medium/fir_sapling_medium_1k/StaticMeshes/fir_sapling_medium_c_LOD0")},
+			{TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_large_a_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_large_b_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_large_c_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_mid_a_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_mid_b_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_tall_a_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_tall_b_LOD0"),
+				TEXT("grass_medium_01/grass_medium_01_1k/StaticMeshes/grass_medium_01_tall_c_LOD0"),
+				TEXT("grass_medium_02/grass_medium_02_1k/StaticMeshes/grass_medium_02_c"),
+				TEXT("grass_medium_02/grass_medium_02_1k/StaticMeshes/grass_medium_02_d"),
+				TEXT("grass_medium_02/grass_medium_02_1k/StaticMeshes/grass_medium_02_e")},
+			{TEXT("coastal_cliff_01/coastal_cliff_01_1k/StaticMeshes/coastal_cliff_01_1k"),
+				TEXT("coastal_cliff_02/coastal_cliff_02_1k/StaticMeshes/coastal_cliff_02_1k")},
+			{TEXT("rock_face_01/rock_face_01_2k/StaticMeshes/rock_face_01_2k"), TEXT("rock_face_02/rock_face_02_2k/StaticMeshes/rock_face_02_2k")},
 		};
 		static_assert(UE_ARRAY_COUNT(Sets) == static_cast<int32>(EDBArtMeshSet::Count), "EDBArtMeshSet and mesh table out of sync");
 		return Sets[static_cast<int32>(Set)];

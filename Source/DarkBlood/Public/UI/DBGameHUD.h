@@ -30,6 +30,9 @@ public:
 	bool IsSkillTreeVisible() const { return SkillTreeRoot.IsValid(); }
 
 	void ToggleInventory();
+
+	/** Graphics settings [F10]. */
+	void ToggleSettings();
 	void ShowCrafting(AActor* Station);
 	void HideCrafting();
 
@@ -45,6 +48,7 @@ private:
 	TSharedPtr<SWidget> CreatorRoot;
 	TSharedPtr<SWidget> SkillTreeRoot;
 	TSharedPtr<SWidget> InventoryRoot;
+	TSharedPtr<SWidget> SettingsRoot;
 	TSharedPtr<SDBCraftingWidget> CraftingWidget;
 	FDelegateHandle DialogueHandle;
 	bool bUIReady = false;

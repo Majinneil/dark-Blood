@@ -10,6 +10,8 @@
 #include "DBVisualSliceDirector.generated.h"
 
 class APostProcessVolume;
+class AStaticMeshActor;
+class UMaterialInstanceDynamic;
 
 UENUM(BlueprintType)
 enum class EDBTimeOfDay : uint8
@@ -72,6 +74,10 @@ private:
 	void BuildDressing();
 	void ClearDressing();
 	void ApplyLighting();
+	/** Volumetric clouds and sky atmosphere when the level has none (local, transient). */
+	void EnsureSky();
+	/** Pale moon at night, huge blood moon in the demon night, hidden otherwise. */
+	void UpdateMoon(const FRotator& LightRotation, bool bVisible, const FLinearColor& Color, float Strength, float Diameter);
 
 	UPROPERTY(ReplicatedUsing = OnRep_State)
 	FDBVisualSliceState State;
@@ -82,5 +88,15 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APostProcessVolume> PostProcess = nullptr;
 
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> SkyActors;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AStaticMeshActor> Moon = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> MoonMaterial = nullptr;
+
 	bool bBuilt = false;
+	bool bSkyChecked = false;
 };

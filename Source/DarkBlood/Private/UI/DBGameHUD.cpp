@@ -10,7 +10,11 @@
 #include "UI/SDBCharacterCreatorWidget.h"
 #include "UI/SDBDialogueWidget.h"
 #include "UI/SDBGameHudWidget.h"
+#include "Misc/App.h"
+#include "Misc/CommandLine.h"
+#include "Settings/DBGameUserSettings.h"
 #include "UI/SDBInventoryWidget.h"
+#include "UI/SDBSettingsWidget.h"
 #include "UI/SDBSkillTreeWidget.h"
 #include "Widgets/SWeakWidget.h"
 
@@ -23,6 +27,25 @@ void ADBGameHUD::BeginPlay()
 	if (!Controller || !Controller->IsLocalController() || !Viewport)
 	{
 		return; // dedicated servers and headless runs have no UI
+	}
+
+	// Graphics: recommended settings on the first start (desktop resolution, TSR, ray tracing when the GPU has it).
+	// Automated and explicitly sized runs (-ResX, -windowed) keep their command line settings.
+	if (UDBGameUserSettings* Graphics = UDBGameUserSettings::Get())
+	{
+		const TCHAR* CommandLine = FCommandLine::Get();
+		int32 ExplicitWidth = 0;
+		const bool bExplicitMode = FApp::IsUnattended() || FParse::Param(CommandLine, TEXT("windowed")) || FParse::Value(CommandLine, TEXT("ResX="), ExplicitWidth);
+		if (!Graphics->bRecommendedDefaultsApplied && !bExplicitMode)
+		{
+			Graphics->ApplyRecommendedDefaults();
+			Graphics->ApplySettings(false);
+			Graphics->SaveSettings();
+		}
+		else
+		{
+			Graphics->ApplyNonResolutionSettings();
+		}
 	}
 
 	HudWidget = SNew(SDBGameHudWidget).Owner(Controller);
@@ -59,6 +82,10 @@ void ADBGameHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		if (SkillTreeRoot.IsValid())
 		{
 			Viewport->RemoveViewportWidgetContent(SkillTreeRoot.ToSharedRef());
+		}
+		if (SettingsRoot.IsValid())
+		{
+			Viewport->RemoveViewportWidgetContent(SettingsRoot.ToSharedRef());
 		}
 		if (InventoryRoot.IsValid())
 		{
@@ -175,6 +202,26 @@ void ADBGameHUD::ToggleInventory()
 	UpdateInputMode();
 }
 
+void ADBGameHUD::ToggleSettings()
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	if (!bUIReady || !Viewport || CreatorRoot.IsValid())
+	{
+		return;
+	}
+	if (SettingsRoot.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(SettingsRoot.ToSharedRef());
+		SettingsRoot.Reset();
+	}
+	else
+	{
+		SettingsRoot = SNew(SDBSettingsWidget).OnClose(FSimpleDelegate::CreateUObject(this, &ADBGameHUD::ToggleSettings));
+		Viewport->AddViewportWidgetContent(SettingsRoot.ToSharedRef(), 60);
+	}
+	UpdateInputMode();
+}
+
 void ADBGameHUD::ShowCrafting(AActor* Station)
 {
 	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
@@ -232,7 +279,7 @@ void ADBGameHUD::UpdateInputMode()
 	{
 		return;
 	}
-	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || CraftingWidget.IsValid())
+	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || SettingsRoot.IsValid() || CraftingWidget.IsValid())
 	{
 		// Mouse for the option buttons; keys 1-4 and E keep working through game input.
 		FInputModeGameAndUI Mode;

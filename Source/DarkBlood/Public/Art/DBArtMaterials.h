@@ -26,6 +26,11 @@ enum class EDBArtMeshSet : uint8
 	/** Blossoming cherry: island tree geometry with the sakura leaf material. */
 	SakuraTree,
 	Conifer,
+	/** Grass clumps (Nanite) for meadows and forest floors. */
+	Grass,
+	/** Long cliff lines and cliff blocks (plateaus, coast, castle rock). */
+	Cliff,
+	RockFace,
 	Count UMETA(Hidden)
 };
 
@@ -82,6 +87,16 @@ enum class EDBArtMaterial : uint8
 	BarkSakura,
 	Bamboo,
 	FoliageSakuraLeaves,
+	TerrainMountain,
+	TerrainHills,
+	TerrainCliff,
+	GroundMeadow,
+	GroundShore,
+	TerrainSnow,
+	/** Glowing blood-red water of the demon lands. */
+	BloodRiver,
+	/** Dark red, faintly glowing leaf cards (the demon tree). */
+	FoliageDemonLeaves,
 	Void,
 	Count UMETA(Hidden)
 };

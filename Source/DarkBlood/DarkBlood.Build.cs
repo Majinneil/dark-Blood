@@ -23,6 +23,7 @@ public class DarkBlood : ModuleRules
 			"DeveloperSettings",
 			"AnimGraphRuntime",
 			"RHI",
+			"RenderCore",
 			"DarkBloodRules",
 		});
 	}

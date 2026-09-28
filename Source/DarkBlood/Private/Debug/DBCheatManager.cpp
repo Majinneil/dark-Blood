@@ -19,6 +19,7 @@
 #include "DarkBlood.h"
 #include "Engine/SkeletalMesh.h"
 #include "RHIStats.h"
+#include "Settings/DBGameUserSettings.h"
 #include "Visual/DBAnimationSetDefinition.h"
 #include "Visual/DBCharacterVisualComponent.h"
 #include "Visual/DBCharacterVisualDefinition.h"
@@ -689,6 +690,23 @@ void UDBCheatManager::DBPerfSnapshot()
 	const ADBVisualSliceDirector* Director = ADBVisualSliceDirector::Get(GetWorld());
 	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS perf: %.1f fps, frame %.2f ms, GPU %.2f ms, %d draw calls, %d primitives; characters %d (%d with body); %s"), GAverageFPS,
 		GAverageMS, GpuMs, DrawCalls, Primitives, Characters, WithBody, Director ? *Director->DescribeLocalSlice() : TEXT("no visual slice"));
+	const IConsoleVariable* ScreenPercentage = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ScreenPercentage"));
+	const IConsoleVariable* LumenHardware = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.HardwareRayTracing"));
+	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS graphics: r.ScreenPercentage %.1f, Lumen HWRT %d (available %d); %s"), ScreenPercentage ? ScreenPercentage->GetFloat() : 0.f,
+		LumenHardware ? LumenHardware->GetInt() : -1, UDBGameUserSettings::IsHardwareRayTracingAvailable() ? 1 : 0,
+		UDBGameUserSettings::Get() ? *UDBGameUserSettings::Get()->Describe() : TEXT("-"));
+}
+
+void UDBCheatManager::DBGraphics(int32 Quality, int32 Upscaling, int32 bRayTracing)
+{
+	if (UDBGameUserSettings* Settings = UDBGameUserSettings::Get())
+	{
+		Settings->SetOverallScalabilityLevel(FMath::Clamp(Quality, 0, 4));
+		Settings->Upscaling = static_cast<EDBUpscaling>(FMath::Clamp(Upscaling, 0, 4));
+		Settings->bHardwareRayTracing = bRayTracing != 0;
+		Settings->ApplyNonResolutionSettings();
+		UE_LOG(LogDarkBlood, Display, TEXT("DBGraphics: %s"), *Settings->Describe());
+	}
 }
 
 void UDBCheatManager::DBVisualAudit()

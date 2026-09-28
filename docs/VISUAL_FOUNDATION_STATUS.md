@@ -27,6 +27,12 @@ MetaHumans, Animationen und Architektur-Module (Fab/Epic, Konto nötig) – daf�
 | Poly Haven (CC0) | Texturen: weathered_planks, hinoki_planks, old_planks_02, plastered_wall_02, clay_plaster, grey_roof_01, reed_roof_04, japanese_stone_wall, mossy_rock, lichen_rock, rock_pitted_mossy, grey_stone_path, forest_leaves_04, rocky_trail_02, japanese_cedar_bark, sakura_bark, burned_ground_01 (2K) → 22 Material-Instanzen; Modelle (1K, Nanite): tree_small_02, dead_tree_trunk_02, shrub_02/04, fern_02, moss_01, rock_moss_set_01/02, boulder_01, tree_stump_01 → Wald, Wegränder, Bachufer, Dungeon-Hügel |
 | ambientCG (CC0) | PaintedWood003/005, Paper001/004, Fabric036/026/023, Metal009, Metal035, Bamboo002A (2K) → 12 Instanzen; Poly Haven zusätzlich island_tree_02 (Wald + Kirschbaum mit `MI_DB_Foliage_Sakura_Leaves`), fir_sapling_medium (Bergwald) |
 | Waffen | Katana in der rechten Hand (Fab „Corrupted Dark Katana“, lokal), zehn Klingen-Oberflächen (`M_DB_Katana_Master`: Verderbnis-Flecken umgefärbt + pulsierendes Glühen je Element), Rückfall Stahlklinge |
+| Grafik / 4K | Menü `[F10]`: Qualität Niedrig–Kino, Auflösung bis 3840×2160, Anzeigemodus, TSR-Hochskalierung (100/67/58/50/33 %), Hardware-Raytracing (Lumen, SM6), FPS-Limit, VSync; empfohlene Werte beim ersten Start (`UDBGameUserSettings`) |
+| Horizont | selbst erzeugte Bergketten (3,5–14 km, bis ~3 km hoch, Schnee über der Schneegrenze) und Hügel (0,55–4 km), Nanite, Luftperspektive je Tageszeit, Lücke zur Küste im Süden |
+| Wiesen / Gras | Wiesenboden bis zu den Hügeln, Waldboden unter den Wäldern, Poly-Haven-Grasbüschel (Nanite, Foliage-Material mit Alpha) per Scatter-Volumen (`GrassDensity`, Biom Meadow) |
+| Atmosphäre | Lichtstrahlen (volumetrische Streuung + Light-Shaft-Bloom), Wolken/Himmel (ergänzt, falls der Level keine hat), Mond nachts, Blutmond in der Dämonennacht |
+| Bewegte Luft | `ADBAmbientFx`: Kirschblüten, Glut (Schmiede, Dämonentor, Dämonenbaum), Glühwürmchen (Dämmerung/Nacht), rote Asche |
+| Dämonengebiet | nördlich des Dungeons: Dämonenbäume (Adern-Rinde, glühende Blätter), zwei verdorbene Torii, Blutfluss (`MI_DB_Blood_River`), Ruinen, roter lokaler Nebel, Lichter brennen auch am Tag |
 | Werkzeuge | Setup-Skripte, Material-Generator, Poly-Haven- und ambientCG-Download + Import, Ordner-Setup, Audit (Paket + `DBVisualAudit`), `DBPerfSnapshot`, `DBView` |
 
 ## 🟡 Vorbereitet (Slot da, Inhalt fehlt)
@@ -43,6 +49,12 @@ MetaHumans, Animationen und Architektur-Module (Fab/Epic, Konto nötig) – daf�
 Bambus-/Glyzinien-Modelle, Torii-/Laternen-/Statuen-Modelle, Dachziegel-Module, MetaHumans, Haare,
 Kleidung, Rüstungen, Waffen-Meshes, Katana-Animationen, Gesichtsanimation, VFX (Niagara), Wasser-Shader, HDRIs.
 Bis dahin: Baukasten-Bauteile mit echten Materialien + Engine-Mannequin (klar als DEV markiert).
+
+## Zielbilder
+
+`docs/VisualPack/Reference/`: DarkBlood_Zielbild.png (8 Bereiche), DarkBlood_Regionen.png (16 Regionen),
+DarkBlood_Siedlungen.png (16 Siedlungstypen), DarkBlood_Weltkarte.png (Karte). Weltgröße festgelegt: 16 × 16 km
+mit allen 16 Regionen in der Anordnung der Karte.
 
 ## ✋ Manuell nötig (nur du kannst das)
 

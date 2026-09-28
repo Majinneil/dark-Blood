@@ -39,7 +39,14 @@ UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UM
 	UInstancedStaticMeshComponent* Component = NewObject<UInstancedStaticMeshComponent>(&Owner, NAME_None, RF_Transient);
 	Component->SetupAttachment(&Parent);
 	Component->SetStaticMesh(Mesh);
-	if (Material)
+	if (Material && Slot == INDEX_NONE)
+	{
+		for (int32 Index = 0; Index < Mesh->GetStaticMaterials().Num(); ++Index)
+		{
+			Component->SetMaterial(Index, Material);
+		}
+	}
+	else if (Material)
 	{
 		Component->SetMaterial(Slot, Material);
 	}
@@ -79,6 +86,30 @@ void FDBArtBatcher::MeshWithSlot(UStaticMesh* InMesh, int32 Slot, UMaterialInter
 		return;
 	}
 	FindOrCreate(InMesh, Material, Slot)->AddInstance(LocalTransform, /*bWorldSpace*/ false);
+	++InstanceCount;
+}
+
+void FDBArtBatcher::MeshWithMaterials(UStaticMesh* InMesh, const TArray<UMaterialInterface*>& Materials, const FTransform& LocalTransform)
+{
+	if (!InMesh)
+	{
+		return;
+	}
+	// One batch per material combination: a pseudo slot index derived from the combination keys the batch.
+	uint32 Hash = GetTypeHash(InMesh);
+	for (const UMaterialInterface* Material : Materials)
+	{
+		Hash = HashCombine(Hash, GetTypeHash(Material));
+	}
+	UInstancedStaticMeshComponent* Component = FindOrCreate(InMesh, nullptr, -2 - static_cast<int32>(Hash & 0xFFFFFF));
+	for (int32 Index = 0; Index < Materials.Num(); ++Index)
+	{
+		if (Materials[Index] && Component->GetMaterial(Index) != Materials[Index])
+		{
+			Component->SetMaterial(Index, Materials[Index]);
+		}
+	}
+	Component->AddInstance(LocalTransform, /*bWorldSpace*/ false);
 	++InstanceCount;
 }
 

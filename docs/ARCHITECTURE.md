@@ -130,6 +130,7 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBVisuals 0\|1` | Charakter-Profile an / Greybox-Körper (lokal) |
 | `DBView X Y Yaw [Pitch]` | Spieler relativ zum Slice-Ursprung platzieren |
 | `DBOrbit Yaw [Pitch] [Abstand]` | Kamera um die eigene Figur drehen (180 = von vorn), für Sichtprüfungen |
+| `DBGraphics Qualität [Hochskalierung] [Raytracing]` | Grafik für Tests setzen (0–4, 0 = nativ … 4 = 33 %, 0/1); Spieler nutzen das Menü `[F10]` |
 | `DBPerfSnapshot` / `DBVisualAudit` | Frame-/GPU-Zeit, Draw Calls, Slice-Statistik / fehlende Visual-Referenzen |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die

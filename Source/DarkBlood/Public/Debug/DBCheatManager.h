@@ -89,6 +89,8 @@ public:
 	UFUNCTION(Exec) void DBVisuals(int32 bEnabled);
 	/** Local: frame time, GPU time, draw calls, primitives and slice statistics. */
 	UFUNCTION(Exec) void DBPerfSnapshot();
+	/** Graphics settings for tests: quality 0-4, upscaling 0 (native) - 4, hardware ray tracing 0/1 (not saved). */
+	UFUNCTION(Exec) void DBGraphics(int32 Quality, int32 Upscaling = 0, int32 bRayTracing = 1);
 	/** Local: missing / placeholder visual references (materials, profiles, animation sets). */
 	UFUNCTION(Exec) void DBVisualAudit();
 	/** Server: puts your character at X Y (relative to the slice origin) facing Yaw, camera pitch Pitch. */

@@ -9,6 +9,8 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Math/RandomStream.h"
 
 using EShape = FDBArtBatcher::EShape;
@@ -388,8 +390,9 @@ void ADBSplineDressing::Build(FDBArtBatcher& Batcher)
 		for (float Distance = 0.f; Distance < Length; Distance += Step)
 		{
 			const float Mid = FMath::Min(Distance + Step * 0.5f, Length);
-			Put(Batcher, EShape::Cube, M::Water, Identity, At(Mid) + FVector(0.f, 0.f, 3.f), FVector(Step * 1.15f, Width, 1.f), RotAt(Mid));
-			Put(Batcher, EShape::Cube, M::StoneWet, Identity, At(Mid) + FVector(0.f, 0.f, 1.5f), FVector(Step * 1.15f, Width + 140.f, 1.f), RotAt(Mid));
+			Put(Batcher, EShape::Cube, Liquid, Identity, At(Mid) + FVector(0.f, 0.f, 3.f), FVector(Step * 1.15f, Width, 1.f), RotAt(Mid));
+			Put(Batcher, EShape::Cube, Liquid == M::Water ? M::StoneWet : M::DarkBloodStone, Identity, At(Mid) + FVector(0.f, 0.f, 1.5f),
+				FVector(Step * 1.15f, Width + 140.f, 1.f), RotAt(Mid));
 		}
 		for (float Distance = 20.f; Distance < Length; Distance += Random.FRandRange(35.f, 80.f))
 		{
@@ -509,7 +512,8 @@ void ADBDungeonEntrance::Build(FDBArtBatcher& Batcher)
 		const float Radius = Random.FRandRange(250.f, 520.f);
 		const float Size = Random.FRandRange(320.f, 680.f);
 		const FVector Center(FMath::Cos(Angle) * Radius - 120.f, FMath::Sin(Angle) * Radius, Size * 0.22f);
-		if (!PlaceSetMesh(Batcher, EDBArtMeshSet::Boulder, Random, FVector(Center.X, Center.Y, -Size * 0.08f), Size * 1.1f, true))
+		if (!PlaceSetMesh(Batcher, EDBArtMeshSet::RockFace, Random, FVector(Center.X, Center.Y, -Size * 0.1f), Size * 1.2f, true)
+			&& !PlaceSetMesh(Batcher, EDBArtMeshSet::Boulder, Random, FVector(Center.X, Center.Y, -Size * 0.08f), Size * 1.1f, true))
 		{
 			Put(Batcher, EShape::Sphere, Index % 3 == 0 ? M::StoneMossy : M::StoneMountain, Identity, Center, FVector(Size, Size * 0.8f, Size * 0.62f),
 				FRotator(Random.FRandRange(-8.f, 8.f), Random.FRandRange(0.f, 360.f), 0.f));
@@ -595,7 +599,7 @@ bool ADBScatterVolume::IsExcluded(const FVector& World, float Clearance) const
 	{
 		// Only locally built, deterministic landmarks: server and clients must place the same trees
 		// (trunks collide), so replicated gameplay actors are kept clear by the slice layout instead.
-		const bool bLandmark = It->IsA<ADBDungeonEntrance>() || It->IsA<ADBGate>() || It->IsA<ADBBridge>() || It->IsA<ADBLantern>() || It->IsA<ADBPropActor>();
+		const bool bLandmark = It->IsA<ADBDungeonEntrance>() || It->IsA<ADBGate>() || It->IsA<ADBBridge>() || It->IsA<ADBLantern>() || (It->IsA<ADBPropActor>() && !Cast<ADBPropActor>(*It)->bKeepPivot);
 		if (bLandmark && FVector::Dist2D(It->GetActorLocation(), World) < GameplayClearance * Clearance)
 		{
 			return true;
@@ -854,7 +858,7 @@ void ADBScatterVolume::Build(FDBArtBatcher& Batcher)
 		return false;
 	};
 
-	const int32 PlantCount = FMath::RoundToInt(AreaM2 / 100.f * Density);
+	const int32 PlantCount = Biome == EDBBiome::Meadow ? 0 : FMath::RoundToInt(AreaM2 / 100.f * Density);
 	Scatter(PlantCount, 1.f, [&](const FVector& Local, float Scale, const FVector& Normal)
 	{
 		if (Plants.Num() == 0 || !PlaceAuthored(Plants, Local, Normal))
@@ -862,6 +866,20 @@ void ADBScatterVolume::Build(FDBArtBatcher& Batcher)
 			PlaceDevPlant(Batcher, Local, Scale, Random);
 		}
 	});
+	// Grass: many small clumps, no collision, no gameplay clearance (players walk through it).
+	const TArray<TObjectPtr<UStaticMesh>>& GrassMeshes = UDBArtMaterialSubsystem::GetMeshes(EDBArtMeshSet::Grass);
+	if (GrassDensity > 0.f && GrassMeshes.Num() > 0)
+	{
+		Batcher.SetCollision(false);
+		const int32 GrassCount = FMath::RoundToInt(AreaM2 * GrassDensity);
+		Scatter(GrassCount, 0.25f, [&](const FVector& Local, float Scale, const FVector& Normal)
+		{
+			UStaticMesh* Mesh = GrassMeshes[Random.RandRange(0, GrassMeshes.Num() - 1)];
+			const FQuat Align = FQuat::FindBetweenNormals(FVector::UpVector, GetActorTransform().InverseTransformVector(Normal));
+			Batcher.Mesh(Mesh, nullptr, FTransform(Align * FQuat(FVector::UpVector, Random.FRandRange(0.f, 2.f * PI)), Local,
+				FVector(Random.FRandRange(1.8f, 3.2f) * Scale)));
+		});
+	}
 	const int32 UndergrowthCount = FMath::RoundToInt(AreaM2 / 100.f * UndergrowthDensity);
 	Scatter(UndergrowthCount, 0.5f, [&](const FVector& Local, float Scale, const FVector& Normal)
 	{
@@ -870,6 +888,116 @@ void ADBScatterVolume::Build(FDBArtBatcher& Batcher)
 			PlaceDevUndergrowth(Batcher, Local, Scale, Random);
 		}
 	});
+}
+
+// ---- Ambient particles -------------------------------------------------------------------------------------
+
+ADBAmbientFx::ADBAmbientFx()
+{
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	Root->SetMobility(EComponentMobility::Movable);
+}
+
+void ADBAmbientFx::Build(FDBArtBatcher& Batcher)
+{
+	Particles.Reset();
+	Swarm = nullptr;
+	FRandomStream Random(Seed);
+	const bool bPetal = Kind == EDBAmbientFx::CherryPetals;
+	UStaticMesh* Mesh = bPetal ? LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")) : FDBArtBatcher::GetShapeMesh(FDBArtBatcher::EShape::Sphere);
+	const EDBArtMaterial Material = bPetal ? EDBArtMaterial::FoliageSakura
+								  : Kind == EDBAmbientFx::Fireflies ? EDBArtMaterial::LanternPaper
+								  : Kind == EDBAmbientFx::DemonAsh ? EDBArtMaterial::DarkBloodVeins
+																	: EDBArtMaterial::LanternFire;
+	if (!Mesh)
+	{
+		return;
+	}
+	Batcher.SetCollision(false);
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		FParticle& P = Particles.AddDefaulted_GetRef();
+		P.Base = FVector(Random.FRandRange(-Extent.X, Extent.X), Random.FRandRange(-Extent.Y, Extent.Y), Random.FRandRange(0.f, Extent.Z * 2.f));
+		P.Phase = Random.FRand();
+		P.Speed = Random.FRandRange(0.7f, 1.3f);
+		P.Sway = Random.FRandRange(20.f, 80.f);
+		P.SwayRate = Random.FRandRange(0.6f, 1.6f);
+		P.Size = bPetal ? Random.FRandRange(0.05f, 0.08f) : (Kind == EDBAmbientFx::Fireflies ? Random.FRandRange(0.035f, 0.05f) : Random.FRandRange(0.025f, 0.045f));
+		Batcher.Mesh(Mesh, UDBArtMaterialSubsystem::Get(Material), FTransform(P.Base));
+	}
+	if (Pieces.Num() > 0)
+	{
+		Swarm = Pieces.Last();
+		Swarm->SetMobility(EComponentMobility::Movable);
+		Swarm->SetCastShadow(false);
+		Swarm->SetCanEverAffectNavigation(false);
+	}
+	Transforms.SetNum(Particles.Num());
+}
+
+void ADBAmbientFx::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (!Swarm || Particles.Num() == 0 || IsHidden() || IsRunningDedicatedServer())
+	{
+		return;
+	}
+	// Only animate near the local camera (the pieces are too small to read from afar).
+	if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
+	{
+		if (FVector::Dist(Camera->GetCameraLocation(), GetActorLocation()) > Extent.Size() + 5000.f)
+		{
+			return;
+		}
+	}
+	Time += DeltaSeconds;
+	const float Height = Extent.Z * 2.f;
+	for (int32 Index = 0; Index < Particles.Num(); ++Index)
+	{
+		const FParticle& P = Particles[Index];
+		const float Wave = Time * P.SwayRate + P.Phase * 6.283f;
+		FVector Location = P.Base;
+		FRotator Rotation = FRotator::ZeroRotator;
+		float Scale = P.Size;
+		switch (Kind)
+		{
+		case EDBAmbientFx::CherryPetals:
+		case EDBAmbientFx::DemonAsh:
+		{
+			// Falls through the box with the wind, fluttering; fades in at the top and out at the ground.
+			const float Cycle = Kind == EDBAmbientFx::DemonAsh ? 22.f : 14.f;
+			const float T = FMath::Frac(P.Phase + Time * P.Speed / Cycle);
+			Location.Z = Height * (1.f - T);
+			Location.X += FMath::Sin(Wave) * P.Sway + T * 220.f;
+			Location.Y += FMath::Cos(Wave * 0.8f) * P.Sway * 0.7f + T * 90.f;
+			Rotation = FRotator(Time * 90.f * P.Speed + P.Phase * 360.f, P.Phase * 720.f, FMath::Sin(Wave * 2.f) * 70.f);
+			Scale *= FMath::Clamp(T * 12.f, 0.f, 1.f) * FMath::Clamp((1.f - T) * 12.f, 0.f, 1.f);
+			break;
+		}
+		case EDBAmbientFx::Embers:
+		{
+			// Rises and shrinks as it burns out.
+			const float T = FMath::Frac(P.Phase + Time * P.Speed / 4.f);
+			Location.Z = Height * T;
+			Location.X += FMath::Sin(Wave * 2.3f) * P.Sway * 0.4f * T;
+			Location.Y += FMath::Cos(Wave * 1.9f) * P.Sway * 0.4f * T;
+			Scale *= 1.f - T * 0.85f;
+			break;
+		}
+		case EDBAmbientFx::Fireflies:
+		{
+			// Lazy wandering, slow blink.
+			Location.X += FMath::Sin(Wave * 0.35f) * 160.f;
+			Location.Y += FMath::Cos(Wave * 0.27f + 1.3f) * 160.f;
+			Location.Z = 40.f + FMath::Fmod(P.Base.Z, 180.f) + FMath::Sin(Wave * 0.5f) * 35.f;
+			Scale *= FMath::Clamp(FMath::Sin(Time * 1.7f * P.Speed + P.Phase * 40.f) * 3.f - 1.5f, 0.f, 1.f);
+			break;
+		}
+		}
+		Transforms[Index] = FTransform(Rotation, Location, FVector(FMath::Max(Scale, 0.0001f)));
+	}
+	Swarm->BatchUpdateInstancesTransforms(0, Transforms, /*bWorldSpace*/ false, /*bMarkRenderStateDirty*/ true, /*bTeleport*/ true);
 }
 
 // ---- Authored prop -----------------------------------------------------------------------------------------
@@ -892,6 +1020,39 @@ void ADBPropActor::Build(FDBArtBatcher& Batcher)
 	{
 		return;
 	}
+	UMaterialInterface* Override = MaterialOverride != EDBArtMaterial::Count ? UDBArtMaterialSubsystem::Get(MaterialOverride) : nullptr;
+	auto Place = [&](UStaticMesh* Mesh, const FTransform& Transform)
+	{
+		if (SlotMaterials.Num() > 0)
+		{
+			TArray<UMaterialInterface*> Materials;
+			for (const FStaticMaterial& Slot : Mesh->GetStaticMaterials())
+			{
+				UMaterialInterface* Material = Override;
+				for (const TPair<FString, EDBArtMaterial>& Entry : SlotMaterials)
+				{
+					if (Slot.MaterialSlotName.ToString().Contains(Entry.Key))
+					{
+						Material = UDBArtMaterialSubsystem::Get(Entry.Value);
+					}
+				}
+				Materials.Add(Material);
+			}
+			Batcher.MeshWithMaterials(Mesh, Materials, Transform);
+			return;
+		}
+		Override ? Batcher.MeshAllSlots(Mesh, Override, Transform) : Batcher.Mesh(Mesh, nullptr, Transform);
+	};
+	if (bKeepPivot)
+	{
+		Batcher.SetCollision(bCollision);
+		for (UStaticMesh* Mesh : Meshes)
+		{
+			Place(Mesh, Rotation);
+		}
+		bHasModel = true;
+		return;
+	}
 	const float Height = Bounds.Max.Z - Bounds.Min.Z;
 	const float Scale = TargetHeight > 0.f && Height > KINDA_SMALL_NUMBER ? TargetHeight / Height : 1.f;
 	const FVector Center = Bounds.GetCenter();
@@ -899,11 +1060,11 @@ void ADBPropActor::Build(FDBArtBatcher& Batcher)
 	Batcher.SetCollision(bCollision);
 	for (UStaticMesh* Mesh : Meshes)
 	{
-		Batcher.Mesh(Mesh, nullptr, FTransform(ModelRotation, FVector::ZeroVector, FVector(Scale)) * FTransform(FVector(-Center.X, -Center.Y, -Bounds.Min.Z) * Scale));
+		Place(Mesh, FTransform(ModelRotation, FVector::ZeroVector, FVector(Scale)) * FTransform(FVector(-Center.X, -Center.Y, -Bounds.Min.Z) * Scale));
 	}
 	if (LightLumens > 0.f)
 	{
-		AddLight(LightOffset, LightLumens, 700.f, FLinearColor(1.f, 0.6f, 0.3f));
+		AddLight(LightOffset, LightLumens, FMath::Max(700.f, TargetHeight * 1.5f), LightColor);
 	}
 	bHasModel = true;
 }

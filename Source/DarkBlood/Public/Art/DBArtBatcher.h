@@ -41,6 +41,12 @@ public:
 	/** Authored mesh with one material slot replaced (e.g. blossom leaves on a tree). */
 	void MeshWithSlot(UStaticMesh* Mesh, int32 Slot, UMaterialInterface* Material, const FTransform& LocalTransform);
 
+	/** Authored mesh with per-slot materials (null entries keep the authored material). */
+	void MeshWithMaterials(UStaticMesh* Mesh, const TArray<UMaterialInterface*>& Materials, const FTransform& LocalTransform);
+
+	/** Authored mesh with every slot replaced (e.g. a tree turned into corrupted, vein-lit wood). */
+	void MeshAllSlots(UStaticMesh* Mesh, UMaterialInterface* Material, const FTransform& LocalTransform) { MeshWithSlot(Mesh, INDEX_NONE, Material, LocalTransform); }
+
 	int32 GetInstanceCount() const { return InstanceCount; }
 
 	static UStaticMesh* GetShapeMesh(EShape Shape);

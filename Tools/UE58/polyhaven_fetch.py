@@ -31,6 +31,13 @@ TEXTURES = [
     "japanese_cedar_bark",   # tree bark
     "sakura_bark",           # cherry bark
     "burned_ground_01",      # Dark Blood corrupted soil
+    # World pass (backdrop terrain, coast, harbor): Tools/UE58/db_import_polyhaven_world.py
+    "aerial_grass_rock",     # hills: grass with rock patches, seen from afar
+    "aerial_rocks_02",       # mountain rock from afar
+    "snow_02",               # snow caps
+    "cliff_side",            # cliffs of the capital plateau / castle rock
+    "leafy_grass",           # meadows
+    "coast_sand_rocks_02",   # harbor shore
 ]
 TEXTURE_MAPS = {"Diffuse": "diff", "nor_gl": "nor_gl", "arm": "arm"}
 
@@ -47,6 +54,22 @@ MODELS = [
     "tree_small_02",  # ~100 MB; fir_tree_01 / pine_tree_01 are 0.5-1 GB each and left out
     "island_tree_02",  # gnarled old tree: forest variety and (with blossom leaves) the cherry tree
     "fir_sapling_medium",  # young firs for mountain forests
+    # World pass: "id:resolution" overrides the default model resolution
+    "coastal_cliff_01",      # long cliff line: capital plateau, coast
+    "coastal_cliff_02",      # cliff block: castle rock, waterfall cliffs
+    "rock_face_01:2k",
+    "rock_face_02:2k",
+    "grass_medium_01",       # grass clumps (Nanite)
+    "grass_medium_02",
+    "dutch_ship_medium",     # harbor: Nanban trade ship
+    "ship_pinnace",          # harbor: smaller ship
+    "modular_wooden_pier",   # harbor piers
+    "wooden_crate_02",       # harbor / tavern props
+    "wooden_barrels_01",
+    "chinese_tea_table:2k",  # tavern
+    "round_wooden_table_01:2k",
+    "wooden_stool_02",
+    "lantern_chandelier_01:2k",
 ]
 
 
@@ -79,17 +102,19 @@ def main():
             total += download(entry["url"], OUT / "Textures" / asset / f"{asset}_{short}_{args.res}.jpg", entry["size"])
         print("texture", asset)
     if not args.textures_only:
-        for asset in MODELS:
+        for entry_name in MODELS:
+            asset, _, res = entry_name.partition(":")
+            res = res or args.model_res
             files = fetch_json("https://api.polyhaven.com/files/" + asset)
-            gltf = files["gltf"][args.model_res]["gltf"]
+            gltf = files["gltf"][res]["gltf"]
             folder = OUT / "Models" / asset
             total += download(gltf["url"], folder / pathlib.Path(gltf["url"]).name, gltf["size"])
             for relative, entry in gltf.get("include", {}).items():
                 total += download(entry["url"], folder / relative, entry["size"])
             # Leaf / card alpha is a separate map that the glTF does not reference.
             for key, maps in files.items():
-                if "alpha" in key.lower() and args.model_res in maps and "jpg" in maps[args.model_res]:
-                    entry = maps[args.model_res]["jpg"]
+                if "alpha" in key.lower() and res in maps and "jpg" in maps[res]:
+                    entry = maps[res]["jpg"]
                     total += download(entry["url"], folder / "textures" / pathlib.Path(entry["url"]).name, entry["size"])
             print("model", asset)
     (OUT / "LICENSE.txt").write_text("All assets in this folder are CC0 (public domain) from https://polyhaven.com (license: https://polyhaven.com/license).\n")

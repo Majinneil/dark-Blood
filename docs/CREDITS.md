@@ -7,9 +7,16 @@ Texturen und Modelle von [Poly Haven](https://polyhaven.com), Lizenz CC0 (https:
 
 - Texturen: weathered_planks, hinoki_planks, old_planks_02, plastered_wall_02, clay_plaster, grey_roof_01,
   reed_roof_04, japanese_stone_wall, mossy_rock, lichen_rock, rock_pitted_mossy, grey_stone_path, forest_leaves_04,
-  rocky_trail_02, japanese_cedar_bark, sakura_bark, burned_ground_01
+  rocky_trail_02, japanese_cedar_bark, sakura_bark, burned_ground_01, aerial_grass_rock, aerial_rocks_02, snow_02,
+  cliff_side, leafy_grass, coast_sand_rocks_02
 - Modelle: tree_small_02, dead_tree_trunk_02, shrub_02, shrub_04, fern_02, moss_01, rock_moss_set_01,
-  rock_moss_set_02, boulder_01, tree_stump_01, island_tree_02, fir_sapling_medium
+  rock_moss_set_02, boulder_01, tree_stump_01, island_tree_02, fir_sapling_medium, coastal_cliff_01, coastal_cliff_02,
+  rock_face_01, rock_face_02, grass_medium_01, grass_medium_02, dutch_ship_medium, ship_pinnace, modular_wooden_pier,
+  wooden_crate_02, wooden_barrels_01, chinese_tea_table, round_wooden_table_01, wooden_stool_02, lantern_chandelier_01
+  (Welt-Import: `Tools/UE58/db_import_polyhaven_world.py`)
+
+Eigene Inhalte: die Berge und Hügel am Horizont erzeugt `Tools/UE58/generate_backdrop_terrain.py` (Rauschen, kein
+fremdes Material), importiert mit `db_import_backdrop_terrain.py`.
 
 CC0 verlangt keine Nennung; sie steht hier als Dank und zur Herkunftsdokumentation.
 

@@ -100,6 +100,7 @@ namespace DBTags
 	// UI input (routed to the HUD, not to abilities)
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_UI_SkillTree);
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_UI_Inventory);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_UI_Settings);
 
 	// Damage
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage);
