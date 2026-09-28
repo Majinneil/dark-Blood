@@ -104,9 +104,16 @@ public:
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */
 	/** Puts the player on the deck of the nearest ship of a style (0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBBoardShip(int32 Style);
+	/** Sets up every free model of the library in a row ahead of the player (size and facing check); again clears it. */
+	UFUNCTION(Exec) void DBModelShowroom(float Spacing = 5000.f);
+	/** Shows one library model Distance ahead of the player, turned by Yaw (0: its front faces the player). */
+	UFUNCTION(Exec) void DBModelShow(const FString& Key, float Distance = 3000.f, float Yaw = 0.f);
 	UFUNCTION(Exec) void DBSail(float Rudder = 0.f, float Sails = 1.f, float Seconds = 10.f);
 
 private:
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> ShowroomActors;
+
 	/** On clients: sends the command to the server and returns true. */
 	bool ForwardToServer(const FString& Command) const;
 	ADBPlayerState* GetDBPlayerState() const;

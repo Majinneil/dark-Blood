@@ -36,11 +36,17 @@ struct FDBShipSpec
 	/** Water depth the hull needs (m). */
 	float Draft = 1.5f;
 	FText DisplayName;
+	/** Authored model (DBModelLibrary) shown instead of the kit ship, and how deep its keel lies below the water line (cm). */
+	const TCHAR* ModelKey = nullptr;
+	float ModelDraft = 0.f;
 };
 
 namespace DBShipArt
 {
 	DARKBLOOD_API const FDBShipSpec& GetSpec(EDBShipStyle Style);
+
+	/** Authored model of the style scaled to the ship's length, keel ModelDraft below the water line; false when missing. */
+	DARKBLOOD_API bool BuildModel(FDBArtBatcher& Batcher, EDBShipStyle Style);
 
 	/** Builds the ship's pieces into Batcher (collision, when wanted, on hull and decks only); OutLanterns receives the
 	 *  main lanterns (where lights belong). */

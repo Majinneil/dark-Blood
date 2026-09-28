@@ -1,6 +1,7 @@
 #include "Art/DBShipArt.h"
 
 #include "Art/DBArtBatcher.h"
+#include "Art/DBModelLibrary.h"
 
 namespace
 {
@@ -484,12 +485,18 @@ namespace
 const FDBShipSpec& DBShipArt::GetSpec(EDBShipStyle Style)
 {
 	static const FDBShipSpec Specs[] = {
-		{4800.f, 1300.f, 520.f, 820.f, 850.f, 7.f, 3.f, NSLOCTEXT("DarkBlood", "ShipWar", "Kriegsschiff")},
-		{3400.f, 760.f, 380.f, 520.f, 1900.f, 18.f, 2.f, NSLOCTEXT("DarkBlood", "ShipFighting", "Kampfschiff")},
-		{3800.f, 1150.f, 420.f, 580.f, 1150.f, 10.f, 2.5f, NSLOCTEXT("DarkBlood", "ShipMerchant", "Handelsschiff")},
-		{900.f, 230.f, 70.f, 70.f, 1000.f, 35.f, 0.6f, NSLOCTEXT("DarkBlood", "ShipBoat", "Kleines Boot")},
+		{4800.f, 1300.f, 520.f, 820.f, 850.f, 7.f, 3.f, NSLOCTEXT("DarkBlood", "ShipWar", "Kriegsschiff"), TEXT("junk_red_large"), 350.f},
+		{3400.f, 760.f, 380.f, 520.f, 1900.f, 18.f, 2.f, NSLOCTEXT("DarkBlood", "ShipFighting", "Kampfschiff"), TEXT("junk_red_small"), 250.f},
+		{3800.f, 1150.f, 420.f, 580.f, 1150.f, 10.f, 2.5f, NSLOCTEXT("DarkBlood", "ShipMerchant", "Handelsschiff"), TEXT("junk_merchant"), 300.f},
+		{900.f, 230.f, 70.f, 70.f, 1000.f, 35.f, 0.6f, NSLOCTEXT("DarkBlood", "ShipBoat", "Kleines Boot"), TEXT("wooden_boat"), 25.f},
 	};
 	return Specs[FMath::Clamp(static_cast<int32>(Style), 0, static_cast<int32>(UE_ARRAY_COUNT(Specs)) - 1)];
+}
+
+bool DBShipArt::BuildModel(FDBArtBatcher& Batcher, EDBShipStyle Style)
+{
+	const FDBShipSpec& Spec = GetSpec(Style);
+	return Spec.ModelKey && DBModels::BuildScaledToLength(Batcher, Spec.ModelKey, Spec.Length, FTransform(FVector(0.f, 0.f, -Spec.ModelDraft)));
 }
 
 void DBShipArt::Build(FDBArtBatcher& Batcher, EDBShipStyle Style, int32 Seed, bool bCollision, TArray<FVector>* OutLanterns)
@@ -507,6 +514,11 @@ void DBShipArt::Build(FDBArtBatcher& Batcher, EDBShipStyle Style, int32 Seed, bo
 
 void ADBShipModel::Build(FDBArtBatcher& Batcher)
 {
+	Batcher.SetCollision(false);
+	if (DBShipArt::BuildModel(Batcher, Style))
+	{
+		return;
+	}
 	TArray<FVector> Lanterns;
 	DBShipArt::Build(Batcher, Style, Seed, true, &Lanterns);
 	// Warm light at the main lanterns (fades out with distance like every small light).

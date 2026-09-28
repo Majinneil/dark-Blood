@@ -1,6 +1,8 @@
 #include "Debug/DBCheatManager.h"
 
 #include "Abilities/DBAttributeSet.h"
+#include "Art/DBArtBuilder.h"
+#include "Art/DBModelLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Character/DBLesserDemon.h"
 #include "Character/DBNpcCharacter.h"
@@ -850,6 +852,73 @@ void UDBCheatManager::DBSpawnShip(float Distance, int32 Style)
 		const FVector At = Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * Distance;
 		ADBShip::SpawnAt(GetWorld(), FVector2D(At), Pawn->GetActorRotation().Yaw + 90.f, DBShipArt::GetSpec(ShipStyle).DisplayName, ShipStyle);
 	}
+}
+
+void UDBCheatManager::DBModelShowroom(float Spacing)
+{
+	for (AActor* Actor : ShowroomActors)
+	{
+		if (IsValid(Actor))
+		{
+			Actor->Destroy();
+		}
+	}
+	const bool bWasSet = ShowroomActors.Num() > 0;
+	ShowroomActors.Reset();
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (bWasSet || !Pawn)
+	{
+		return;
+	}
+	const FVector Forward = FRotator(0.f, Pawn->GetActorRotation().Yaw, 0.f).Vector();
+	const FVector Right(-Forward.Y, Forward.X, 0.f);
+	int32 Index = 0;
+	for (const DBModels::FModelInfo& Info : DBModels::GetAll())
+	{
+		// A row across the view, 30 m ahead; each model stands on the ground below its spot, facing the player (+X towards).
+		FVector At = Pawn->GetActorLocation() + Forward * 3000.f + Right * (Index - DBModels::GetAll().Num() * 0.5f) * Spacing;
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByChannel(Hit, At + FVector(0.f, 0.f, 20000.f), At - FVector(0.f, 0.f, 20000.f), ECC_WorldStatic))
+		{
+			At = Hit.ImpactPoint;
+		}
+		DBArtBuild::FArtBuilder Builder{*GetWorld(), FTransform(FRotator(0.f, Pawn->GetActorRotation().Yaw + 180.f, 0.f), At), ShowroomActors};
+		const ADBPropActor* Model = Builder.Model(FVector::ZeroVector, 0.f, Info.Key);
+		FVector Origin, Extent;
+		if (Model)
+		{
+			Model->GetActorBounds(false, Origin, Extent);
+		}
+		UE_LOG(LogDarkBlood, Display, TEXT("DBModelShowroom %d %s: %d parts, %s, size %s"), Index, Info.Key, DBModels::GetParts(Info.Key).Num(),
+			Model ? TEXT("placed") : TEXT("MISSING"), *(Extent * 2.f).ToCompactString());
+		++Index;
+	}
+}
+
+void UDBCheatManager::DBModelShow(const FString& Key, float Distance, float Yaw)
+{
+	for (AActor* Actor : ShowroomActors)
+	{
+		if (IsValid(Actor))
+		{
+			Actor->Destroy();
+		}
+	}
+	ShowroomActors.Reset();
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	FVector At = Pawn->GetActorLocation() + FRotator(0.f, Pawn->GetActorRotation().Yaw, 0.f).Vector() * Distance;
+	FHitResult Hit;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, At + FVector(0.f, 0.f, 20000.f), At - FVector(0.f, 0.f, 20000.f), ECC_WorldStatic))
+	{
+		At = Hit.ImpactPoint;
+	}
+	DBArtBuild::FArtBuilder Builder{*GetWorld(), FTransform(FRotator(0.f, Pawn->GetActorRotation().Yaw + 180.f + Yaw, 0.f), At), ShowroomActors};
+	const ADBPropActor* Model = Builder.Model(FVector::ZeroVector, 0.f, *Key);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBModelShow %s: %s"), *Key, Model ? TEXT("placed") : TEXT("MISSING"));
 }
 
 void UDBCheatManager::DBBoardShip(int32 Style)

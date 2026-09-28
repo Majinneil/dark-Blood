@@ -6,6 +6,7 @@
 #include "Art/DBArtBatcher.h"
 #include "Art/DBArtMaterials.h"
 #include "Art/DBModularBuilding.h"
+#include "Art/DBModelLibrary.h"
 #include "Art/DBSetDressing.h"
 #include "Components/BoxComponent.h"
 #include "Components/LocalFogVolumeComponent.h"
@@ -112,6 +113,25 @@ namespace DBArtBuild
 				Actor->StoneMaterial = Style == EDBLanternStyle::Stone ? EDBArtMaterial::StoneTemple : EDBArtMaterial::StoneMossy;
 			}
 			return Finish(Actor, Local, Yaw);
+		}
+
+		/** Free authored model from the library (DBModelLibrary) at its library size, or Height; null when not imported. */
+		ADBPropActor* Model(const FVector& Local, float Yaw, const TCHAR* Key, float Height = 0.f, bool bCollision = true, float Lumens = 0.f,
+			const FVector& LightOffset = FVector::ZeroVector)
+		{
+			const DBModels::FModelInfo* Info = DBModels::Find(Key);
+			const TArray<FString>& Parts = DBModels::GetParts(Key);
+			if (!Info || Parts.IsEmpty())
+			{
+				return nullptr;
+			}
+			TArray<const TCHAR*> PartPtrs;
+			for (const FString& Part : Parts)
+			{
+				PartPtrs.Add(*Part);
+			}
+			const float Size = Height > 0.f ? Height : Info->Height;
+			return Prop(Local - FVector(0.f, 0.f, Size * Info->Sink), Yaw, PartPtrs, Size, FRotator(0.f, Info->Yaw, 0.f), Lumens, LightOffset, bCollision);
 		}
 
 		/** Authored (Fab CC BY) model; returns null when it is not imported so callers can fall back. */

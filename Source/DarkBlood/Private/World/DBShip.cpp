@@ -81,7 +81,11 @@ void ADBShip::ApplyStyle()
 	// The model rolls with the waves, so its pieces are movable and do not collide (the level deck box does).
 	FDBArtBatcher Batcher(*this, *Model, ModelPieces);
 	Batcher.SetMovable(true);
-	DBShipArt::Build(Batcher, Style, 7, false); // same seed on every machine
+	Batcher.SetCollision(false);
+	if (!DBShipArt::BuildModel(Batcher, Style))
+	{
+		DBShipArt::Build(Batcher, Style, 7, false); // kit ship, same seed on every machine
+	}
 }
 
 void ADBShip::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

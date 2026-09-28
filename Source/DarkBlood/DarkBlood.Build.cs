@@ -29,5 +29,6 @@ public class DarkBlood : ModuleRules
 
 		// Open world: landscape (runtime queries, and the editor-only realm builder commandlet).
 		PrivateDependencyModuleNames.Add("Landscape");
+		PrivateDependencyModuleNames.Add("AssetRegistry");
 	}
 }

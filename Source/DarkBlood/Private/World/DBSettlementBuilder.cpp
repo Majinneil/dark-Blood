@@ -29,7 +29,17 @@ namespace
 		float Lot = 1500.f;
 		float Setback = 900.f;
 		float Damage = 0.f;
+		/** Authored house models (DBModelLibrary) that replace ordinary houses with this chance. */
+		TArray<const TCHAR*> Models;
+		float ModelChance = 0.f;
 	};
+
+	FStyle WithModels(FStyle Style, TArray<const TCHAR*> Models, float Chance)
+	{
+		Style.Models = MoveTemp(Models);
+		Style.ModelChance = Chance;
+		return Style;
+	}
 
 	struct FContext
 	{
@@ -89,6 +99,13 @@ namespace
 			return;
 		}
 		C.Houses.Add(At);
+		// Ordinary homes may be authored models instead (halls, shrines, guardhouses stay kit buildings).
+		const bool bOrdinary = Type == B::SmallHouse || Type == B::LargeHouse || Type == B::MerchantHouse;
+		if (bOrdinary && !Style.Models.IsEmpty() && C.Random.FRand() < Style.ModelChance
+			&& C.Builder.Model(At, Yaw, Style.Models[C.Random.RandRange(0, Style.Models.Num() - 1)]))
+		{
+			return;
+		}
 		const int32 ModulesX = X > 0 ? X : C.Random.RandRange(2, 3);
 		const int32 ModulesY = Y > 0 ? Y : C.Random.RandRange(2, 4);
 		const int32 Floors = Style.Floors > 1 && C.Random.FRand() < 0.6f ? Style.Floors : 1;
@@ -327,7 +344,17 @@ namespace
 		const float R = C.Radius;
 		const bool bForest = Site.Type == S::ForestSettlement;
 		const bool bSnow = Site.Type == S::SnowSettlement;
-		const FStyle Village{TEXT("Village"), bSnow ? 0.25f : 0.35f, 1, {B::SmallHouse, B::SmallHouse, B::LargeHouse, B::Warehouse}, 1400.f, 800.f};
+		const bool bHighland = bSnow || Site.Type == S::MountainVillage;
+		const FStyle Village = WithModels(FStyle{TEXT("Village"), bSnow ? 0.25f : 0.35f, 1, {B::SmallHouse, B::SmallHouse, B::LargeHouse, B::Warehouse}, 1400.f, 800.f},
+			// (The shirakawago model's thatch cards have no alpha and read as white paper: not used.)
+			TArray<const TCHAR*>{TEXT("minka_houses"), TEXT("japanese_house")}, bHighland ? 0.6f : 0.55f);
+		// Village shrine behind a torii (kept free of houses).
+		const FVector ShrineAt(R * 0.55f, -R * 0.55f, 0.f);
+		C.Reserved.Emplace(ShrineAt, 1500.f);
+		if (Builder.Model(ShrineAt, 135.f, TEXT("asian_shrine")))
+		{
+			Builder.Model(ShrineAt + FVector(-900.f, 900.f, 0.f), 135.f, TEXT("torii_game"));
+		}
 		// A bending main street through the village, houses along it.
 		const FVector A(-R * 0.9f, -R * 0.2f, 0.f);
 		const FVector Mid(0.f, R * 0.15f, 0.f);
@@ -392,23 +419,29 @@ namespace DBSettlements
 		{
 			const FStyle City{TEXT("Capital"), 0.9f, 2, {B::LargeHouse, B::MerchantHouse, B::LargeHouse, B::Guardhouse}, 1800.f, 1000.f};
 			Builder.Ground(FVector::ZeroVector, FVector2D(R * 1.5f, R * 1.5f), M::GroundCourtyard, 1.4f);
+			// The castle keep rises in its own quarter.
+			const FVector Keep(R * 0.55f, -R * 0.55f, 0.f);
+			C.Reserved.Emplace(Keep, 3800.f);
 			Street(C, City, FVector(-R * 0.85f, 0.f, 0.f), FVector(R * 0.85f, 0.f, 0.f), 700.f, true, EDBLanternStyle::Stone);
 			Street(C, City, FVector(0.f, -R * 0.85f, 0.f), FVector(0.f, R * 0.85f, 0.f), 700.f, true, EDBLanternStyle::Stone);
 			WalledSquare(C, R * 0.92f);
 			Builder.Building(FVector(-R * 0.5f, -R * 0.5f, 0.f), 45.f, B::TempleHall, C.Seed(), TEXT("Temple"), 0.9f, 5, 4, 2);
+			Builder.Model(Keep, 135.f, TEXT("japanese_castle"));
 			Builder.Scatter(FVector(R * 0.5f, R * 0.5f, 0.f), FVector(R * 0.3f, R * 0.3f, 500.f), EDBBiome::CherryGrove, 6.f, 4.f, C.Seed(), 1.f);
 			Builder.Fx(EDBAmbientFx::CherryPetals, FVector(R * 0.5f, R * 0.5f, 0.f), FVector(R * 0.3f, R * 0.3f, 500.f), 220, C.Seed());
 			break;
 		}
 		case S::GreatCity:
 		{
-			const FStyle City{TEXT("Capital"), 0.7f, 2, {B::MerchantHouse, B::Tavern, B::LargeHouse, B::MerchantHouse, B::Warehouse}, 1600.f, 900.f};
+			const FStyle City = WithModels(FStyle{TEXT("Capital"), 0.7f, 2, {B::MerchantHouse, B::Tavern, B::LargeHouse, B::MerchantHouse, B::Warehouse}, 1600.f, 900.f},
+				{TEXT("japanese_house")}, 0.12f);
 			// Cross streets and the temple precinct are planned first: no house stands on them.
 			for (const float Offset : {-0.25f, 0.25f})
 			{
 				PlanRoad(C, FVector(R * Offset, -R * 0.9f, 0.f), FVector(R * Offset, R * 0.9f, 0.f), 500.f);
 			}
 			C.Reserved.Emplace(FVector(0.f, R * 0.75f, 0.f), 2600.f);
+			C.Reserved.Emplace(FVector(R * 0.3f, R * 0.72f, 0.f), 1800.f);
 			for (const float Offset : {-0.5f, 0.f, 0.5f})
 			{
 				Street(C, City, FVector(-R * 0.9f, R * Offset, 0.f), FVector(R * 0.9f, R * Offset, 0.f), 600.f);
@@ -418,6 +451,7 @@ namespace DBSettlements
 				Street(C, City, FVector(R * Offset, -R * 0.9f, 0.f), FVector(R * Offset, R * 0.9f, 0.f), 500.f);
 			}
 			Builder.Building(FVector(0.f, R * 0.75f, 0.f), -90.f, B::TempleHall, C.Seed(), TEXT("Temple"), 0.8f, 4, 4, 2);
+			Builder.Model(FVector(R * 0.3f, R * 0.72f, 0.f), -90.f, TEXT("temple_pagoda_lanterns"));
 			FStyle Backyard = City;
 			Backyard.Floors = 1;
 			Infill(C, Backyard, FVector2D(-R * 0.85f, -R * 0.85f), FVector2D(R * 0.85f, R * 0.85f), 1800.f, 0.75f);
@@ -425,7 +459,8 @@ namespace DBSettlements
 		}
 		case S::TavernTown:
 		{
-			const FStyle Town{TEXT("Village"), 0.55f, 2, {B::Tavern, B::Tavern, B::MerchantHouse, B::SmallHouse}, 1500.f, 850.f};
+			const FStyle Town = WithModels(FStyle{TEXT("Village"), 0.55f, 2, {B::Tavern, B::Tavern, B::MerchantHouse, B::SmallHouse}, 1500.f, 850.f},
+				{TEXT("japanese_house")}, 0.25f);
 			Street(C, Town, FVector(-R * 0.9f, 0.f, 0.f), FVector(R * 0.9f, 0.f, 0.f), 550.f);
 			Street(C, Town, FVector(0.f, -R * 0.9f, 0.f), FVector(0.f, R * 0.9f, 0.f), 550.f);
 			Infill(C, Town, FVector2D(-R * 0.8f, -R * 0.8f), FVector2D(R * 0.8f, R * 0.8f), 1800.f, 0.35f);
@@ -434,14 +469,14 @@ namespace DBSettlements
 		case S::HarborTown:
 		{
 			const bool bGreat = FCString::Strcmp(Site.Name, TEXT("Hauptstadthafen")) == 0;
-			const FStyle Town{bGreat ? FName(TEXT("Capital")) : FName(TEXT("Village")), bGreat ? 0.8f : 0.5f, 2,
-				{B::MerchantHouse, B::Tavern, B::LargeHouse, B::SmallHouse}, 1500.f, 850.f};
+			const FStyle Town = WithModels(FStyle{bGreat ? FName(TEXT("Capital")) : FName(TEXT("Village")), bGreat ? 0.8f : 0.5f, 2,
+				{B::MerchantHouse, B::Tavern, B::LargeHouse, B::SmallHouse}, 1500.f, 850.f}, {TEXT("japanese_house")}, bGreat ? 0.12f : 0.3f);
 			Harbor(C, Town, bGreat);
 			break;
 		}
 		case S::FishingVillage:
 		{
-			const FStyle Huts{TEXT("Village"), 0.2f, 1, {B::SmallHouse}, 1300.f, 700.f};
+			const FStyle Huts = WithModels(FStyle{TEXT("Village"), 0.2f, 1, {B::SmallHouse}, 1300.f, 700.f}, {TEXT("japanese_house")}, 0.5f);
 			const float Shore = static_cast<float>(Site.ShoreDistance * 100.0);
 			for (int32 Index = 0; Index < 7; ++Index)
 			{
@@ -460,7 +495,8 @@ namespace DBSettlements
 		}
 		case S::RiceVillage:
 		{
-			const FStyle Farm{TEXT("Village"), 0.3f, 1, {B::SmallHouse, B::SmallHouse, B::Warehouse}, 1400.f, 800.f};
+			const FStyle Farm = WithModels(FStyle{TEXT("Village"), 0.3f, 1, {B::SmallHouse, B::SmallHouse, B::Warehouse}, 1400.f, 800.f},
+				{TEXT("minka_houses"), TEXT("japanese_house")}, 0.5f);
 			Street(C, Farm, FVector(-R * 0.4f, 0.f, 0.f), FVector(R * 0.4f, 0.f, 0.f), 400.f);
 			House(C, Farm, FVector(0.f, R * 0.25f, 0.f), -90.f, B::VillageHall, 3, 4);
 			RicePaddies(C, R * 0.45f, R * 1.0f);
@@ -470,6 +506,12 @@ namespace DBSettlements
 		{
 			Builder.Building(FVector(R * 0.55f, 0.f, 0.f), 180.f, B::TempleHall, C.Seed(), TEXT("Temple"), 0.9f, 6, 5, 2);
 			Builder.Spline(EDBSplineDressing::StonePath, {FVector(-R * 0.95f, 0.f, 0.f), FVector(R * 0.35f, 0.f, 0.f)}, 260.f, C.Seed());
+			// The great gate at the start of the path, a five-storey pagoda and a temple tower beside the hall.
+			Builder.Model(FVector(-R * 0.97f, 0.f, 0.f), 0.f, TEXT("torii_large"));
+			Builder.Model(FVector(R * 0.25f, -R * 0.38f, 0.f), 90.f, TEXT("japanese_temple"));
+			Builder.Model(FVector(R * 0.25f, R * 0.38f, 0.f), -90.f, TEXT("pagoda"));
+			C.Reserved.Emplace(FVector(R * 0.25f, -R * 0.38f, 0.f), 1600.f);
+			C.Reserved.Emplace(FVector(R * 0.25f, R * 0.38f, 0.f), 1600.f);
 			const FString Torii = TEXT("/Game/DarkBlood/Art/Fab/Torii_Pikas/scene/StaticMeshes/Torri_Gate_Torri_gate_0");
 			const FString Rope = TEXT("/Game/DarkBlood/Art/Fab/Torii_Pikas/scene/StaticMeshes/Torri_Gate_Rope_Gold_0");
 			for (const float X : {-0.8f, -0.5f, -0.2f})
@@ -505,6 +547,8 @@ namespace DBSettlements
 			}
 			Builder.Spline(EDBSplineDressing::Road, {FVector(-R * 1.2f, 0.f, 0.f), FVector(R * 1.2f, 0.f, 0.f)}, 500.f, C.Seed());
 			Builder.Fx(EDBAmbientFx::Embers, FVector::ZeroVector, FVector(200.f, 200.f, 250.f), 40, C.Seed());
+			// The vassal lord's castle on its wooded hill beside the outpost.
+			Builder.Model(FVector(R + 9000.f, R * 0.3f, 0.f), 180.f, TEXT("kokura_castle"), 0.f, false);
 			break;
 		}
 		case S::CaravanTown:
@@ -532,7 +576,8 @@ namespace DBSettlements
 		}
 		case S::RiverSettlement:
 		{
-			const FStyle River{TEXT("Village"), 0.4f, 1, {B::SmallHouse, B::LargeHouse, B::MerchantHouse}, 1400.f, 800.f};
+			const FStyle River = WithModels(FStyle{TEXT("Village"), 0.4f, 1, {B::SmallHouse, B::LargeHouse, B::MerchantHouse}, 1400.f, 800.f},
+				{TEXT("japanese_house"), TEXT("minka_houses")}, 0.4f);
 			Builder.Spline(EDBSplineDressing::Stream, {FVector(0.f, -R * 1.1f, 0.f), FVector(200.f, 0.f, 0.f), FVector(0.f, R * 1.1f, 0.f)}, 500.f, C.Seed());
 			if (ADBBridge* Bridge = Builder.Begin<ADBBridge>(FVector(200.f, 0.f, 0.f)))
 			{

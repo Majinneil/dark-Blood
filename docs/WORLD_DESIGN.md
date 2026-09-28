@@ -56,7 +56,14 @@ Steuer mit E, W/S Segel, A/D Ruder; Server bewegt, Mitspieler fahren auf Deck mi
 Der Hauptstadthafen hält die ganze Flotte bereit, andere Häfen Handels-, Kampfschiff und Boot, das Fischerdorf Boote;
 zusätzlich liegen unbemannte Schiffe an den Stegen (`ADBShipModel`). Bug und Bugflanken prüfen den Tiefgang des Typs.
 Testbefehle `DBSpawnShip <Abstand> <Typ>`, `DBBoardShip <Typ>`, `DBSail <Ruder> <Segel> <Sekunden>`.
+Die vier Typen zeigen die freien Dschunken-Modelle (Kriegsschiff: rote Dschunke, Kampfschiff: kleine rote Dschunke,
+Handelsschiff: Dschunke mit Leinensegeln, Boot: Holzruderboot – siehe CREDITS.md); das Bau-Kit-Schiff bleibt Rückfall.
 Offen: Innenräume (Kapitänsdeck, Laderaum), Besatzung.
+
+Freie Modelle in Siedlungen (`DBModelLibrary`, `FArtBuilder::Model`): Dörfer, Reisdorf, Fischerdorf und Flusssiedlung
+setzen Minka- und japanische Häuser statt Kit-Häusern ein (40–60 %), Städte vereinzelt; die Hauptstadt hat eine Burg,
+die Großstadt eine Pagode mit Laternen, die Tempelsiedlung großes Torii, Tempelturm und Pagode, Dörfer einen Schrein mit
+Torii, der Grenzposten die Burg Kokura auf ihrem Hügel. Testbefehle `DBModelShowroom`, `DBModelShow <Schlüssel>`.
 
 Meer: eine 40-km-Fläche auf Z −0,3 m mit `M_DB_Sea` (dunkel, glänzend, opak; drei gegeneinander driftende
 Weltprojektionen der generierten Wellen-Normalmap `Tools/generate_sea_normal.py`). Keine Kollision – Figuren im Meer

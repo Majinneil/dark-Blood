@@ -37,6 +37,35 @@ das DARK-BLOOD-Materialsystem angepasst (Änderung im Sinne von CC BY):
 - „Ibaraki Temple Statue – MTSU Animation“ – Paul Griswold / MTSU Animation – https://www.fab.com/listings/bc48cffd-d102-4049-b200-20ca0982198e
 - „Shrine statue in Kusatsu Japan – MTSU“ – Paul Griswold / MTSU Animation – https://www.fab.com/listings/b37529e9-b708-45fa-b399-7adaee4f6e68
 
+## Sketchfab – CC BY 4.0 (Namensnennung Pflicht, auch im späteren Spiel-Abspann)
+
+Kostenlose, herunterladbare Modelle ohne „NoAI“-Markierung, über das Sketchfab-Konto des Projektinhabers geladen
+(2026-09-28), Lizenz [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Quellen unter `SourceArt/Sketchfab/`
+(nicht im Repository), importiert von `Tools/UE58/db_import_sketchfab.py` nach
+`/Game/DarkBlood/Art/Environment/Sketchfab/<Schlüssel>/` (Nanite, Materialien angepasst, skaliert und gedreht –
+Änderungen im Sinne von CC BY). Eingesetzt über `DBModelLibrary`.
+
+| Modell | Urheber | Schlüssel | Quelle |
+|---|---|---|---|
+| „Japanese house "minka"“ | kolya5561 | `minka_houses` | https://sketchfab.com/3d-models/1b757cde000240cb84d571032946bfe6 |
+| „Japanese House“ | Daniel Stringer | `japanese_house` | https://sketchfab.com/3d-models/771899f2af8a4b57aa98b1ca1ae83034 |
+| „Shirakawago Village Set House 1“ | Lokomotto | `shirakawago_house (importiert, derzeit nicht verwendet)` | https://sketchfab.com/3d-models/f94da738aefc4674ab2062df5c01cd43 |
+| „Japanese Temple“ | galaxxxy | `temple_pagoda_lanterns` | https://sketchfab.com/3d-models/5917e267ca3e48ac8a27f9ec5809fc29 |
+| „Japanese Temple“ | Jainesh Pathak | `japanese_temple` | https://sketchfab.com/3d-models/a210febbec4f454dbd0df1d142be06bc |
+| „Kokura Castle“ | AVATTA | `kokura_castle` | https://sketchfab.com/3d-models/aba23531911c45439067a6e0aaccad07 |
+| „Japanese Castle“ | Zorodroger | `japanese_castle` | https://sketchfab.com/3d-models/a37d9de4c8dc4f2da25698bb2028b10a |
+| „Chinese Junk Ship“ | pinkycolada | `junk_red_large (Kriegsschiff)` | https://sketchfab.com/3d-models/35b340bce9fb4e0680bc0116cebc35c9 |
+| „junk“ | NorbertNagy | `junk_red_small (Kampfschiff)` | https://sketchfab.com/3d-models/7350d87350ab41f2be0d0640d2030518 |
+| „Chinese Junk Ship Model“ | BG Builds | `junk_merchant (Handelsschiff)` | https://sketchfab.com/3d-models/dca48504de4e4794b790e249983238cc |
+| „Wooden Boat (PBR - Game ready)“ | Javaad | `wooden_boat (Kleines Boot)` | https://sketchfab.com/3d-models/863f20dcd6324b799b69e6a583909a6b |
+| „Pagoda“ | Juoda | `pagoda` | https://sketchfab.com/3d-models/b8c35388ecd443178c24a5e5cb4c972c |
+| „Japanese Lantern“ | Joseph Casetta | `lantern_hanging` | https://sketchfab.com/3d-models/2ca3f1b33e0d41fca89718ec5932e5e2 |
+| „Stone Japanese Lantern“ | magiccc | `lantern_stone` | https://sketchfab.com/3d-models/6b475ce70edc4399b4364cc36afe3c9a |
+| „Asian Shrine“ | Pikas | `asian_shrine` | https://sketchfab.com/3d-models/e9c5a53fdb09482ab64ac3024b0e2522 |
+| „Traditional Japanese Bridge“ | matthewnixon | `bridge_red` | https://sketchfab.com/3d-models/7a58c496216f42bca9a37d725be2ef0f |
+| „Japanese Torii gate Game Asset“ | Bazylonator | `torii_game` | https://sketchfab.com/3d-models/e12d2fa1b2b94928b8b87cb7787e2462 |
+| „Torii gate“ | blash3D | `torii_large` | https://sketchfab.com/3d-models/abbd7a053bd84a08a207ca86bdc62783 |
+
 ## Fab – Standard-Lizenz (nicht im Repository)
 
 Fab verbietet die Weitergabe als eigenständige Dateien; jede Person lädt sie aus ihrer eigenen Fab-Bibliothek nach
