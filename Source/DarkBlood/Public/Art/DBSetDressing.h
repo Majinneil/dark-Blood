@@ -219,6 +219,44 @@ protected:
 	virtual void Build(FDBArtBatcher& Batcher) override;
 };
 
+/** Authored model (e.g. CC BY Fab props), scaled to a target height and set on the ground. Multi-part models share
+ *  one scene space, so all parts get the same transform. Falls back to nothing when the meshes are not imported. */
+UCLASS()
+class DARKBLOOD_API ADBPropActor : public ADBArtActor
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	TArray<TSoftObjectPtr<UStaticMesh>> Parts;
+
+	/** Height of the combined parts after scaling (0 = keep the authored size). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art", meta = (Units = "cm"))
+	float TargetHeight = 0.f;
+
+	/** Extra rotation of the model inside the actor (authoring axes differ between sources). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	FRotator ModelRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	bool bCollision = true;
+
+	/** Optional light (e.g. a lantern flame) at this local offset above the ground after scaling. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	float LightLumens = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Art")
+	FVector LightOffset = FVector::ZeroVector;
+
+	bool HasModel() const { return bHasModel; }
+
+protected:
+	virtual void Build(FDBArtBatcher& Batcher) override;
+
+private:
+	bool bHasModel = false;
+};
+
 UENUM(BlueprintType)
 enum class EDBBiome : uint8
 {

@@ -19,6 +19,27 @@ Materialien von [ambientCG](https://ambientcg.com), Lizenz CC0 (https://docs.amb
 `Tools/UE58/ambientcg_fetch.py`: PaintedWood003, PaintedWood005, Paper001, Paper004, Fabric036, Fabric026, Fabric023,
 Metal009, Metal035, Bamboo002A.
 
+## Fab – CC BY 4.0 (Namensnennung Pflicht, auch im späteren Spiel-Abspann)
+
+Über das Fab-Konto des Projektinhabers geladen, alle mit „Allows usage with AI: Yes“, Lizenz
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Eingebunden unter `/Game/DarkBlood/Art/Fab/`, Materialien an
+das DARK-BLOOD-Materialsystem angepasst (Änderung im Sinne von CC BY):
+
+- „Japanese Torii Gate“ – Pikas – https://www.fab.com/listings/805a07ba-a248-4871-bf06-78bea645ba7b
+- „Medieval Wall Mounted Lantern“ – Kigha – https://www.fab.com/listings/11f8f6d9-69dd-4119-8490-ebe686ff9626
+- „Ibaraki Temple Statue – MTSU Animation“ – Paul Griswold / MTSU Animation – https://www.fab.com/listings/bc48cffd-d102-4049-b200-20ca0982198e
+- „Shrine statue in Kusatsu Japan – MTSU“ – Paul Griswold / MTSU Animation – https://www.fab.com/listings/b37529e9-b708-45fa-b399-7adaee4f6e68
+
+## Fab – Standard-Lizenz (nicht im Repository)
+
+Fab verbietet die Weitergabe als eigenständige Dateien; jede Person lädt sie aus ihrer eigenen Fab-Bibliothek nach
+`SourceArt/Fab` und importiert sie mit `Tools/UE58/db_import_fab.py` (landen in `/Game/DarkBlood/Dev/FabAnims/`, ignoriert):
+
+- „Fight Mocap Animation Data“ – Mocap.in (Lizenz „Persönlich“: kostenlos bis 100.000 US-$ Jahresumsatz)
+- „Dynamic Falling & Rolling Animation Pack“ – DZTFIX KATSU (Lizenz „Persönlich“, wie oben)
+- In der Bibliothek, Installation über den Epic Launcher: „Kostenloses Animationspaket“ (Gamma Studio),
+  „Mage Collection Samples“ (Rapa Motion), „Europäische Waldumwelt“ (Blackridge, CC BY 4.0)
+
 ## Unreal Engine
 
 Entwicklungs-Mannequin und -Animationen stammen aus der lokalen UE-5.8-Installation (Template-Inhalte) und werden

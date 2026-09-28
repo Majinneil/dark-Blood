@@ -127,7 +127,11 @@ void UDBAbility_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	{
 		ASC->AddTimedLooseTag(DBTags::State_Invulnerable, InvulnerableSeconds);
 	}
-	PlayPresentationMontage(DodgeMontage, DBTags::Anim_Dodge, 0, DurationSeconds);
+	// Presentation: directional roll (8 variants clockwise from forward; sets with fewer variants wrap around).
+	const FVector Local = Character->GetActorTransform().InverseTransformVectorNoScale(Direction);
+	const float Degrees = FMath::RadiansToDegrees(FMath::Atan2(Local.Y, Local.X));
+	const int32 Octant = (FMath::RoundToInt(Degrees / 45.f) + 8) % 8;
+	PlayPresentationMontage(DodgeMontage, DBTags::Anim_Dodge, Octant, DurationSeconds);
 	ApplyPush(this, TEXT("Dodge"), Direction, Distance, DurationSeconds);
 	UE_LOG(LogDBCombat, Log, TEXT("%s dodges"), *DBCombat::GetCombatName(Character));
 	if (HasAuthority(&ActivationInfo))

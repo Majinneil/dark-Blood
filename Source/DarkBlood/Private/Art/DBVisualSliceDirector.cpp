@@ -115,6 +115,35 @@ namespace
 			return Finish(Actor, Local, Yaw);
 		}
 
+		/** Authored (Fab CC BY) model; returns null when it is not imported so callers can fall back. */
+		ADBPropActor* Prop(const FVector& Local, float Yaw, const TArray<const TCHAR*>& Parts, float Height, const FRotator& ModelRotation = FRotator::ZeroRotator,
+			float Lumens = 0.f, const FVector& LightOffset = FVector::ZeroVector, bool bCollision = true)
+		{
+			ADBPropActor* Actor = Begin<ADBPropActor>(Local, Yaw);
+			if (!Actor)
+			{
+				return nullptr;
+			}
+			for (const TCHAR* Part : Parts)
+			{
+				const FString Path(Part);
+				Actor->Parts.Add(TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(Path + TEXT(".") + FPaths::GetBaseFilename(Path))));
+			}
+			Actor->TargetHeight = Height;
+			Actor->ModelRotation = ModelRotation;
+			Actor->LightLumens = Lumens;
+			Actor->LightOffset = LightOffset;
+			Actor->bCollision = bCollision;
+			Finish(Actor, Local, Yaw);
+			if (!Actor->HasModel())
+			{
+				Out.Remove(Actor);
+				Actor->Destroy();
+				return nullptr;
+			}
+			return Actor;
+		}
+
 		ADBScatterVolume* Scatter(const FVector& Local, const FVector& Extent, EDBBiome Biome, float Density, float Undergrowth, int32 Seed)
 		{
 			ADBScatterVolume* Actor = Begin<ADBScatterVolume>(Local);
@@ -342,6 +371,11 @@ void ADBVisualSliceDirector::BuildDressing()
 		Tavern->Configure(EDBBuildingType::Tavern, 41, TEXT("Village"), 0.55f, 3, 4, 2);
 		B.Finish(Tavern, FVector(3900.f, -1780.f, 0.f), 90.f);
 	}
+	for (const float X : {3400.f, 4400.f})
+	{
+		B.Prop(FVector(X, -1385.f, 190.f), 90.f, {TEXT("/Game/DarkBlood/Art/Fab/WallLantern_Kigha/scene/StaticMeshes/scene")}, 55.f, FRotator::ZeroRotator, 500.f,
+			FVector(0.f, 0.f, 25.f), false);
+	}
 	B.Building(FVector(2950.f, -1750.f, 0.f), 90.f, EDBBuildingType::MerchantHouse, 43, TEXT("Village"), 0.5f, 2, 2, 2);
 	B.Building(FVector(4950.f, -1650.f, 0.f), 90.f, EDBBuildingType::SmallHouse, 47, TEXT("Village"), 0.3f, 2, 3);
 	B.Building(FVector(5050.f, -2800.f, 0.f), 180.f, EDBBuildingType::SmallHouse, 53, TEXT("Village"), 0.35f, 2, 2);
@@ -374,10 +408,23 @@ void ADBVisualSliceDirector::BuildDressing()
 	B.Scatter(FVector(6700.f, 1800.f, 0.f), FVector(500.f, 1300.f, 500.f), EDBBiome::WetForest, 6.f, 24.f, 16);
 
 	// ---- 7. Shrine: torii, stone path, lanterns, cherry trees, bamboo grove ---------------------------------
-	if (ADBGate* Torii = B.Begin<ADBGate>(FVector(7100.f, -700.f, 0.f)))
+	// Torii: CC BY model (Pikas, Fab) with the procedural gate as fallback.
+	const TCHAR* ToriiRoot = TEXT("/Game/DarkBlood/Art/Fab/Torii_Pikas/scene/StaticMeshes/");
+	if (!B.Prop(FVector(7100.f, -700.f, 0.f), 0.f, {*(FString(ToriiRoot) + TEXT("Torri_Gate_Torri_gate_0")), *(FString(ToriiRoot) + TEXT("Torri_Gate_Rope_Gold_0"))}, 560.f,
+			FRotator(0.f, 90.f, 0.f)))
 	{
-		Torii->Style = EDBGateStyle::Torii;
-		B.Finish(Torii, FVector(7100.f, -700.f, 0.f));
+		if (ADBGate* Torii = B.Begin<ADBGate>(FVector(7100.f, -700.f, 0.f)))
+		{
+			Torii->Style = EDBGateStyle::Torii;
+			B.Finish(Torii, FVector(7100.f, -700.f, 0.f));
+		}
+	}
+	// Temple guardian statues (MTSU photogrammetry, CC BY) flanking the shrine, stacked-stone figures along the path.
+	B.Prop(FVector(8000.f, -1230.f, 0.f), 90.f, {TEXT("/Game/DarkBlood/Art/Fab/Statue_Ibaraki_MTSU/scene/StaticMeshes/scene")}, 260.f);
+	B.Prop(FVector(8000.f, -170.f, 0.f), -90.f, {TEXT("/Game/DarkBlood/Art/Fab/Statue_Ibaraki_MTSU/scene/StaticMeshes/scene")}, 260.f);
+	for (const float Y : {-1000.f, -400.f})
+	{
+		B.Prop(FVector(7300.f, Y, 0.f), Y < -700.f ? 90.f : -90.f, {TEXT("/Game/DarkBlood/Art/Fab/Statue_Kusatsu_MTSU/Scaniverse")}, 110.f, FRotator(0.f, 0.f, 90.f));
 	}
 	B.Spline(EDBSplineDressing::StonePath, {FVector(7200.f, -700.f, 0.f), FVector(7850.f, -700.f, 0.f)}, 170.f, 17);
 	for (const float X : {7450.f, 7750.f})

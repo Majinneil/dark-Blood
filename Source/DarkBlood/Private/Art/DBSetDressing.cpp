@@ -595,7 +595,7 @@ bool ADBScatterVolume::IsExcluded(const FVector& World, float Clearance) const
 	{
 		// Only locally built, deterministic landmarks: server and clients must place the same trees
 		// (trunks collide), so replicated gameplay actors are kept clear by the slice layout instead.
-		const bool bLandmark = It->IsA<ADBDungeonEntrance>() || It->IsA<ADBGate>() || It->IsA<ADBBridge>() || It->IsA<ADBLantern>();
+		const bool bLandmark = It->IsA<ADBDungeonEntrance>() || It->IsA<ADBGate>() || It->IsA<ADBBridge>() || It->IsA<ADBLantern>() || It->IsA<ADBPropActor>();
 		if (bLandmark && FVector::Dist2D(It->GetActorLocation(), World) < GameplayClearance * Clearance)
 		{
 			return true;
@@ -870,4 +870,40 @@ void ADBScatterVolume::Build(FDBArtBatcher& Batcher)
 			PlaceDevUndergrowth(Batcher, Local, Scale, Random);
 		}
 	});
+}
+
+// ---- Authored prop -----------------------------------------------------------------------------------------
+
+void ADBPropActor::Build(FDBArtBatcher& Batcher)
+{
+	bHasModel = false;
+	TArray<UStaticMesh*> Meshes;
+	FBox Bounds(ForceInit);
+	const FTransform Rotation(ModelRotation);
+	for (const TSoftObjectPtr<UStaticMesh>& Part : Parts)
+	{
+		if (UStaticMesh* Mesh = Part.LoadSynchronous())
+		{
+			Meshes.Add(Mesh);
+			Bounds += Mesh->GetBoundingBox().TransformBy(Rotation);
+		}
+	}
+	if (Meshes.Num() == 0 || !Bounds.IsValid)
+	{
+		return;
+	}
+	const float Height = Bounds.Max.Z - Bounds.Min.Z;
+	const float Scale = TargetHeight > 0.f && Height > KINDA_SMALL_NUMBER ? TargetHeight / Height : 1.f;
+	const FVector Center = Bounds.GetCenter();
+	// Scale about the model, then put the bottom center on the actor origin.
+	Batcher.SetCollision(bCollision);
+	for (UStaticMesh* Mesh : Meshes)
+	{
+		Batcher.Mesh(Mesh, nullptr, FTransform(ModelRotation, FVector::ZeroVector, FVector(Scale)) * FTransform(FVector(-Center.X, -Center.Y, -Bounds.Min.Z) * Scale));
+	}
+	if (LightLumens > 0.f)
+	{
+		AddLight(LightOffset, LightLumens, 700.f, FLinearColor(1.f, 0.6f, 0.3f));
+	}
+	bHasModel = true;
 }

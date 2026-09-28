@@ -15,6 +15,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Engine/SkeletalMesh.h"
+#include "Misc/PackageName.h"
 #include "Materials/MaterialInterface.h"
 #include "Visual/DBAnimationSetDefinition.h"
 #include "Visual/DBCharacterVisualDefinition.h"
@@ -606,11 +607,37 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		};
 		const TArray<TSoftObjectPtr<UAnimMontage>> Combo = {Montage(TEXT("AM_DB_Dev_Attack_01")), Montage(TEXT("AM_DB_Dev_Attack_02")),
 			Montage(TEXT("AM_DB_Dev_Attack_03"))};
-		AddAnim(DBTags::Anim_Attack, Combo);
-		AddAnim(DBTags::Anim_Attack_Light, Combo);
+		// Free Fab animations imported locally by Tools/UE58/db_import_fab.py (Standard license: not in the repo).
+		auto FabMontage = [](const TCHAR* Folder, const TCHAR* Name)
+		{
+			return TSoftObjectPtr<UAnimMontage>(FSoftObjectPath(FString::Printf(TEXT("/Game/DarkBlood/Dev/FabAnims/%s/%s.%s"), Folder, Name, Name)));
+		};
+		const bool bFabFight = FPackageName::DoesPackageExist(TEXT("/Game/DarkBlood/Dev/FabAnims/Fight/AM_DB_Fight_Attack_Sword_A"));
+		const bool bFabRolls = FPackageName::DoesPackageExist(TEXT("/Game/DarkBlood/Dev/FabAnims/Rolls/AM_DB_Roll_0_front"));
+		const TArray<TSoftObjectPtr<UAnimMontage>> SwordCombo = bFabFight
+			? TArray<TSoftObjectPtr<UAnimMontage>>{FabMontage(TEXT("Fight"), TEXT("AM_DB_Fight_Attack_Sword_A")), FabMontage(TEXT("Fight"), TEXT("AM_DB_Fight_Attack_Sword_B")),
+				Montage(TEXT("AM_DB_Dev_Attack_03"))}
+			: Combo;
+		AddAnim(DBTags::Anim_Attack, SwordCombo);
+		AddAnim(DBTags::Anim_Attack_Light, SwordCombo);
 		AddAnim(DBTags::Anim_Attack_Heavy, {Montage(TEXT("AM_DB_Dev_Attack_Heavy"))});
-		AddAnim(DBTags::Anim_Attack_Charged, {Montage(TEXT("AM_DB_Dev_Attack_Heavy"))});
-		AddAnim(DBTags::Anim_Dodge, {Montage(TEXT("AM_DB_Dev_Dodge"))});
+		AddAnim(DBTags::Anim_Attack_Charged, {bFabFight ? FabMontage(TEXT("Fight"), TEXT("AM_DB_Fight_Attack_Sword_B")) : Montage(TEXT("AM_DB_Dev_Attack_Heavy"))});
+		if (bFabRolls)
+		{
+			static const TCHAR* Rolls[] = {TEXT("AM_DB_Roll_0_front"), TEXT("AM_DB_Roll_1_front_right_45"), TEXT("AM_DB_Roll_2_right"),
+				TEXT("AM_DB_Roll_3_back_right_45"), TEXT("AM_DB_Roll_4_back"), TEXT("AM_DB_Roll_5_back_left_45"), TEXT("AM_DB_Roll_6_left"),
+				TEXT("AM_DB_Roll_7_front_left_45")};
+			TArray<TSoftObjectPtr<UAnimMontage>> RollMontages;
+			for (const TCHAR* Roll : Rolls)
+			{
+				RollMontages.Add(FabMontage(TEXT("Rolls"), Roll));
+			}
+			AddAnim(DBTags::Anim_Dodge, RollMontages);
+		}
+		else
+		{
+			AddAnim(DBTags::Anim_Dodge, {Montage(TEXT("AM_DB_Dev_Dodge"))});
+		}
 		AddAnim(DBTags::Anim_HitReact, {Montage(TEXT("AM_DB_Dev_HitReact"))});
 		AddAnim(DBTags::Anim_Knockdown, {Montage(TEXT("AM_DB_Dev_HitReact_Heavy"))});
 		AddAnim(DBTags::Anim_Death, {Montage(TEXT("AM_DB_Dev_Death")), Montage(TEXT("AM_DB_Dev_Death_Back"))}, false);
