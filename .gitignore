@@ -34,3 +34,4 @@ Content/DarkBlood/Dev/Mannequin/
 SourceArt/
 # Fab Standard-license animations: imported locally from each developer's own Fab library (Tools/UE58/db_import_fab.py)
 Content/DarkBlood/Dev/FabAnims/
+Content/DarkBlood/Dev/FabWeapons/

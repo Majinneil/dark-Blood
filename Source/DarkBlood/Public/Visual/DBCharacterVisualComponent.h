@@ -16,6 +16,7 @@ class UDBAnimationSetDefinition;
 class UDBCharacterVisualDefinition;
 class UMaterialInstanceDynamic;
 class USkeletalMeshComponent;
+class UStaticMeshComponent;
 
 UCLASS(ClassGroup = "DarkBlood", meta = (BlueprintSpawnableComponent))
 class DARKBLOOD_API UDBCharacterVisualComponent : public UActorComponent
@@ -35,6 +36,11 @@ public:
 
 	/** Appearance + class of a player character (from the replicated profile); optionally switches the profile. */
 	void SetAppearance(const FDBAppearance& Appearance, FName ClassId, FName NewProfileId = NAME_None);
+
+	/** Main-hand weapon shown in the right hand (item id from the replicated equipment; None = empty hand). */
+	void SetWeaponItem(FName ItemId);
+	FName GetWeaponItem() const { return WeaponItemId; }
+	UStaticMeshComponent* GetWeaponComponent() const { return WeaponComponent; }
 
 	/** Re-applies the current profile (after SetVisualsEnabled or a profile change). */
 	void RefreshVisuals();
@@ -73,6 +79,12 @@ private:
 	void ApplyAppearanceParameters();
 	USkeletalMeshComponent* AddPart(const struct FDBVisualPart& Part, USkeletalMeshComponent& Leader);
 	void ClearVisuals();
+	void ApplyWeapon();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMeshComponent> WeaponComponent = nullptr;
+
+	FName WeaponItemId;
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UDBCharacterVisualDefinition> ActiveProfile = nullptr;

@@ -129,6 +129,7 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBTimeOfDay Day\|Dusk\|Night\|DemonNight` | Lichtstimmung des Visual Slice |
 | `DBVisuals 0\|1` | Charakter-Profile an / Greybox-Körper (lokal) |
 | `DBView X Y Yaw [Pitch]` | Spieler relativ zum Slice-Ursprung platzieren |
+| `DBOrbit Yaw [Pitch] [Abstand]` | Kamera um die eigene Figur drehen (180 = von vorn), für Sichtprüfungen |
 | `DBPerfSnapshot` / `DBVisualAudit` | Frame-/GPU-Zeit, Draw Calls, Slice-Statistik / fehlende Visual-Referenzen |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die

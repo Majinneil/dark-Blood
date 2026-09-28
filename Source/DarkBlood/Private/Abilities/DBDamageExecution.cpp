@@ -202,7 +202,7 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 	}
 
 	// Presentation hooks; without GameplayCue notify assets these are no-ops.
-	if (TargetASC)
+	if (TargetASC && !SpecTags.HasTagExact(DBTags::Damage_OverTime))
 	{
 		const FGameplayTag Cue = Result.bParried  ? DBTags::GameplayCue_Combat_Parried
 							   : Result.bBlocked  ? DBTags::GameplayCue_Combat_Blocked

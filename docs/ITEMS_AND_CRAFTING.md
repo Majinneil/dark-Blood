@@ -33,6 +33,26 @@ Reparatur, Inventar- und Schmiede-UI; headless getestet. Item-Icons/Meshes fehle
 ## Entwicklungsinhalte
 
 - Geschmiedete Klassenwaffen (Stufe 5): Tamahagane-Katana, Schattenstahl-Kunai, Glutstab, Eisenbandagen.
+- Katana-Sammlung (Krieger, alle an der Schmiede): jede Klinge mit eigenen Werten und Treffer-Effekten
+  (`UDBItemDefinition::WeaponEffects`, siehe unten).
+
+| Katana | Stufe | Seltenheit | Stärken | Effekte pro Treffer |
+|---|---|---|---|---|
+| Homura – Flammenklinge | 6 | Selten | Angriff 16, Feuerres. 5 % | +20 % Feuer; 30 %: Brand 4/s, 4 s |
+| Yukiore – Frostbiss | 6 | Selten | Angriff 15, Frostres. 10 % | +20 % Frost; +50 % Haltungsschaden |
+| Dokuga – Giftzahn | 8 | Selten | Angriff 17, Giftres. 10 % | 50 %: Gift 5/s, 6 s |
+| Raikiri – Donnerschneider | 10 | Episch | Angriff 20, Krit 8 % | 25 %: +60 % Blitz; 35 %: Kettenblitz auf nächsten Gegner (6 m, 40 %) |
+| Chishio – Blutdurst | 10 | Episch | Angriff 21, +20 Leben | 8 % Lebensraub; 40 %: Blutung 4/s, 5 s |
+| Kagekiri – Schattenschnitt | 12 | Episch | Angriff 22, Krit 12 % | +30 % Schatten |
+| Reiha – Geisterklinge | 12 | Episch | Angriff 19, +20 Ausdauer, Geistres. 15 % | +35 % Geist |
+| Kegare – Verdorbenes Katana | 15 | Dämonisch | Angriff 30, Krit 5 %, Dunkelblutres. −10 % | +40 % Dunkelblut, 12 % Lebensraub; 20 %: Verderbnis 6/s, 5 s |
+
+**Waffeneffekte** (`Combat/DBWeaponEffects`, nur Server, nur Nahkampftreffer des Trägers): Elementarschaden,
+Schaden über Zeit (`UDBDamageOverTimeEffect`, 1 Tick/s, stapelt nicht: `State.Burning/Poisoned/Bleeding/Afflicted`,
+endet mit dem Tod des Ziels), Lebensraub, Haltungsbruch, Kettenschlag. Alles läuft durch die normale
+Schadensberechnung (Resistenzen, Rüstung, Blocken, Unverwundbarkeit); ausgewichene oder parierte Treffer lösen nichts aus.
+Die Klinge erscheint in der rechten Hand (`UDBCharacterVisualComponent::SetWeaponItem`, Griffposition aus der
+Referenzpose der Hand, im Koop aus der replizierten Ausrüstung); ohne importiertes Fab-Modell eine schlichte Stahlklinge.
 - Rüstung: Ashigaru-Helm/-Brustpanzer, Lederne Kote, Eisen-Suneate, Waraji; Schutzamulett (Geist/Schatten).
 - Verbrauch: Onigiri (40 Leben, 30 Ausdauer), Heiltrank (120), Geistertee (60 Mana).
 - Material: Tamahagane, Dämonenerz, Dämonenhorn, Leder, Geisterpapier.

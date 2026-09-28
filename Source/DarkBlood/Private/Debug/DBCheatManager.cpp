@@ -25,6 +25,7 @@
 #include "GameplayEffect.h"
 #include "UObject/Package.h"
 #include "Engine/World.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Framework/DBDevelopmentSlice.h"
 #include "Framework/DBGameMode.h"
 #include "Framework/DBGameState.h"
@@ -740,6 +741,19 @@ void UDBCheatManager::DBVisualAudit()
 		}
 	}
 	UE_LOG(LogDarkBlood, Display, TEXT("DBVIS audit done: %d missing references"), Missing);
+}
+
+void UDBCheatManager::DBOrbit(float Yaw, float Pitch, float Distance)
+{
+	APlayerController* Controller = GetOuterAPlayerController();
+	ADBPlayerCharacter* Character = Controller ? Cast<ADBPlayerCharacter>(Controller->GetPawn()) : nullptr;
+	if (!Character)
+	{
+		return;
+	}
+	Character->GetCameraBoom()->TargetArmLength = Distance;
+	Character->GetCameraBoom()->bDoCollisionTest = false;
+	Controller->SetControlRotation(FRotator(Pitch, Character->GetActorRotation().Yaw + Yaw, 0.f));
 }
 
 void UDBCheatManager::DBView(float X, float Y, float Yaw, float Pitch)

@@ -9,6 +9,7 @@
 
 #include "DBItemDefinition.generated.h"
 
+class UMaterialInterface;
 class UStaticMesh;
 class USkeletalMesh;
 class UTexture2D;
@@ -35,6 +36,46 @@ struct FDBItemStats
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistances") float DarkBloodResistance = 0.f;
 
 	DarkBlood::Rules::FItemStats ToRules() const;
+};
+
+UENUM(BlueprintType)
+enum class EDBWeaponEffectKind : uint8
+{
+	/** Extra hit of DamageType worth Magnitude x the hit's base damage. */
+	ElementalDamage UMETA(DisplayName = "Elementarschaden"),
+	/** DamageType damage every second: Magnitude per tick for Duration seconds (does not stack). */
+	DamageOverTime UMETA(DisplayName = "Schaden ueber Zeit"),
+	/** Heals the wielder by Magnitude x the hit's base damage. */
+	Lifesteal UMETA(DisplayName = "Lebensraub"),
+	/** Multiplies the hit's poise damage by 1 + Magnitude (staggers sooner). */
+	PoiseBreak UMETA(DisplayName = "Haltungsbruch"),
+	/** Jumps to the nearest other enemy within 6 m: DamageType hit worth Magnitude x the base damage. */
+	ChainStrike UMETA(DisplayName = "Kettenschlag"),
+};
+
+/** On-hit effect of a weapon (melee hits of the wielder, server side). */
+USTRUCT(BlueprintType)
+struct FDBWeaponEffect
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	EDBWeaponEffectKind Kind = EDBWeaponEffectKind::ElementalDamage;
+
+	/** Damage.Type.* of the extra damage (physical when empty). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (Categories = "Damage.Type"))
+	FGameplayTag DamageType;
+
+	/** Chance per landed hit [0, 1]. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (ClampMin = 0, ClampMax = 1))
+	float Chance = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float Magnitude = 0.f;
+
+	/** Seconds (damage over time only). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (ClampMin = 0))
+	float Duration = 0.f;
 };
 
 UCLASS(BlueprintType, Const)
@@ -92,6 +133,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
 	FDBItemStats Stats;
 
+	/** Weapons: effects applied by every landed melee hit (see DBWeaponEffects). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
+	TArray<FDBWeaponEffect> WeaponEffects;
+
 	/** Consumables: restored when used. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float HealAmount = 0.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float StaminaAmount = 0.f;
@@ -116,8 +161,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Visuals")
 	TSoftObjectPtr<UTexture2D> Icon;
 
+	/** Dropped item, and a main-hand weapon in the character's right hand (pivot = grip center, blade along +Z). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Visuals")
 	TSoftObjectPtr<UStaticMesh> WorldMesh;
+
+	/** Material override for WorldMesh (one blade model, many finishes). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Visuals")
+	TSoftObjectPtr<UMaterialInterface> WorldMaterial;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Visuals")
 	TSoftObjectPtr<USkeletalMesh> EquippedMesh;

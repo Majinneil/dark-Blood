@@ -40,6 +40,10 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CounterStance, "State.CounterStance", "Monk counter stance: the next hit is answered.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ShadowEmpowered, "State.ShadowEmpowered", "After a shadow teleport: next hit is stronger.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Flying, "State.Flying", "Mage flight.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Burning, "State.Burning", "Fire damage over time (weapon effect).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Poisoned, "State.Poisoned", "Poison damage over time (weapon effect).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Bleeding, "State.Bleeding", "Physical damage over time (weapon effect).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Afflicted, "State.Afflicted", "Other damage over time (weapon effect).");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_Breakthrough, "Cooldown.Breakthrough", "Cooldown: Durchbruch.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_ShadowMark, "Cooldown.ShadowMark", "Cooldown: Schattenmal.");
@@ -87,6 +91,7 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_DarkBlood, "Damage.Type.DarkBlood", "Corruption of the Dark Blood.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Unblockable, "Damage.Unblockable", "Attack cannot be blocked.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Unparryable, "Damage.Unparryable", "Attack cannot be parried.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_OverTime, "Damage.OverTime", "Periodic tick of a damage-over-time effect.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack, "Anim.Attack", "Any attack (fallback of every Anim.Attack.* key).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Anim_Attack_Light, "Anim.Attack.Light", "Light combo steps (variant = step index).");

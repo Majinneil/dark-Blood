@@ -5,6 +5,7 @@
 #include "Combat/DBLockOnComponent.h"
 #include "Dialogue/DBDialogueComponent.h"
 #include "Interaction/DBInteractionComponent.h"
+#include "Inventory/DBInventoryComponent.h"
 #include "UI/DBGameHUD.h"
 #include "Components/CapsuleComponent.h"
 #include "Visual/DBCharacterVisualComponent.h"
@@ -96,8 +97,19 @@ void ADBPlayerCharacter::InitAbilityActorInfo()
 	ASC->RegisterGameplayTagEvent(DBTags::Movement_DoubleJump).AddUObject(this, &ADBPlayerCharacter::OnDoubleJumpTagChanged);
 	OnDoubleJumpTagChanged(DBTags::Movement_DoubleJump, ASC->GetTagCount(DBTags::Movement_DoubleJump));
 	DBPlayerState->OnProfileChanged.AddUniqueDynamic(this, &ADBPlayerCharacter::RefreshNameplateFromState);
+	if (UDBInventoryComponent* Inventory = DBPlayerState->GetInventory())
+	{
+		Inventory->OnInventoryChanged.AddUniqueDynamic(this, &ADBPlayerCharacter::RefreshEquippedWeapon);
+	}
 	RefreshNameplate();
 	ApplyPlayerVisuals();
+}
+
+void ADBPlayerCharacter::RefreshEquippedWeapon()
+{
+	const ADBPlayerState* DBPlayerState = GetPlayerState<ADBPlayerState>();
+	const UDBInventoryComponent* Inventory = DBPlayerState ? DBPlayerState->GetInventory() : nullptr;
+	Visuals->SetWeaponItem(Inventory ? Inventory->GetEquipped(EDBEquipSlot::MainHand).ItemId : NAME_None);
 }
 
 void ADBPlayerCharacter::RefreshNameplateFromState(ADBPlayerState* /*ChangedState*/)
@@ -117,6 +129,7 @@ void ADBPlayerCharacter::ApplyPlayerVisuals()
 	const FDBCharacterProfile& Profile = DBPlayerState->GetProfile();
 	Visuals->SetAppearance(Profile.Appearance, Profile.ClassId,
 		Profile.Appearance.BodyType == EDBBodyType::TypeB ? FName(TEXT("CV_Player_TypeB")) : FName(TEXT("CV_Player_TypeA")));
+	RefreshEquippedWeapon();
 }
 
 void ADBPlayerCharacter::RefreshNameplate()

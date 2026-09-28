@@ -37,6 +37,9 @@ Fab verbietet die Weitergabe als eigenständige Dateien; jede Person lädt sie a
 
 - „Fight Mocap Animation Data“ – Mocap.in (Lizenz „Persönlich“: kostenlos bis 100.000 US-$ Jahresumsatz)
 - „Dynamic Falling & Rolling Animation Pack“ – DZTFIX KATSU (Lizenz „Persönlich“, wie oben)
+- „Corrupted Dark Katana | Dark Fantasy Japanese Sword“ – Deepanshu (Lizenz „Persönlich“, wie oben). Nur als
+  `.blend`: erst `Tools/UE58/blender_export_katana.py` (Blender 5.x), dann `Tools/UE58/db_import_fab_weapons.py`
+  → `/Game/DarkBlood/Dev/FabWeapons/` (ein Klingenmodell, zehn Oberflächen für die Katana-Sammlung)
 - In der Bibliothek, Installation über den Epic Launcher: „Kostenloses Animationspaket“ (Gamma Studio),
   „Mage Collection Samples“ (Rapa Motion), „Europäische Waldumwelt“ (Blackridge, CC BY 4.0)
 

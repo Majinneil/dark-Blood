@@ -2,6 +2,12 @@
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "AnimationRuntime.h"
+#include "Art/DBArtBatcher.h"
+#include "Art/DBArtMaterials.h"
+#include "Components/StaticMeshComponent.h"
+#include "Data/DBItemDefinition.h"
+#include "Engine/StaticMesh.h"
 #include "Character/DBCharacterBase.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -21,6 +27,50 @@ namespace
 	{
 		static bool bEnabled = !FParse::Param(FCommandLine::Get(), TEXT("DBGreybox"));
 		return bEnabled;
+	}
+
+	const FName HandBone(TEXT("hand_r"));
+
+	/**
+	 * Weapon transform relative to hand_r for a hammer grip, derived from the reference pose of the hand:
+	 * blade out of the thumb side (pinky -> index knuckles), edge along the fingers, handle in the closed palm.
+	 * Works for any skeleton with UE mannequin finger names; others get a plain offset.
+	 */
+	FTransform ComputeGripTransform(const USkeletalMeshComponent& Mesh)
+	{
+		const USkinnedAsset* Asset = Mesh.GetSkinnedAsset();
+		if (!Asset)
+		{
+			return FTransform::Identity;
+		}
+		const FReferenceSkeleton& Skeleton = Asset->GetRefSkeleton();
+		const int32 Hand = Skeleton.FindBoneIndex(HandBone);
+		const int32 Index = Skeleton.FindBoneIndex(TEXT("index_01_r"));
+		const int32 Middle = Skeleton.FindBoneIndex(TEXT("middle_01_r"));
+		const int32 Pinky = Skeleton.FindBoneIndex(TEXT("pinky_01_r"));
+		const int32 Thumb = Skeleton.FindBoneIndex(TEXT("thumb_03_r"));
+		if (Hand == INDEX_NONE || Index == INDEX_NONE || Middle == INDEX_NONE || Pinky == INDEX_NONE || Thumb == INDEX_NONE)
+		{
+			return FTransform(FVector(10.f, 0.f, 0.f));
+		}
+		const FTransform HandCS = FAnimationRuntime::GetComponentSpaceTransformRefPose(Skeleton, Hand);
+		const FVector IndexPos = FAnimationRuntime::GetComponentSpaceTransformRefPose(Skeleton, Index).GetLocation();
+		const FVector MiddlePos = FAnimationRuntime::GetComponentSpaceTransformRefPose(Skeleton, Middle).GetLocation();
+		const FVector PinkyPos = FAnimationRuntime::GetComponentSpaceTransformRefPose(Skeleton, Pinky).GetLocation();
+		const FVector ThumbPos = FAnimationRuntime::GetComponentSpaceTransformRefPose(Skeleton, Thumb).GetLocation();
+
+		const FVector Blade = (IndexPos - PinkyPos).GetSafeNormal();
+		const FVector Fingers = FVector::VectorPlaneProject(MiddlePos - HandCS.GetLocation(), Blade).GetSafeNormal();
+		FVector Palm = FVector::CrossProduct(Blade, Fingers).GetSafeNormal();
+		if (FVector::DotProduct(ThumbPos - MiddlePos, Palm) < 0.f)
+		{
+			Palm = -Palm; // the thumb tip rests on the palm side
+		}
+		// Handle center: just past the knuckles, inside the closed fist; the hand sits near the guard.
+		const FVector KnuckleCenter = (IndexPos + PinkyPos) * 0.5f;
+		const FVector Grip = KnuckleCenter + Fingers * 1.5f + Palm * 3.5f - Blade * 4.f;
+		const FTransform WeaponCS(FRotationMatrix::MakeFromXZ(Fingers, Blade).ToQuat(), Grip);
+		return WeaponCS.GetRelativeTransform(HandCS);
 	}
 }
 
@@ -184,6 +234,7 @@ void UDBCharacterVisualComponent::ApplyProfile(const UDBCharacterVisualDefinitio
 	bHasVisualBody = true;
 	Character->SetPlaceholderVisible(false);
 	ApplyAppearanceParameters();
+	ApplyWeapon();
 	if (Character->IsDead())
 	{
 		PlayDeathPresentation();
@@ -279,8 +330,67 @@ void UDBCharacterVisualComponent::ApplyAppearanceParameters()
 	}
 }
 
+void UDBCharacterVisualComponent::SetWeaponItem(FName ItemId)
+{
+	if (WeaponItemId != ItemId)
+	{
+		WeaponItemId = ItemId;
+		ApplyWeapon();
+	}
+}
+
+void UDBCharacterVisualComponent::ApplyWeapon()
+{
+	if (WeaponComponent)
+	{
+		WeaponComponent->DestroyComponent();
+		WeaponComponent = nullptr;
+	}
+	ADBCharacterBase* Character = GetCharacter();
+	USkeletalMeshComponent* Mesh = Character ? Character->GetMesh() : nullptr;
+	const UDBGameDataSubsystem* Data = WeaponItemId.IsNone() ? nullptr : UDBGameDataSubsystem::Get(this);
+	const UDBItemDefinition* Item = Data ? Data->FindItem(WeaponItemId) : nullptr;
+	if (!bHasVisualBody || !Mesh || !Item || Item->Category != EDBItemCategory::Weapon || Mesh->GetBoneIndex(HandBone) == INDEX_NONE)
+	{
+		return;
+	}
+	// Authored weapon model, or a plain steel blade until the model is imported.
+	UStaticMesh* WeaponMesh = Item->WorldMesh.LoadSynchronous();
+	UMaterialInterface* Material = Item->WorldMaterial.LoadSynchronous();
+	FTransform ModelTransform = FTransform::Identity;
+	if (!WeaponMesh)
+	{
+		WeaponMesh = FDBArtBatcher::GetShapeMesh(FDBArtBatcher::EShape::Cube);
+		Material = UDBArtMaterialSubsystem::Get(EDBArtMaterial::MetalIron);
+		ModelTransform = FTransform(FRotator::ZeroRotator, FVector(0.f, 0.f, 38.f), FVector(0.035f, 0.008f, 0.95f));
+	}
+	if (!WeaponMesh)
+	{
+		return;
+	}
+	WeaponComponent = NewObject<UStaticMeshComponent>(GetOwner(), NAME_None, RF_Transient);
+	WeaponComponent->SetStaticMesh(WeaponMesh);
+	if (Material)
+	{
+		WeaponComponent->SetMaterial(0, Material);
+	}
+	WeaponComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponComponent->SetGenerateOverlapEvents(false);
+	WeaponComponent->SetCanEverAffectNavigation(false);
+	WeaponComponent->SetupAttachment(Mesh, HandBone);
+	WeaponComponent->SetRelativeTransform(ModelTransform * ComputeGripTransform(*Mesh));
+	WeaponComponent->RegisterComponent();
+	WeaponComponent->SetVisibility(Mesh->IsVisible());
+	UE_LOG(LogDarkBlood, Log, TEXT("%s: weapon %s (%s)"), *GetNameSafe(GetOwner()), *WeaponItemId.ToString(), *GetNameSafe(WeaponMesh));
+}
+
 void UDBCharacterVisualComponent::ClearVisuals()
 {
+	if (WeaponComponent)
+	{
+		WeaponComponent->DestroyComponent();
+		WeaponComponent = nullptr;
+	}
 	for (USkeletalMeshComponent* Part : PartComponents)
 	{
 		if (Part)

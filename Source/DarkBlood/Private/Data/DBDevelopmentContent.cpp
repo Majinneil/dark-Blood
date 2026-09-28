@@ -15,6 +15,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
 #include "Misc/PackageName.h"
 #include "Materials/MaterialInterface.h"
 #include "Visual/DBAnimationSetDefinition.h"
@@ -200,10 +201,24 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		bAddedAny = true;
 	};
 
+	// Katana model + finishes: the free Fab "Corrupted Dark Katana", imported locally by Tools/UE58/db_import_fab.py
+	// (Standard license, not in the repo). Without it the hand shows a plain steel blade.
+	auto KatanaVisual = [](UDBItemDefinition& D, const TCHAR* Finish)
+	{
+		D.WorldMesh = TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(TEXT("/Game/DarkBlood/Dev/FabWeapons/Katana/SM_Katana_Corrupted.SM_Katana_Corrupted")));
+		const FString Material = FString::Printf(TEXT("MI_DB_Katana_%s"), Finish);
+		D.WorldMaterial =
+			TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(FString::Printf(TEXT("/Game/DarkBlood/Dev/FabWeapons/Katana/%s.%s"), *Material, *Material)));
+	};
+
 	auto Weapon = [&](FName Id, const TCHAR* Name, FName ClassId)
 	{
-		AddItem(Id, Name, EDBItemCategory::Weapon, 1, [ClassId](UDBItemDefinition& D)
+		AddItem(Id, Name, EDBItemCategory::Weapon, 1, [&KatanaVisual, Id, ClassId](UDBItemDefinition& D)
 		{
+			if (Id == TEXT("Katana_Dev"))
+			{
+				KatanaVisual(D, TEXT("Steel"));
+			}
 			D.EquipSlot = EDBEquipSlot::MainHand;
 			D.ItemLevel = 1;
 			D.MaxDurability = 100;
@@ -232,12 +247,81 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 			D.Rarity = EDBItemRarity::Uncommon;
 			D.AllowedClasses = {ClassId};
 			SetStats(D.Stats);
+			if (Id == TEXT("Katana_Tamahagane"))
+			{
+				KatanaVisual(D, TEXT("Tamahagane"));
+			}
 		});
 	};
 	Forged(TEXT("Katana_Tamahagane"), TEXT("Tamahagane-Katana"), TEXT("Warrior"), 5, [](FDBItemStats& S) { S.AttackPower = 14.f; S.CritChance = 0.02f; });
 	Forged(TEXT("Kunai_Shadowsteel"), TEXT("Schattenstahl-Kunai"), TEXT("Shadowrunner"), 5, [](FDBItemStats& S) { S.AttackPower = 10.f; S.CritChance = 0.06f; });
 	Forged(TEXT("Staff_Ember"), TEXT("Glutstab"), TEXT("Mage"), 5, [](FDBItemStats& S) { S.SpellPower = 16.f; S.FireResistance = 0.1f; S.MaxMana = 20.f; });
 	Forged(TEXT("Handwraps_Iron"), TEXT("Eisenbandagen"), TEXT("Monk"), 5, [](FDBItemStats& S) { S.AttackPower = 11.f; S.SpiritResistance = 0.1f; });
+
+	// Katana collection (Warrior): each blade has its own strengths and on-hit effects (see DBWeaponEffects).
+	auto Effect = [](EDBWeaponEffectKind Kind, const FGameplayTag& Type, float Chance, float Magnitude, float Duration = 0.f)
+	{
+		FDBWeaponEffect Result;
+		Result.Kind = Kind;
+		Result.DamageType = Type;
+		Result.Chance = Chance;
+		Result.Magnitude = Magnitude;
+		Result.Duration = Duration;
+		return Result;
+	};
+	auto Katana = [&](FName Id, const TCHAR* Name, const TCHAR* Finish, EDBItemRarity Rarity, int32 Level, const TCHAR* Description,
+		TFunctionRef<void(FDBItemStats&)> SetStats, TArray<FDBWeaponEffect> Effects)
+	{
+		AddItem(Id, Name, EDBItemCategory::Weapon, 1, [&](UDBItemDefinition& D)
+		{
+			D.EquipSlot = EDBEquipSlot::MainHand;
+			D.ItemLevel = Level;
+			D.RequiredLevel = Level;
+			D.MaxDurability = 140 + Level * 10;
+			D.BaseValue = 150 * Level;
+			D.Rarity = Rarity;
+			D.AllowedClasses = {TEXT("Warrior")};
+			D.Description = FText::FromString(Description);
+			SetStats(D.Stats);
+			D.WeaponEffects = Effects;
+			KatanaVisual(D, Finish);
+		});
+	};
+	using EFx = EDBWeaponEffectKind;
+	Katana(TEXT("Katana_Homura"), TEXT("Homura - Flammenklinge"), TEXT("Homura"), EDBItemRarity::Rare, 6,
+		TEXT("Jeder Treffer +20 % Feuerschaden. 30 %: Brand (4 Feuerschaden pro Sekunde, 4 s)."),
+		[](FDBItemStats& S) { S.AttackPower = 16.f; S.FireResistance = 0.05f; },
+		{Effect(EFx::ElementalDamage, DBTags::Damage_Type_Fire, 1.f, 0.2f), Effect(EFx::DamageOverTime, DBTags::Damage_Type_Fire, 0.3f, 4.f, 4.f)});
+	Katana(TEXT("Katana_Yukiore"), TEXT("Yukiore - Frostbiss"), TEXT("Yukiore"), EDBItemRarity::Rare, 6,
+		TEXT("Jeder Treffer +20 % Frostschaden und +50 % Haltungsschaden: Gegner geraten schneller ins Taumeln."),
+		[](FDBItemStats& S) { S.AttackPower = 15.f; S.FrostResistance = 0.1f; },
+		{Effect(EFx::ElementalDamage, DBTags::Damage_Type_Frost, 1.f, 0.2f), Effect(EFx::PoiseBreak, DBTags::Damage_Type_Frost, 1.f, 0.5f)});
+	Katana(TEXT("Katana_Dokuga"), TEXT("Dokuga - Giftzahn"), TEXT("Dokuga"), EDBItemRarity::Rare, 8,
+		TEXT("50 %: Gift (5 Giftschaden pro Sekunde, 6 s)."),
+		[](FDBItemStats& S) { S.AttackPower = 17.f; S.PoisonResistance = 0.1f; },
+		{Effect(EFx::DamageOverTime, DBTags::Damage_Type_Poison, 0.5f, 5.f, 6.f)});
+	Katana(TEXT("Katana_Raikiri"), TEXT("Raikiri - Donnerschneider"), TEXT("Raikiri"), EDBItemRarity::Epic, 10,
+		TEXT("25 %: Blitzschlag (+60 % Blitzschaden). 35 %: der Blitz springt auf einen weiteren Gegner in 6 m ueber (40 %)."),
+		[](FDBItemStats& S) { S.AttackPower = 20.f; S.CritChance = 0.08f; S.LightningResistance = 0.1f; },
+		{Effect(EFx::ElementalDamage, DBTags::Damage_Type_Lightning, 0.25f, 0.6f), Effect(EFx::ChainStrike, DBTags::Damage_Type_Lightning, 0.35f, 0.4f)});
+	Katana(TEXT("Katana_Chishio"), TEXT("Chishio - Blutdurst"), TEXT("Chishio"), EDBItemRarity::Epic, 10,
+		TEXT("Jeder Treffer heilt dich um 8 % des Schadens. 40 %: Blutung (4 Schaden pro Sekunde, 5 s)."),
+		[](FDBItemStats& S) { S.AttackPower = 21.f; S.MaxHealth = 20.f; },
+		{Effect(EFx::Lifesteal, FGameplayTag(), 1.f, 0.08f), Effect(EFx::DamageOverTime, DBTags::Damage_Type_Physical, 0.4f, 4.f, 5.f)});
+	Katana(TEXT("Katana_Kagekiri"), TEXT("Kagekiri - Schattenschnitt"), TEXT("Kagekiri"), EDBItemRarity::Epic, 12,
+		TEXT("Jeder Treffer +30 % Schattenschaden. Hohe kritische Trefferchance."),
+		[](FDBItemStats& S) { S.AttackPower = 22.f; S.CritChance = 0.12f; S.ShadowResistance = 0.1f; },
+		{Effect(EFx::ElementalDamage, DBTags::Damage_Type_Shadow, 1.f, 0.3f)});
+	Katana(TEXT("Katana_Reiha"), TEXT("Reiha - Geisterklinge"), TEXT("Reiha"), EDBItemRarity::Epic, 12,
+		TEXT("Jeder Treffer +35 % Geistschaden - die Klinge der Daemonenjaeger. +20 Ausdauer."),
+		[](FDBItemStats& S) { S.AttackPower = 19.f; S.MaxStamina = 20.f; S.SpiritResistance = 0.15f; },
+		{Effect(EFx::ElementalDamage, DBTags::Damage_Type_Spirit, 1.f, 0.35f)});
+	Katana(TEXT("Katana_Kegare"), TEXT("Kegare - Verdorbenes Katana"), TEXT("Kegare"), EDBItemRarity::Demonic, 15,
+		TEXT("Vom Dunklen Blut verdorben: +40 % Dunkelblut-Schaden, 12 % Lebensraub, 20 %: Verderbnis (6 Schaden pro Sekunde, 5 s). ")
+		TEXT("Der Traeger wird anfaelliger fuer Dunkelblut."),
+		[](FDBItemStats& S) { S.AttackPower = 30.f; S.CritChance = 0.05f; S.DarkBloodResistance = -0.1f; },
+		{Effect(EFx::ElementalDamage, DBTags::Damage_Type_DarkBlood, 1.f, 0.4f), Effect(EFx::Lifesteal, FGameplayTag(), 1.f, 0.12f),
+			Effect(EFx::DamageOverTime, DBTags::Damage_Type_DarkBlood, 0.2f, 6.f, 5.f)});
 
 	// Armor (all classes)
 	auto Armor = [&](FName Id, const TCHAR* Name, EDBEquipSlot Slot, int32 Level, TFunctionRef<void(FDBItemStats&)> SetStats)
@@ -362,6 +446,14 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	};
 	const FName Forge(TEXT("Forge"));
 	Recipe(TEXT("R_Katana_Tamahagane"), TEXT("Katana_Tamahagane"), 1, {In(TEXT("Tamahagane"), 6), In(TEXT("DemonHorn"), 2)}, 80, 5, Forge);
+	Recipe(TEXT("R_Katana_Homura"), TEXT("Katana_Homura"), 1, {In(TEXT("Tamahagane"), 6), In(TEXT("DemonHorn"), 3), In(TEXT("SpiritPaper"), 1)}, 150, 6, Forge);
+	Recipe(TEXT("R_Katana_Yukiore"), TEXT("Katana_Yukiore"), 1, {In(TEXT("Tamahagane"), 6), In(TEXT("SpiritPaper"), 3)}, 150, 6, Forge);
+	Recipe(TEXT("R_Katana_Dokuga"), TEXT("Katana_Dokuga"), 1, {In(TEXT("Tamahagane"), 5), In(TEXT("DemonOre"), 3), In(TEXT("Leather"), 2)}, 200, 8, Forge);
+	Recipe(TEXT("R_Katana_Raikiri"), TEXT("Katana_Raikiri"), 1, {In(TEXT("Tamahagane"), 8), In(TEXT("DemonOre"), 4), In(TEXT("SpiritPaper"), 2)}, 350, 10, Forge);
+	Recipe(TEXT("R_Katana_Chishio"), TEXT("Katana_Chishio"), 1, {In(TEXT("Tamahagane"), 8), In(TEXT("DemonHorn"), 5)}, 350, 10, Forge);
+	Recipe(TEXT("R_Katana_Kagekiri"), TEXT("Katana_Kagekiri"), 1, {In(TEXT("Tamahagane"), 8), In(TEXT("DemonOre"), 5), In(TEXT("Leather"), 2)}, 450, 12, Forge);
+	Recipe(TEXT("R_Katana_Reiha"), TEXT("Katana_Reiha"), 1, {In(TEXT("Tamahagane"), 8), In(TEXT("SpiritPaper"), 6)}, 450, 12, Forge);
+	Recipe(TEXT("R_Katana_Kegare"), TEXT("Katana_Kegare"), 1, {In(TEXT("Tamahagane"), 10), In(TEXT("DemonOre"), 10), In(TEXT("DemonHorn"), 10)}, 800, 15, Forge);
 	Recipe(TEXT("R_Kunai_Shadowsteel"), TEXT("Kunai_Shadowsteel"), 1, {In(TEXT("Tamahagane"), 4), In(TEXT("DemonOre"), 2)}, 70, 5, Forge);
 	Recipe(TEXT("R_Staff_Ember"), TEXT("Staff_Ember"), 1, {In(TEXT("SpiritPaper"), 3), In(TEXT("DemonHorn"), 2)}, 70, 5, Forge);
 	Recipe(TEXT("R_Handwraps_Iron"), TEXT("Handwraps_Iron"), 1, {In(TEXT("Leather"), 3), In(TEXT("Tamahagane"), 2)}, 60, 5, Forge);

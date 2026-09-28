@@ -101,6 +101,9 @@ void ADBCharacterBase::HandleOutOfHealth(AActor* DamageInstigator, AActor* Damag
 		ASC->CancelAllAbilities();
 		// Each machine sets its own local count (server here, clients in OnRep_IsDead); cleared on respawn.
 		ASC->SetLooseGameplayTagCount(DBTags::State_Dead, 1);
+		// Weapon damage over time ends with the victim (GAS defers the removal while an effect executes).
+		ASC->RemoveActiveEffectsWithGrantedTags(
+			FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{DBTags::State_Burning, DBTags::State_Poisoned, DBTags::State_Bleeding, DBTags::State_Afflicted}));
 	}
 	PlayDeathPresentation();
 	OnDied.Broadcast(this);

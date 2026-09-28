@@ -93,6 +93,8 @@ public:
 	UFUNCTION(Exec) void DBVisualAudit();
 	/** Server: puts your character at X Y (relative to the slice origin) facing Yaw, camera pitch Pitch. */
 	UFUNCTION(Exec) void DBView(float X, float Y, float Yaw, float Pitch = -10.f);
+	/** Local camera orbit around your character for visual checks: Yaw relative to its facing (180 = front), arm length in cm. */
+	UFUNCTION(Exec) void DBOrbit(float Yaw, float Pitch = -10.f, float Distance = 250.f);
 
 private:
 	/** On clients: sends the command to the server and returns true. */

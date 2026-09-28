@@ -39,6 +39,8 @@ public:
 	void PressAbilityInput(FGameplayTag InputTag) { Input_AbilityPressed(InputTag); }
 	void ReleaseAbilityInput(FGameplayTag InputTag) { Input_AbilityReleased(InputTag); }
 
+	USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+
 protected:
 	void InitAbilityActorInfo();
 	void OnDoubleJumpTagChanged(const FGameplayTag Tag, int32 NewCount);
@@ -48,6 +50,10 @@ protected:
 
 	UFUNCTION()
 	void RefreshNameplateFromState(ADBPlayerState* ChangedState);
+
+	/** Equipment changed (server and clients): shows the main-hand weapon. */
+	UFUNCTION()
+	void RefreshEquippedWeapon();
 
 	void Input_Move(const FInputActionValue& Value);
 	void Input_Look(const FInputActionValue& Value);

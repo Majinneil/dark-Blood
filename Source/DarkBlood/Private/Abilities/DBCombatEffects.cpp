@@ -13,6 +13,17 @@ UDBDamageEffect::UDBDamageEffect()
 	Executions.Add(Execution);
 }
 
+UDBDamageOverTimeEffect::UDBDamageOverTimeEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(1.f));
+	Period = 1.f;
+
+	FGameplayEffectExecutionDefinition Execution;
+	Execution.CalculationClass = UDBDamageExecution::StaticClass();
+	Executions.Add(Execution);
+}
+
 UDBStaminaCostEffect::UDBStaminaCostEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Instant;

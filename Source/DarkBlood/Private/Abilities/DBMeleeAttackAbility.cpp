@@ -7,6 +7,7 @@
 #include "Abilities/DBClassAbilities.h"
 #include "Character/DBCharacterBase.h"
 #include "Combat/DBCombatStatics.h"
+#include "Combat/DBWeaponEffects.h"
 #include "Components/CapsuleComponent.h"
 #include "Core/DBGameplayTags.h"
 #include "DarkBlood.h"
@@ -343,6 +344,7 @@ void UDBMeleeAttackAbility::PerformHit()
 		Hit.BaseDamage *= 1.5f;
 		SourceASC->SetLooseGameplayTagCount(DBTags::State_ShadowEmpowered, 0);
 	}
+	DBWeaponEffects::ModifyOutgoingHit(Self, Hit);
 	const int32 AmbushRank = GetSkillRank(DBSkillNodes::Ambush);
 	const int32 BloodlustRank = GetSkillRank(DBSkillNodes::Bloodlust);
 
@@ -380,6 +382,7 @@ void UDBMeleeAttackAbility::PerformHit()
 			UE_LOG(LogDBCombat, Log, TEXT("%s: Hinterhalt"), *DBCombat::GetCombatName(Self));
 		}
 		DBCombat::ApplyHit(SourceASC, Target->GetAbilitySystemComponent(), TargetHit);
+		DBWeaponEffects::ApplyOnHit(Self, Target, TargetHit);
 		// Krieger "Blutrausch": every hit restores stamina.
 		RestoreStamina(3.f * static_cast<float>(BloodlustRank));
 	}
