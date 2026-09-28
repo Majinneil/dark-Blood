@@ -52,7 +52,7 @@ UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UM
 	{
 		Component->SetMaterial(Slot, Material);
 	}
-	Component->SetMobility(EComponentMobility::Static);
+	Component->SetMobility(bMovable ? EComponentMobility::Movable : EComponentMobility::Static);
 	Component->SetCollisionEnabled(bCollision ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 	Component->SetCollisionProfileName(bCollision ? UCollisionProfile::BlockAll_ProfileName : UCollisionProfile::NoCollision_ProfileName);
 	Component->SetCanEverAffectNavigation(bCollision);

@@ -1,6 +1,7 @@
 #include "World/DBSettlementBuilder.h"
 
 #include "Art/DBArtBuilder.h"
+#include "Art/DBShipArt.h"
 #include "Math/RandomStream.h"
 #include "World/DBRealmLayout.h"
 
@@ -213,32 +214,16 @@ namespace
 	}
 
 	/** A moored ship; the keel sits below the water line (water is at local Z = -GroundHeight). */
-	void Ship(FContext& C, const FVector& At, float Yaw, bool bLarge)
+	/** A moored Japanese ship floating at the water line (the frame stands on the leveled ground). */
+	void Ship(FContext& C, const FVector& At, float Yaw, EDBShipStyle Style)
 	{
-		const float WaterZ = static_cast<float>(-C.Site.GroundHeight * 100.0);
-		TArray<FString> Parts;
-		if (bLarge)
+		const FVector Local = At + FVector(0.f, 0.f, static_cast<float>(-C.Site.GroundHeight * 100.0));
+		if (ADBShipModel* Model = C.Builder.Begin<ADBShipModel>(Local, Yaw))
 		{
-			for (const TCHAR* Part : {TEXT("hull"), TEXT("rigging"), TEXT("sails")})
-			{
-				Parts.Add(Model(TEXT("dutch_ship_medium"), TEXT("1k"), *(FString(TEXT("dutch_ship_medium_")) + Part)));
-			}
+			Model->Style = Style;
+			Model->Seed = C.Seed();
+			C.Builder.Finish(Model, Local, Yaw);
 		}
-		else
-		{
-			for (const TCHAR* Part : {TEXT("aft"), TEXT("deck"), TEXT("details"), TEXT("hull"), TEXT("interior"), TEXT("rigging"), TEXT("sails")})
-			{
-				Parts.Add(Model(TEXT("ship_pinnace"), TEXT("1k"), *(FString(TEXT("ship_pinnace_")) + Part)));
-			}
-		}
-		TArray<const TCHAR*> PartPtrs;
-		for (const FString& Part : Parts)
-		{
-			PartPtrs.Add(*Part);
-		}
-		// The pinnace is modeled along Y: turn it onto X.
-		C.Builder.Prop(At + FVector(0.f, 0.f, WaterZ - (bLarge ? 260.f : 220.f)), Yaw, PartPtrs, 0.f, bLarge ? FRotator::ZeroRotator : FRotator(0.f, 90.f, 0.f), 0.f,
-			FVector::ZeroVector, true);
 	}
 
 	void Cargo(FContext& C, const FVector& At)
@@ -296,8 +281,14 @@ namespace
 			const float Y = FMath::Lerp(-Half * 0.75f, Half * 0.75f, Index / float(Piers - 1));
 			const float Length = C.Random.FRandRange(4500.f, 7500.f);
 			Pier(C, FVector(Shore - 300.f, Y, -40.f), Length, 450.f);
-			Ship(C, FVector(Shore + Length * 0.6f, Y + (Index % 2 == 0 ? 1100.f : -1100.f), 0.f), C.Random.FRand() < 0.5f ? 0.f : 180.f,
-				bGreat ? Index % 2 == 0 : Index == 1);
+			// The capital's harbor holds the war fleet (atakebune) between the merchant ships.
+			const EDBShipStyle Style = bGreat && Index % 2 == 0 ? EDBShipStyle::Atakebune : EDBShipStyle::Bezaisen;
+			Ship(C, FVector(Shore + Length * 0.6f, Y + (Index % 2 == 0 ? 1300.f : -1100.f), 0.f), C.Random.FRand() < 0.5f ? 0.f : 180.f, Style);
+			for (int32 Boat = 0; Boat < 2; ++Boat)
+			{
+				Ship(C, FVector(Shore + C.Random.FRandRange(600.f, Length * 0.8f), Y + (Boat == 0 ? -420.f : 420.f), 0.f), C.Random.FRandRange(-15.f, 15.f),
+					EDBShipStyle::Kobaya);
+			}
 			Cargo(C, FVector(Shore - 900.f, Y + 400.f, 0.f));
 		}
 		for (const TPair<FVector, FVector>& Planned : Streets)
@@ -459,7 +450,11 @@ namespace DBSettlements
 			}
 			Pier(C, FVector(Shore - 200.f, -R * 0.2f, -40.f), 3800.f, 300.f);
 			Pier(C, FVector(Shore - 200.f, R * 0.3f, -40.f), 3000.f, 300.f);
-			Ship(C, FVector(Shore + 2600.f, R * 0.05f, 0.f), 0.f, false);
+			for (int32 Boat = 0; Boat < 6; ++Boat)
+			{
+				const float Y = (Boat < 3 ? -R * 0.2f : R * 0.3f) + (Boat % 3 - 1) * 380.f;
+				Ship(C, FVector(Shore + C.Random.FRandRange(800.f, 2600.f), Y, 0.f), C.Random.FRandRange(-20.f, 20.f), EDBShipStyle::Kobaya);
+			}
 			Cargo(C, FVector(Shore - 700.f, 0.f, 0.f));
 			break;
 		}

@@ -1,10 +1,10 @@
 #include "World/DBShip.h"
 
-#include "Art/DBArtMaterials.h"
+#include "Art/DBArtBatcher.h"
+#include "Art/DBShipArt.h"
 #include "Components/BoxComponent.h"
-#include "Components/StaticMeshComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "DarkBlood.h"
-#include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -17,8 +17,8 @@ namespace
 {
 	/** Deck height above the water line and the helm position at the stern (ship frame, cm). */
 	constexpr float DeckHeight = 380.f;
-	/** Relative to the actor (the deck box center, 60 cm below the deck surface): a standing character at the stern. */
-	const FVector HelmOffset(-1250.f, 0.f, 160.f);
+	/** Relative to the actor (the deck box center, 60 cm below the deck surface): standing on the raised stern deck. */
+	const FVector HelmOffset(-1150.f, 0.f, 300.f);
 }
 
 ADBShip::ADBShip()
@@ -49,37 +49,11 @@ void ADBShip::BeginPlay()
 	{
 		return;
 	}
-	// The CC0 pinnace (Poly Haven, modeled along Y and grounded on its keel) or a plain hull.
-	static const TCHAR* Parts[] = {TEXT("aft"), TEXT("deck"), TEXT("details"), TEXT("hull"), TEXT("interior"), TEXT("rigging"), TEXT("sails")};
-	bool bModel = false;
-	for (const TCHAR* Part : Parts)
-	{
-		const FString Path = FString::Printf(TEXT("/Game/DarkBlood/Art/Environment/PolyHaven/ship_pinnace/ship_pinnace_1k/StaticMeshes/ship_pinnace_%s.ship_pinnace_%s"),
-			Part, Part);
-		UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
-		if (!Mesh)
-		{
-			continue;
-		}
-		UStaticMeshComponent* Piece = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
-		Piece->SetStaticMesh(Mesh);
-		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Piece->SetupAttachment(Model);
-		// Keel 2.2 m below the water line; the model's Y axis becomes the ship's forward axis.
-		Piece->SetRelativeTransform(FTransform(FRotator(0.f, 90.f, 0.f), FVector(0.f, 0.f, -220.f)));
-		Piece->RegisterComponent();
-		bModel = true;
-	}
-	if (!bModel)
-	{
-		UStaticMeshComponent* Box = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
-		Box->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
-		Box->SetMaterial(0, UDBArtMaterialSubsystem::Get(EDBArtMaterial::WoodDark));
-		Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Box->SetupAttachment(Model);
-		Box->SetRelativeTransform(FTransform(FRotator::ZeroRotator, FVector(0.f, 0.f, DeckHeight * 0.5f - 150.f), FVector(30.f, 7.5f, (DeckHeight + 150.f) / 100.f)));
-		Box->RegisterComponent();
-	}
+	// A bezaisen from the art kit; the model rolls with the waves, so its pieces are movable and do not collide (the
+	// level deck box does).
+	FDBArtBatcher Batcher(*this, *Model, ModelPieces);
+	Batcher.SetMovable(true);
+	DBShipArt::Build(Batcher, EDBShipStyle::Bezaisen, 7, false); // same seed on every machine
 }
 
 void ADBShip::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

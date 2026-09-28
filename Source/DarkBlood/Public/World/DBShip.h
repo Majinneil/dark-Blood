@@ -1,7 +1,7 @@
 // A sailing ship of the open world. Interact on board to take the helm: the player character stays itself (camera,
 // abilities, saves), is attached at the helm, and its movement input steers the ship (W/S sails, A/D rudder). Others
 // ride along on the deck. The server moves the ship on the sea (it never sails onto land); clients receive the
-// replicated movement. The model is the CC0 pinnace (Poly Haven); a plain hull stands in when it is not imported.
+// replicated movement. The model is a Japanese bezaisen from the art kit (DBShipArt).
 #pragma once
 
 #include "GameFramework/Actor.h"
@@ -10,7 +10,7 @@
 #include "DBShip.generated.h"
 
 class UBoxComponent;
-class UStaticMeshComponent;
+class UInstancedStaticMeshComponent;
 
 UCLASS()
 class DARKBLOOD_API ADBShip : public AActor, public IDBInteractable
@@ -63,6 +63,9 @@ private:
 	/** Visual model; rolls and pitches with the waves (the deck collision stays level). */
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Ship")
 	TObjectPtr<USceneComponent> Model;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> ModelPieces;
 
 	UPROPERTY(Replicated)
 	TObjectPtr<APawn> Helmsman = nullptr;

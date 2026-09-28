@@ -31,6 +31,9 @@ public:
 	/** Places everything relative to Frame within the parent (a shared batch filled by many actors). */
 	void SetFrame(const FTransform& InFrame) { Frame = InFrame; }
 
+	/** Pieces on something that moves (a ship) must be movable; everything else is static. */
+	void SetMovable(bool bInMovable) { bMovable = bInMovable; }
+
 	/** New components stay unregistered until the owner registers them (filling many instances at no render cost). */
 	void SetDeferRegister(bool bDefer) { bDeferRegister = bDefer; }
 
@@ -68,4 +71,5 @@ private:
 	int32 InstanceCount = 0;
 	FTransform Frame = FTransform::Identity;
 	bool bDeferRegister = false;
+	bool bMovable = false;
 };
