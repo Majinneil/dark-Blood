@@ -28,6 +28,12 @@ public:
 	/** Structural pieces block and affect navigation; ornaments (lattices, ribs, lanterns) do not. */
 	void SetCollision(bool bEnabled) { bCollision = bEnabled; }
 
+	/** Places everything relative to Frame within the parent (a shared batch filled by many actors). */
+	void SetFrame(const FTransform& InFrame) { Frame = InFrame; }
+
+	/** New components stay unregistered until the owner registers them (filling many instances at no render cost). */
+	void SetDeferRegister(bool bDefer) { bDeferRegister = bDefer; }
+
 	/** Shapes in the parent's local space; Size in cm. */
 	void Box(EDBArtMaterial Material, const FVector& Center, const FVector& Size, const FRotator& Rotation = FRotator::ZeroRotator);
 	void Cylinder(EDBArtMaterial Material, const FVector& Center, float Diameter, float Height, const FRotator& Rotation = FRotator::ZeroRotator);
@@ -60,4 +66,6 @@ private:
 	TMap<FString, UInstancedStaticMeshComponent*> ByKey;
 	bool bCollision = true;
 	int32 InstanceCount = 0;
+	FTransform Frame = FTransform::Identity;
+	bool bDeferRegister = false;
 };

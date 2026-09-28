@@ -57,6 +57,11 @@ public:
 
 	void Rebuild();
 
+	/** Open world: new buildings wait for Rebuild (built a few per frame instead of all in one hitch)... */
+	static void SetDeferRebuild(bool bDefer) { bDeferRebuild = bDefer; }
+	/** ...and put their pieces into a settlement-wide batch (few primitives for a whole city) while one is set. */
+	static void SetSharedBatcher(FDBArtBatcher* Batcher) { SharedBatcher = Batcher; }
+
 	/** World-space bounds incl. roof overhang (vegetation / scatter exclusion). */
 	FBox GetFootprintBounds() const;
 	int32 GetInstanceCount() const { return InstanceCount; }
@@ -123,6 +128,9 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInstancedStaticMeshComponent>> Pieces;
+
+	static bool bDeferRebuild;
+	static FDBArtBatcher* SharedBatcher;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPointLightComponent>> Lights;

@@ -57,7 +57,10 @@ UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UM
 	Component->SetCollisionProfileName(bCollision ? UCollisionProfile::BlockAll_ProfileName : UCollisionProfile::NoCollision_ProfileName);
 	Component->SetCanEverAffectNavigation(bCollision);
 	Component->SetGenerateOverlapEvents(false);
-	Component->RegisterComponent();
+	if (!bDeferRegister)
+	{
+		Component->RegisterComponent();
+	}
 	Components.Add(Component);
 	ByKey.Add(Key, Component);
 	return Component;
@@ -77,7 +80,7 @@ void FDBArtBatcher::Mesh(UStaticMesh* InMesh, UMaterialInterface* Material, cons
 	{
 		return;
 	}
-	FindOrCreate(InMesh, Material)->AddInstance(LocalTransform, /*bWorldSpace*/ false);
+	FindOrCreate(InMesh, Material)->AddInstance(LocalTransform * Frame, /*bWorldSpace*/ false);
 	++InstanceCount;
 }
 
@@ -87,7 +90,7 @@ void FDBArtBatcher::MeshWithSlot(UStaticMesh* InMesh, int32 Slot, UMaterialInter
 	{
 		return;
 	}
-	FindOrCreate(InMesh, Material, Slot)->AddInstance(LocalTransform, /*bWorldSpace*/ false);
+	FindOrCreate(InMesh, Material, Slot)->AddInstance(LocalTransform * Frame, /*bWorldSpace*/ false);
 	++InstanceCount;
 }
 
@@ -111,7 +114,7 @@ void FDBArtBatcher::MeshWithMaterials(UStaticMesh* InMesh, const TArray<UMateria
 			Component->SetMaterial(Index, Materials[Index]);
 		}
 	}
-	Component->AddInstance(LocalTransform, /*bWorldSpace*/ false);
+	Component->AddInstance(LocalTransform * Frame, /*bWorldSpace*/ false);
 	++InstanceCount;
 }
 

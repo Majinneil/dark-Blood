@@ -37,12 +37,57 @@ namespace
 		const FDBRealmSettlement& Site;
 		float Radius;
 		int32 NextSeed;
+		/** What is already built: house centers and street segments (A, B, half width), so crossings stay free. */
+		TArray<FVector> Houses;
+		TArray<TTuple<FVector, FVector, float>> Roads;
+		/** Areas kept free for large buildings (center, radius). */
+		TArray<TPair<FVector, float>> Reserved;
+		/** The street whose houses are being placed: its own houses stand beside it by design. */
+		int32 CurrentRoad = INDEX_NONE;
 
 		int32 Seed() { return NextSeed++; }
+
+		bool IsFree(const FVector& At) const
+		{
+			for (const FVector& Other : Houses)
+			{
+				if (FVector::DistSquared2D(At, Other) < FMath::Square(1150.f))
+				{
+					return false;
+				}
+			}
+			for (const TPair<FVector, float>& Area : Reserved)
+			{
+				if (FVector::DistSquared2D(At, Area.Key) < FMath::Square(Area.Value))
+				{
+					return false;
+				}
+			}
+			for (int32 Index = 0; Index < Roads.Num(); ++Index)
+			{
+				if (Index == CurrentRoad)
+				{
+					continue;
+				}
+				const TTuple<FVector, FVector, float>& Road = Roads[Index];
+				const FVector OnRoad = FMath::ClosestPointOnSegment(FVector(At.X, At.Y, 0.f), FVector(Road.Get<0>().X, Road.Get<0>().Y, 0.f),
+					FVector(Road.Get<1>().X, Road.Get<1>().Y, 0.f));
+				if (FVector::Dist2D(At, OnRoad) < Road.Get<2>() + 650.f)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
 	};
 
 	void House(FContext& C, const FStyle& Style, const FVector& At, float Yaw, B Type, int32 X = 0, int32 Y = 0)
 	{
+		if (!C.IsFree(At))
+		{
+			return;
+		}
+		C.Houses.Add(At);
 		const int32 ModulesX = X > 0 ? X : C.Random.RandRange(2, 3);
 		const int32 ModulesY = Y > 0 ? Y : C.Random.RandRange(2, 4);
 		const int32 Floors = Style.Floors > 1 && C.Random.FRand() < 0.6f ? Style.Floors : 1;
@@ -50,11 +95,26 @@ namespace
 			Floors, Style.Damage);
 	}
 
+	/** Registers a street so houses keep off it; returns its index (a street planned twice is registered once). */
+	int32 PlanRoad(FContext& C, const FVector& A, const FVector& Bp, float Width)
+	{
+		for (int32 Index = 0; Index < C.Roads.Num(); ++Index)
+		{
+			if (C.Roads[Index].Get<0>().Equals(A) && C.Roads[Index].Get<1>().Equals(Bp))
+			{
+				return Index;
+			}
+		}
+		return C.Roads.Emplace(A, Bp, Width * 0.5f);
+	}
+
 	/** Houses on both sides of a straight street from A to B, entrances facing the street. */
 	void Street(FContext& C, const FStyle& Style, const FVector& A, const FVector& Bp, float Width, bool bLanterns = true,
 		EDBLanternStyle Lantern = EDBLanternStyle::WoodPost)
 	{
 		C.Builder.Spline(EDBSplineDressing::Road, {A, Bp}, Width, C.Seed());
+		// Streets are known before houses go up (a layout may plan them all first), so no house stands on a later street.
+		C.CurrentRoad = PlanRoad(C, A, Bp, Width);
 		const FVector Dir = (Bp - A).GetSafeNormal2D();
 		const FVector Side(-Dir.Y, Dir.X, 0.f);
 		const float Length = FVector::Dist2D(A, Bp);
@@ -74,6 +134,39 @@ namespace
 			if (bLanterns && C.Random.FRand() < 0.55f)
 			{
 				C.Builder.Lantern(A + Dir * T + Side * (Width * 0.5f + 60.f), Lantern);
+			}
+		}
+		C.CurrentRoad = INDEX_NONE;
+	}
+
+	/** Fills the blocks between the streets in [Min, Max] (local XY) with houses on a jittered grid, each facing its
+	 *  nearest street; Chance thins it out (dense city blocks vs. scattered farmsteads). Streets must be planned first. */
+	void Infill(FContext& C, const FStyle& Style, const FVector2D& Min, const FVector2D& Max, float Spacing, float Chance)
+	{
+		for (float X = Min.X; X <= Max.X; X += Spacing)
+		{
+			for (float Y = Min.Y; Y <= Max.Y; Y += Spacing)
+			{
+				if (C.Random.FRand() > Chance)
+				{
+					continue;
+				}
+				const FVector At(X + C.Random.FRandRange(-0.15f, 0.15f) * Spacing, Y + C.Random.FRandRange(-0.15f, 0.15f) * Spacing, 0.f);
+				FVector Facing = FVector::ForwardVector;
+				float Best = TNumericLimits<float>::Max();
+				for (const TTuple<FVector, FVector, float>& Road : C.Roads)
+				{
+					const FVector OnRoad = FMath::ClosestPointOnSegment(At, Road.Get<0>(), Road.Get<1>());
+					const float Distance = FVector::Dist2D(At, OnRoad);
+					if (Distance < Best && Distance > 1.f)
+					{
+						Best = Distance;
+						Facing = (OnRoad - At).GetSafeNormal2D();
+					}
+				}
+				// Entrance (+X) towards the street, snapped to the street grid.
+				const float Yaw = FMath::GridSnap(Facing.Rotation().Yaw, 90.f);
+				House(C, Style, At, Yaw, Style.Types[C.Random.RandRange(0, Style.Types.Num() - 1)]);
 			}
 		}
 	}
@@ -168,6 +261,27 @@ namespace
 		Quay.Types = {B::Warehouse, B::Warehouse, B::MerchantHouse};
 		Quay.Lot = 1700.f;
 		C.Builder.Spline(EDBSplineDressing::Road, {FVector(Shore - 600.f, -Half, 0.f), FVector(Shore - 600.f, Half, 0.f)}, 700.f, C.Seed());
+		PlanRoad(C, FVector(Shore - 600.f, -Half, 0.f), FVector(Shore - 600.f, Half, 0.f), 700.f);
+		// The town behind the warehouses: streets running inland, crossed by streets parallel to the quay (planned first so
+		// no house stands on a crossing).
+		const float Back = Shore - 2900.f;
+		TArray<TPair<FVector, FVector>> Streets;
+		const int32 Inland = bGreat ? 5 : 3;
+		for (int32 Index = 0; Index < Inland; ++Index)
+		{
+			const float Y = FMath::Lerp(-Half * 0.8f, Half * 0.8f, Index / float(Inland - 1));
+			Streets.Emplace(FVector(Back, Y, 0.f), FVector(-Half, Y, 0.f));
+		}
+		const int32 Cross = bGreat ? 2 : 1;
+		for (int32 Index = 1; Index <= Cross; ++Index)
+		{
+			const float X = FMath::Lerp(Back, -Half, Index / float(Cross + 1));
+			Streets.Emplace(FVector(X, -Half * 0.85f, 0.f), FVector(X, Half * 0.85f, 0.f));
+		}
+		for (const TPair<FVector, FVector>& Street : Streets)
+		{
+			PlanRoad(C, Street.Key, Street.Value, 450.f);
+		}
 		for (float Y = -Half + 900.f; Y < Half - 900.f; Y += Quay.Lot)
 		{
 			if (C.Random.FRand() < 0.85f)
@@ -186,13 +300,13 @@ namespace
 				bGreat ? Index % 2 == 0 : Index == 1);
 			Cargo(C, FVector(Shore - 900.f, Y + 400.f, 0.f));
 		}
-		// The town behind the warehouses: streets running inland.
-		const int32 Streets = bGreat ? 3 : 2;
-		for (int32 Index = 0; Index < Streets; ++Index)
+		for (const TPair<FVector, FVector>& Planned : Streets)
 		{
-			const float Y = FMath::Lerp(-Half * 0.6f, Half * 0.6f, Index / float(Streets - 1));
-			Street(C, Town, FVector(Shore - 2900.f, Y, 0.f), FVector(-Half, Y, 0.f), 450.f);
+			Street(C, Town, Planned.Key, Planned.Value, 450.f);
 		}
+		FStyle Backyard = Town;
+		Backyard.Floors = 1;
+		Infill(C, Backyard, FVector2D(-Half, -Half * 0.85f), FVector2D(Back - 600.f, Half * 0.85f), 1700.f, bGreat ? 0.7f : 0.45f);
 		C.Builder.Fx(EDBAmbientFx::Fireflies, FVector(Shore - 1500.f, 0.f, 0.f), FVector(Half * 0.6f, Half, 200.f), 60, C.Seed(), true);
 	}
 
@@ -234,6 +348,8 @@ namespace
 		{
 			House(C, Village, FVector(R * 0.3f, R * 0.55f, 0.f), -90.f, B::Shrine, 2, 2);
 		}
+		// Farmsteads scattered off the main street.
+		Infill(C, Village, FVector2D(-R * 0.75f, -R * 0.75f), FVector2D(R * 0.75f, R * 0.75f), 2000.f, 0.18f);
 		Builder.Spline(bForest || Site.Type == S::MountainVillage ? EDBSplineDressing::BambooFence : EDBSplineDressing::WoodFence,
 			{Polar(R, 200.f), Polar(R, 250.f), Polar(R, 300.f), Polar(R, 340.f)}, 0.f, C.Seed());
 		if (bForest)
@@ -267,8 +383,17 @@ namespace DBSettlements
 		using S = EDBSettlementType;
 		FContext C{Builder, FRandomStream(Seed), Site, Site.Radius * 100.f, Seed * 100 + 1};
 		const float R = C.Radius;
-		// Packed ground under the settlement.
-		Builder.Ground(FVector::ZeroVector, FVector2D(R * 1.7f, R * 1.7f), M::GroundEarth, 1.f, 0.f, true);
+		// Packed ground under the settlement; at the coast it ends at the shore (+X faces the sea) instead of covering the water.
+		if (Site.SeaDirection.IsZero())
+		{
+			Builder.Ground(FVector::ZeroVector, FVector2D(R * 1.7f, R * 1.7f), M::GroundEarth, 1.f, 0.f, true);
+		}
+		else
+		{
+			// Only the working waterfront is packed earth; the town behind shows the meadow between its streets.
+			const float Shore = static_cast<float>(Site.ShoreDistance * 100.0);
+			Builder.Ground(FVector(Shore - 1300.f, 0.f, 0.f), FVector2D(2600.f, R * 1.7f), M::GroundEarth, 1.f);
+		}
 
 		switch (Site.Type)
 		{
@@ -287,15 +412,24 @@ namespace DBSettlements
 		case S::GreatCity:
 		{
 			const FStyle City{TEXT("Capital"), 0.7f, 2, {B::MerchantHouse, B::Tavern, B::LargeHouse, B::MerchantHouse, B::Warehouse}, 1600.f, 900.f};
+			// Cross streets and the temple precinct are planned first: no house stands on them.
+			for (const float Offset : {-0.25f, 0.25f})
+			{
+				PlanRoad(C, FVector(R * Offset, -R * 0.9f, 0.f), FVector(R * Offset, R * 0.9f, 0.f), 500.f);
+			}
+			C.Reserved.Emplace(FVector(0.f, R * 0.75f, 0.f), 2600.f);
 			for (const float Offset : {-0.5f, 0.f, 0.5f})
 			{
 				Street(C, City, FVector(-R * 0.9f, R * Offset, 0.f), FVector(R * 0.9f, R * Offset, 0.f), 600.f);
 			}
 			for (const float Offset : {-0.25f, 0.25f})
 			{
-				Builder.Spline(EDBSplineDressing::Road, {FVector(R * Offset, -R * 0.9f, 0.f), FVector(R * Offset, R * 0.9f, 0.f)}, 500.f, C.Seed());
+				Street(C, City, FVector(R * Offset, -R * 0.9f, 0.f), FVector(R * Offset, R * 0.9f, 0.f), 500.f);
 			}
 			Builder.Building(FVector(0.f, R * 0.75f, 0.f), -90.f, B::TempleHall, C.Seed(), TEXT("Temple"), 0.8f, 4, 4, 2);
+			FStyle Backyard = City;
+			Backyard.Floors = 1;
+			Infill(C, Backyard, FVector2D(-R * 0.85f, -R * 0.85f), FVector2D(R * 0.85f, R * 0.85f), 1800.f, 0.75f);
 			break;
 		}
 		case S::TavernTown:
@@ -303,6 +437,7 @@ namespace DBSettlements
 			const FStyle Town{TEXT("Village"), 0.55f, 2, {B::Tavern, B::Tavern, B::MerchantHouse, B::SmallHouse}, 1500.f, 850.f};
 			Street(C, Town, FVector(-R * 0.9f, 0.f, 0.f), FVector(R * 0.9f, 0.f, 0.f), 550.f);
 			Street(C, Town, FVector(0.f, -R * 0.9f, 0.f), FVector(0.f, R * 0.9f, 0.f), 550.f);
+			Infill(C, Town, FVector2D(-R * 0.8f, -R * 0.8f), FVector2D(R * 0.8f, R * 0.8f), 1800.f, 0.35f);
 			break;
 		}
 		case S::HarborTown:
@@ -381,6 +516,7 @@ namespace DBSettlements
 		{
 			const FStyle Market{TEXT("Village"), 0.45f, 1, {B::MerchantHouse, B::Warehouse, B::Tavern}, 1600.f, 900.f};
 			Street(C, Market, FVector(-R, 0.f, 0.f), FVector(R, 0.f, 0.f), 700.f);
+			Infill(C, Market, FVector2D(-R * 0.8f, -R * 0.6f), FVector2D(R * 0.8f, R * 0.6f), 1900.f, 0.3f);
 			for (const float X : {-0.5f, 0.f, 0.5f})
 			{
 				Cargo(C, FVector(R * X, 0.f, 0.f));
@@ -391,6 +527,7 @@ namespace DBSettlements
 		{
 			const FStyle Mine{TEXT("Village"), 0.3f, 1, {B::Smithy, B::Warehouse, B::SmallHouse}, 1500.f, 850.f, 0.1f};
 			Street(C, Mine, FVector(-R * 0.9f, 0.f, 0.f), FVector(R * 0.9f, 0.f, 0.f), 500.f);
+			Infill(C, Mine, FVector2D(-R * 0.8f, -R * 0.5f), FVector2D(R * 0.8f, R * 0.5f), 1900.f, 0.25f);
 			for (const float X : {-0.4f, 0.3f})
 			{
 				Builder.Fx(EDBAmbientFx::Embers, FVector(R * X, 1300.f, 0.f), FVector(200.f, 200.f, 300.f), 50, C.Seed());

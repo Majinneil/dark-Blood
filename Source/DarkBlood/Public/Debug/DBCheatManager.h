@@ -99,6 +99,10 @@ public:
 	UFUNCTION(Exec) void DBOrbit(float Yaw, float Pitch = -10.f, float Distance = 250.f);
 	/** Open world: teleport to a region of the realm (id, name or index 0-15), optionally offset in meters. */
 	UFUNCTION(Exec) void DBTravel(const FString& Region, float OffsetX = 0.f, float OffsetY = 0.f);
+	/** Spawns a sailing ship at the water line in front of the player. */
+	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f);
+	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */
+	UFUNCTION(Exec) void DBSail(float Rudder = 0.f, float Sails = 1.f, float Seconds = 10.f);
 
 private:
 	/** On clients: sends the command to the server and returns true. */

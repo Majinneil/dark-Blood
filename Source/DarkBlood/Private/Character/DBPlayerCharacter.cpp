@@ -6,6 +6,7 @@
 #include "Dialogue/DBDialogueComponent.h"
 #include "Interaction/DBInteractionComponent.h"
 #include "Inventory/DBInventoryComponent.h"
+#include "World/DBShip.h"
 #include "UI/DBGameHUD.h"
 #include "Components/CapsuleComponent.h"
 #include "Visual/DBCharacterVisualComponent.h"
@@ -170,6 +171,14 @@ void ADBPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	if (const UInputAction* Move = InputConfig->FindNativeInputAction(DBTags::Input_Move))
 	{
 		EnhancedInput->BindAction(Move, ETriggerEvent::Triggered, this, &ADBPlayerCharacter::Input_Move);
+		EnhancedInput->BindActionValueLambda(Move, ETriggerEvent::Completed, [this](const FInputActionValue&)
+		{
+			if (!ShipSteering.IsZero() && ADBShip::FindSteeredBy(this))
+			{
+				ShipSteering = FVector2D::ZeroVector;
+				ServerSteerShip(FVector2D::ZeroVector);
+			}
+		});
 	}
 	if (const UInputAction* Look = InputConfig->FindNativeInputAction(DBTags::Input_Look))
 	{
@@ -191,9 +200,23 @@ void ADBPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	}
 }
 
+void ADBPlayerCharacter::ServerSteerShip_Implementation(FVector2D Input)
+{
+	if (ADBShip* Ship = ADBShip::FindSteeredBy(this))
+	{
+		Ship->SetSteering(Input);
+	}
+}
+
 void ADBPlayerCharacter::Input_Move(const FInputActionValue& Value)
 {
 	const FVector2D Axis = Value.Get<FVector2D>();
+	if (ADBShip::FindSteeredBy(this))
+	{
+		ShipSteering = Axis;
+		ServerSteerShip(Axis);
+		return;
+	}
 	// Attacks, dodges and hit reactions own the movement while they run.
 	if (!Controller || IsMovementInputBlocked())
 	{

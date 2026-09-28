@@ -72,6 +72,9 @@ struct ADBModularBuilding::FPalette
 	bool bRoundPosts = false;
 };
 
+bool ADBModularBuilding::bDeferRebuild = false;
+FDBArtBatcher* ADBModularBuilding::SharedBatcher = nullptr;
+
 ADBModularBuilding::ADBModularBuilding()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -83,7 +86,10 @@ ADBModularBuilding::ADBModularBuilding()
 void ADBModularBuilding::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	Rebuild();
+	if (!bDeferRebuild)
+	{
+		Rebuild();
+	}
 }
 
 void ADBModularBuilding::Configure(EDBBuildingType InType, int32 InSeed, FName InRegion, float InWealth, int32 InModulesX, int32 InModulesY,
@@ -246,6 +252,9 @@ void ADBModularBuilding::AddLight(const FVector& LocalPosition, float Lumens, fl
 	Light->SetLightColor(Color);
 	Light->SetSourceRadius(15.f);
 	Light->SetCastShadows(bLanternsCastShadows);
+	// Small warm lights matter only up close: beyond 50 m they fade out and cost nothing (a city has hundreds of them).
+	Light->MaxDrawDistance = 5000.f;
+	Light->MaxDistanceFadeRange = 1500.f;
 	Light->RegisterComponent();
 	Lights.Add(Light);
 }
@@ -259,7 +268,10 @@ void ADBModularBuilding::Rebuild()
 	}
 	FRandomStream Random(Seed);
 	const FPalette Palette = MakePalette(Random);
-	FDBArtBatcher Batcher(*this, *Root, Pieces);
+	FDBArtBatcher OwnBatcher(*this, *Root, Pieces);
+	FDBArtBatcher& Batcher = SharedBatcher ? *SharedBatcher : OwnBatcher;
+	const int32 InstancesBefore = Batcher.GetInstanceCount();
+	Batcher.SetFrame(SharedBatcher ? GetActorTransform() : FTransform::Identity);
 	const FTransform Identity = FTransform::Identity;
 
 	const float W = ModulesX * ModuleSize;
@@ -322,7 +334,8 @@ void ADBModularBuilding::Rebuild()
 	}
 
 	BuildDressing(Batcher, Random, Palette, FloorZ);
-	InstanceCount = Batcher.GetInstanceCount();
+	InstanceCount = Batcher.GetInstanceCount() - InstancesBefore;
+	Batcher.SetFrame(FTransform::Identity);
 }
 
 void ADBModularBuilding::BuildFloor(FDBArtBatcher& Batcher, FRandomStream& Random, const FPalette& Palette, int32 Floor, float BaseZ)

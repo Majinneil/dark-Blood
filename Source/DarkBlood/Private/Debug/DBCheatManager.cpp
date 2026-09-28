@@ -24,6 +24,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Settings/DBGameUserSettings.h"
 #include "World/DBRealmLayout.h"
+#include "World/DBShip.h"
 #include "Visual/DBAnimationSetDefinition.h"
 #include "Visual/DBCharacterVisualComponent.h"
 #include "Visual/DBCharacterVisualDefinition.h"
@@ -837,6 +838,87 @@ void UDBCheatManager::DBTravel(const FString& Region, float OffsetX, float Offse
 	const double Ground = FMath::Max(DBRealm::SampleHeight(X, Y), 0.0);
 	Pawn->TeleportTo(FVector(X * 100.0, Y * 100.0, Ground * 100.0 + 250.0), Pawn->GetActorRotation());
 	UE_LOG(LogDarkBlood, Display, TEXT("DBTravel: %s (%s) at %.0f / %.0f m, ground %.0f m"), Target->DisplayName, *Target->RegionId.ToString(), X, Y, Ground);
+}
+
+void UDBCheatManager::DBSpawnShip(float Distance)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBSpawnShip %f"), Distance))) return;
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (Pawn)
+	{
+		const FVector At = Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * Distance;
+		ADBShip::SpawnAt(GetWorld(), FVector2D(At), Pawn->GetActorRotation().Yaw + 90.f, FText::FromString(TEXT("Test-Pinasse")));
+	}
+}
+
+void UDBCheatManager::DBSail(float Rudder, float Sails, float Seconds)
+{
+	if (GetWorld()->GetNetMode() == NM_Client)
+	{
+		// The client's own view: replicated ships and whether the pawn rides one.
+		const APawn* Viewer = GetOuterAPlayerController()->GetPawn();
+		int32 Ships = 0;
+		for (TActorIterator<ADBShip> It(GetWorld()); It; ++It)
+		{
+			++Ships;
+		}
+		UE_LOG(LogDarkBlood, Display, TEXT("DBSail (client): %d ships, pawn at %s riding %s"), Ships, Viewer ? *Viewer->GetActorLocation().ToCompactString() : TEXT("-"),
+			Viewer ? *GetNameSafe(Viewer->GetAttachParentActor()) : TEXT("-"));
+	}
+	if (ForwardToServer(FString::Printf(TEXT("DBSail %f %f %f"), Rudder, Sails, Seconds))) return;
+	APlayerController* Controller = GetOuterAPlayerController();
+	APawn* Pawn = Controller->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	ADBShip* Ship = ADBShip::FindSteeredBy(Pawn);
+	if (!Ship)
+	{
+		double Best = TNumericLimits<double>::Max();
+		for (TActorIterator<ADBShip> It(GetWorld()); It; ++It)
+		{
+			const double Distance = FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation());
+			if (Distance < Best && It->CanInteract(Pawn))
+			{
+				Best = Distance;
+				Ship = *It;
+			}
+		}
+		if (!Ship)
+		{
+			UE_LOG(LogDarkBlood, Warning, TEXT("DBSail: no free ship"));
+			return;
+		}
+		// Board it: stand on the deck, then take the helm like the interaction does.
+		Pawn->TeleportTo(Ship->GetActorLocation() + FVector(0.f, 0.f, 200.f), Pawn->GetActorRotation());
+		Ship->Interact(Controller);
+	}
+	Ship->SetSteering(FVector2D(Rudder, Sails));
+	const FVector Start = Ship->GetActorLocation();
+	// What lies under the hull: the sea floor far below, or (wrongly) ground at the water line.
+	FHitResult Ground;
+	FCollisionQueryParams GroundParams(SCENE_QUERY_STAT(DBSail), false, Ship);
+	GroundParams.AddIgnoredActor(Pawn);
+	if (GetWorld()->LineTraceSingleByChannel(Ground, Start + FVector(0.f, 0.f, 5000.f), Start - FVector(0.f, 0.f, 10000.f), ECC_Visibility, GroundParams))
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBSail: under the hull %s (%s) at Z %.0f, layout height %.1f m"), *GetNameSafe(Ground.GetActor()),
+			*GetNameSafe(Ground.GetComponent()), Ground.ImpactPoint.Z, DBRealm::SampleHeight(Start.X / 100.0, Start.Y / 100.0));
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBSail: %s at %s, rudder %.1f sails %.1f for %.0f s"), *Ship->ShipName.ToString(), *Start.ToCompactString(), Rudder, Sails, Seconds);
+	const TWeakObjectPtr<ADBShip> WeakShip = Ship;
+	FTimerHandle Stop;
+	GetWorld()->GetTimerManager().SetTimer(Stop, FTimerDelegate::CreateWeakLambda(this, [WeakShip, Start]()
+	{
+		if (WeakShip.IsValid())
+		{
+			WeakShip->SetSteering(FVector2D::ZeroVector);
+			const APawn* Helmsman = WeakShip->GetHelmsman();
+			UE_LOG(LogDarkBlood, Display, TEXT("DBSail: sailed %.0f m to %s, yaw %.0f, helmsman %s at %s"), FVector::Dist2D(Start, WeakShip->GetActorLocation()) / 100.0,
+				*WeakShip->GetActorLocation().ToCompactString(), WeakShip->GetActorRotation().Yaw, *GetNameSafe(Helmsman),
+				Helmsman ? *Helmsman->GetActorLocation().ToCompactString() : TEXT("-"));
+		}
+	}), FMath::Max(0.1f, Seconds), false);
 }
 
 void UDBCheatManager::DBView(float X, float Y, float Yaw, float Pitch)

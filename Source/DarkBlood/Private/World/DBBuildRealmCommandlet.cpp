@@ -551,9 +551,9 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 	{
 		Sea->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
 		Sea->GetStaticMeshComponent()->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Instances/MI_DB_Water_Sea.MI_DB_Water_Sea")));
-		Sea->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Sea->GetStaticMeshComponent()->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 		Sea->GetStaticMeshComponent()->SetCastShadow(false);
-		Sea->SetActorScale3D(FVector(400.0, 400.0, 1.0)); // 40 km
+		Sea->SetActorScale3D(FVector(40000.0, 40000.0, 1.0)); // the 1 m engine plane, 40 km across
 		Sea->SetActorLabel(TEXT("Sea"));
 	}
 	if (ADirectionalLight* Sun = Spawn<ADirectionalLight>(*World, FVector(0.0, 0.0, 50000.0), FRotator(-35.0, 140.0, 0.0)))

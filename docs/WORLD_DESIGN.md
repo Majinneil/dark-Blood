@@ -6,32 +6,56 @@ Eine einzige, nahtlose Hauptwelt (`/Game/DarkBlood/Maps/L_Realm`, World Partitio
 Regionen, keine Levelauswahl. Dungeons sind Teil der Welt; nur bei technischem Bedarf werden einzelne
 Innenräume über Level Instances / Data Layers gestreamt.
 
-**Status:** Die Hauptwelt existiert noch nicht (Assets können in der aktuellen Umgebung nicht erstellt
-werden). Bis dahin nutzt die Config die World-Partition-Vorlage der Engine (`/Engine/Maps/Templates/OpenWorld`).
+**Status:** Die Hauptwelt `/Game/DarkBlood/Maps/L_Realm` (16 × 16 km) wird vom Commandlet `DBBuildRealm` aus dem
+Weltplan erzeugt (`UnrealEditor-Cmd DarkBlood.uproject -run=DBBuildRealm`, Vorschau mit `-Preview` nach
+`Saved/Realm/RealmPreview.bmp`). Vorlage: `docs/VisualPack/Reference/DarkBlood_Weltkarte.png`.
 
-## 16 Hauptgebiete (+ Epilog)
+## Die 16 Gebiete der Weltkarte
 
-| ID (Entwicklung) | Gebiet | Thema | Empf. Stärke (Platzhalter) |
+Norden oben, Osten rechts. Lage, Gelände, Bodenschichten und Flüsse stehen in `Source/DarkBlood/.../World/DBRealmLayout.cpp`.
+
+| ID | Gebiet (Karte) | Vasallen-Thema | Gelände |
 |---|---|---|---|
-| `Capital` | Hauptstadt | Schutzzauber, sicherster Ort | 1–5 |
-| `Region01` | Vasallengebiet 1 | Blut | 3–9 |
-| `Region02` | Vasallengebiet 2 | Frost | 7–13 |
-| `Region03` | Vasallengebiet 3 | Schatten | 11–17 |
-| `Region04` | Vasallengebiet 4 | Donner | 15–21 |
-| `Region05` | Vasallengebiet 5 | Feuer / Asche | 19–25 |
-| `Region06` | Vasallengebiet 6 | Knochen / Tod | 23–29 |
-| `Region07` | Vasallengebiet 7 | Gift / Seuche | 27–33 |
-| `Region08` | Vasallengebiet 8 | Wahnsinn / Illusion | 31–37 |
-| `Region09` | Vasallengebiet 9 | Bestien | 35–41 |
-| `Region10` | Vasallengebiet 10 | Eisen | 39–45 |
-| `Region11` | Vasallengebiet 11 | Meer | 43–49 |
-| `Region12` | Vasallengebiet 12 | Wind / Himmel | 47–53 |
-| `Region13` | Vasallengebiet 13 | Finsternis | 51–57 |
-| `Region14` | Vasallengebiet 14 | Schwarze Festung (rechte Hand des Dämonenkönigs) | 55–61 |
-| `TheEnd` | DAS ENDE | Dunkles Blut, Palast des Dämonenkönigs | 62–70 |
-| `Paradise` | DAS PARADIES | Epilog, kein Farmgebiet | – |
+| `Capital` | Hauptstadt | Schutzzauber | Plateau (70 m) im Norden, Hafen an der Nordküste |
+| `Region01` | Kirschblütental | Blut | Täler, Kirschhaine |
+| `Region02` | Eisöde | Frost | Hochplateau, Schnee, Tannen |
+| `Region03` | Bambuswälder | Schatten | dichter Wald |
+| `Region04` | Nebelberge | Donner | Gebirge bis ~1 000 m, Schnee |
+| `Region05` | Feuergebirge | Feuer / Asche | vulkanischer Fels, Lavaströme |
+| `Region06` | Wüstenlande | Knochen / Tod | Dünen, Oase |
+| `Region07` | Flusslande | Gift / Seuche | Flussniederung, Fischerdorf |
+| `Region08` | Wald der Geister | Wahnsinn / Illusion | Sumpfwald, Tümpel |
+| `Region09` | Reisfelder | Bestien | Terrassen |
+| `Region10` | Großstadt | Eisen | Ebene |
+| `Region11` | Küstenland | Meer | Küste, Buchten, Hafenstadt |
+| `Region12` | Himmelstempel | Wind / Himmel | Seen, Tempelsiedlung |
+| `Region13` | Dämonenöde | Finsternis | zerklüftet, verdorben |
+| `Region14` | Vasallenfestung | Schwarze Festung | Anhöhe, Grenzposten |
+| `TheEnd` | Das Ende | Dunkles Blut | Spitzen, verdorben, Lava |
 
-Reihenfolge und Werte sind Platzhalter; endgültige Namen und Zahlen kommen als `DBRegion`-Assets.
+Siedlungen (je Typ eine, `DBRealm::GetSettlements`): Hauptstadt(bezirke), Hauptstadthafen, Großstadt, Dorf, Bergdorf,
+Hafenstadt, Reisdorf, Waldsiedlung, Bergwerksstadt, Tempelsiedlung, Grenzposten, Karawanenstadt, Tavernenstadt,
+Fischerdorf, Schneesiedlung, Flusssiedlung, Oasenstadt. Der Boden ist dort eingeebnet (Häfen behalten ihr Becken);
+`ADBRealmDirector` baut sie auf jedem Rechner deterministisch, sobald die Kamera näher als 2,8 km ist, und entfernt
+sie ab 3,5 km. Straßen werden zuerst geplant, dann stehen Häuser beidseitig, und eine Blockfüllung setzt Hinterhäuser
+zwischen die Straßen (dicht in Städten, locker in Dörfern), ohne Kreuzungen zu verbauen. Die Häuser entstehen danach
+über mehrere Frames (3 ms Budget) in gemeinsame Instanz-Blöcke zu je 40 Häusern: Die Großstadt (≈1100 Häuser,
+220 000 Teile) ist so ~480 Primitive statt 13 600 und erscheint ohne Ruckler.
+
+Schiffe: In jedem Hafen liegt eine segelbare Pinasse (`ADBShip`, Steuer mit E, W/S Segel, A/D Ruder, max. 14 m/s). Der
+Server bewegt das Schiff, der Steuermann ist angehängt, Mitspieler fahren auf dem Deck mit (repliziert, getestet im
+Koop). Bug und Bugflanken prüfen die Wassertiefe, das Schiff läuft nicht auf Land. Testbefehle `DBSpawnShip`,
+`DBSail <Ruder> <Segel> <Sekunden>`.
+
+Meer: eine 40-km-Fläche auf Z −0,3 m mit `M_DB_Sea` (dunkel, glänzend, opak; drei gegeneinander driftende
+Weltprojektionen der generierten Wellen-Normalmap `Tools/generate_sea_normal.py`). Keine Kollision – Figuren im Meer
+laufen derzeit auf dem Meeresgrund (Schwimmen fehlt noch).
+
+Karte: 16 Landscape-Kacheln (4 m Raster, 8 Bodenschichten `M_DB_Realm_Landscape`, Gras über Landscape-Grass-Types,
+deren Dichtekarten zur Laufzeit auf der GPU entstehen: `grass.GrassMap.UseRuntimeGeneration=1`),
+164 000 Bäume und Felsen in 1-km-Zellen (`ADBRealmVegetation`, Nanite), Meer auf Höhe 0. Nanite-Landscape ist
+möglich (`-Nanite`), braucht aber ~590 MB pro Kachel und mehr Speicher als 32 GB beim Bauen – daher aus.
+Testbefehl `DBTravel <Region|Siedlung>`.
 
 ## Regionen im Code
 

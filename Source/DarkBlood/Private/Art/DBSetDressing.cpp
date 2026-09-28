@@ -12,12 +12,16 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Math/RandomStream.h"
+#include "World/DBShip.h"
 
 using EShape = FDBArtBatcher::EShape;
 using M = EDBArtMaterial;
 
 namespace
 {
+	/** The open world's sea plane lies just below Z = 0; scatter never lands on the sea floor under it. */
+	constexpr float SeaFloorZ = -50.f;
+
 	void Put(FDBArtBatcher& Batcher, EShape Shape, M Material, const FTransform& Parent, const FVector& Center, const FVector& Size,
 		const FRotator& Rotation = FRotator::ZeroRotator)
 	{
@@ -142,6 +146,9 @@ void ADBArtActor::AddLight(const FVector& LocalPosition, float Lumens, float Rad
 	Light->SetLightColor(Color);
 	Light->SetSourceRadius(10.f);
 	Light->SetCastShadows(bLightsCastShadows);
+	// Small warm lights matter only up close: beyond 50 m they fade out and cost nothing (a city has hundreds of them).
+	Light->MaxDrawDistance = 5000.f;
+	Light->MaxDistanceFadeRange = 1500.f;
 	Light->RegisterComponent();
 	Lights.Add(Light);
 }
@@ -817,8 +824,9 @@ void ADBScatterVolume::Build(FDBArtBatcher& Batcher)
 			const FVector End = GetActorTransform().TransformPosition(LocalXY - FVector(0.f, 0.f, Extent.Z + 2000.f));
 			FHitResult Hit;
 			FCollisionQueryParams Params(SCENE_QUERY_STAT(DBScatter), false, this);
+			// Plants grow on ground only: never on a ship's deck, never on the sea floor below the water line.
 			if (!World->LineTraceSingleByObjectType(Hit, Start, End, GroundTypes, Params) || Hit.ImpactNormal.Z < MinNormalZ
-				|| IsExcluded(Hit.ImpactPoint, Clearance))
+				|| IsExcluded(Hit.ImpactPoint, Clearance) || Cast<ADBShip>(Hit.GetActor()) || Hit.ImpactPoint.Z < SeaFloorZ)
 			{
 				++RejectedCount;
 				continue;

@@ -51,11 +51,17 @@ protected:
 	UFUNCTION()
 	void RefreshNameplateFromState(ADBPlayerState* ChangedState);
 
+	/** At a ship's helm the movement input steers the ship (X rudder, Y sails). */
+	UFUNCTION(Server, Unreliable)
+	void ServerSteerShip(FVector2D Input);
+
 	/** Equipment changed (server and clients): shows the main-hand weapon. */
 	UFUNCTION()
 	void RefreshEquippedWeapon();
 
 	void Input_Move(const FInputActionValue& Value);
+	/** Last steering input sent to a ship (released keys send zero once). */
+	FVector2D ShipSteering = FVector2D::ZeroVector;
 	void Input_Look(const FInputActionValue& Value);
 	void Input_AbilityPressed(FGameplayTag InputTag);
 	void Input_AbilityReleased(FGameplayTag InputTag);
