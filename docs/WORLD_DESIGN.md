@@ -42,10 +42,21 @@ zwischen die Straßen (dicht in Städten, locker in Dörfern), ohne Kreuzungen z
 über mehrere Frames (3 ms Budget) in gemeinsame Instanz-Blöcke zu je 40 Häusern: Die Großstadt (≈1100 Häuser,
 220 000 Teile) ist so ~480 Primitive statt 13 600 und erscheint ohne Ruckler.
 
-Schiffe: In jedem Hafen liegt eine segelbare Pinasse (`ADBShip`, Steuer mit E, W/S Segel, A/D Ruder, max. 14 m/s). Der
-Server bewegt das Schiff, der Steuermann ist angehängt, Mitspieler fahren auf dem Deck mit (repliziert, getestet im
-Koop). Bug und Bugflanken prüfen die Wassertiefe, das Schiff läuft nicht auf Land. Testbefehle `DBSpawnShip`,
-`DBSail <Ruder> <Segel> <Sekunden>`.
+Schiffe (`DBShipArt`, nach dem Schiffs-Konzeptblatt `docs/VisualPack/Reference`): gebogene Plankenrümpfe aus
+Stationen entlang des Kiels, Dschunken-Segel mit Latten, Laternen und Banner. Vier Typen, alle segelbar (`ADBShip`,
+Steuer mit E, W/S Segel, A/D Ruder; Server bewegt, Mitspieler fahren auf Deck mit):
+
+| Typ | Länge | Tempo | Wende | Merkmale |
+|---|---|---|---|---|
+| Kriegsschiff | 48 m | 8,5 m/s | 7°/s | rote Segel mit Goldwappen, Drachenkopf, zwei Kanonendecks, Heckkastell |
+| Kampfschiff | 34 m | 19 m/s | 18°/s | schwarze Segel mit rotem Wappen, Rammsporn, Schildwall |
+| Handelsschiff | 38 m | 11,5 m/s | 10°/s | Leinensegel, Fracht an Deck, Heckpavillon |
+| Kleines Boot | 9 m | 10 m/s | 35°/s | ein Segel, Bug-Laterne, Wriggruder, fährt in flachem Wasser |
+
+Der Hauptstadthafen hält die ganze Flotte bereit, andere Häfen Handels-, Kampfschiff und Boot, das Fischerdorf Boote;
+zusätzlich liegen unbemannte Schiffe an den Stegen (`ADBShipModel`). Bug und Bugflanken prüfen den Tiefgang des Typs.
+Testbefehle `DBSpawnShip <Abstand> <Typ>`, `DBBoardShip <Typ>`, `DBSail <Ruder> <Segel> <Sekunden>`.
+Offen: Innenräume (Kapitänsdeck, Laderaum), Besatzung.
 
 Meer: eine 40-km-Fläche auf Z −0,3 m mit `M_DB_Sea` (dunkel, glänzend, opak; drei gegeneinander driftende
 Weltprojektionen der generierten Wellen-Normalmap `Tools/generate_sea_normal.py`). Keine Kollision – Figuren im Meer

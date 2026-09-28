@@ -840,14 +840,50 @@ void UDBCheatManager::DBTravel(const FString& Region, float OffsetX, float Offse
 	UE_LOG(LogDarkBlood, Display, TEXT("DBTravel: %s (%s) at %.0f / %.0f m, ground %.0f m"), Target->DisplayName, *Target->RegionId.ToString(), X, Y, Ground);
 }
 
-void UDBCheatManager::DBSpawnShip(float Distance)
+void UDBCheatManager::DBSpawnShip(float Distance, int32 Style)
 {
-	if (ForwardToServer(FString::Printf(TEXT("DBSpawnShip %f"), Distance))) return;
+	if (ForwardToServer(FString::Printf(TEXT("DBSpawnShip %f %d"), Distance, Style))) return;
 	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
 	if (Pawn)
 	{
+		const EDBShipStyle ShipStyle = static_cast<EDBShipStyle>(FMath::Clamp(Style, 0, static_cast<int32>(EDBShipStyle::Boat)));
 		const FVector At = Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * Distance;
-		ADBShip::SpawnAt(GetWorld(), FVector2D(At), Pawn->GetActorRotation().Yaw + 90.f, FText::FromString(TEXT("Test-Pinasse")));
+		ADBShip::SpawnAt(GetWorld(), FVector2D(At), Pawn->GetActorRotation().Yaw + 90.f, DBShipArt::GetSpec(ShipStyle).DisplayName, ShipStyle);
+	}
+}
+
+void UDBCheatManager::DBBoardShip(int32 Style)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBBoardShip %d"), Style))) return;
+	APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	ADBShip* Best = nullptr;
+	for (TActorIterator<ADBShip> It(GetWorld()); It; ++It)
+	{
+		if (static_cast<int32>(It->Style) == Style
+			&& (!Best || FVector::DistSquared(It->GetActorLocation(), Pawn->GetActorLocation()) < FVector::DistSquared(Best->GetActorLocation(), Pawn->GetActorLocation())))
+		{
+			Best = *It;
+		}
+	}
+	if (Best)
+	{
+		const bool bTeleported = Pawn->TeleportTo(Best->GetActorLocation() + FVector(0.f, 0.f, 200.f), Best->GetActorRotation());
+		UE_LOG(LogDarkBlood, Display, TEXT("DBBoardShip: on %s (teleport %d, ship at %s)"), *Best->ShipName.ToString(), bTeleported ? 1 : 0,
+			*Best->GetActorLocation().ToCompactString());
+		const TWeakObjectPtr<APawn> WeakPawn = Pawn;
+		FTimerHandle Check;
+		GetWorld()->GetTimerManager().SetTimer(Check, FTimerDelegate::CreateWeakLambda(this, [WeakPawn]()
+		{
+			if (const ACharacter* Character = Cast<ACharacter>(WeakPawn.Get()))
+			{
+				UE_LOG(LogDarkBlood, Display, TEXT("DBBoardShip: standing at %s on %s"), *Character->GetActorLocation().ToCompactString(),
+					*GetNameSafe(Character->GetMovementBase() ? Character->GetMovementBase()->GetOwner() : nullptr));
+			}
+		}), 1.5f, false);
 	}
 }
 

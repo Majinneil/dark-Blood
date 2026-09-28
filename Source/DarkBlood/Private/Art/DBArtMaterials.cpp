@@ -66,6 +66,7 @@ namespace
 			{TEXT("Instances/MI_DB_Terrain_Snow"), FLinearColor(0.85f, 0.87f, 0.9f)},
 			{TEXT("DarkBlood/MI_DB_Blood_River"), FLinearColor(0.35f, 0.01f, 0.01f)},
 			{TEXT("DarkBlood/MI_DB_Foliage_Demon_Leaves"), FLinearColor(0.3f, 0.02f, 0.02f)},
+			{TEXT("Instances/MI_DB_Fabric_Black"), FLinearColor(0.035f, 0.03f, 0.03f)},
 			{nullptr, FLinearColor(0.004f, 0.004f, 0.004f)},
 		};
 		static_assert(UE_ARRAY_COUNT(Infos) == static_cast<int32>(EDBArtMaterial::Count), "EDBArtMaterial and slot table out of sync");

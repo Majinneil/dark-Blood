@@ -97,6 +97,8 @@ enum class EDBArtMaterial : uint8
 	BloodRiver,
 	/** Dark red, faintly glowing leaf cards (the demon tree). */
 	FoliageDemonLeaves,
+	/** Charcoal sail cloth (fighting ships, war banners). */
+	FabricBlack,
 	Void,
 	Count UMETA(Hidden)
 };

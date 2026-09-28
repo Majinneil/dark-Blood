@@ -281,13 +281,13 @@ namespace
 			const float Y = FMath::Lerp(-Half * 0.75f, Half * 0.75f, Index / float(Piers - 1));
 			const float Length = C.Random.FRandRange(4500.f, 7500.f);
 			Pier(C, FVector(Shore - 300.f, Y, -40.f), Length, 450.f);
-			// The capital's harbor holds the war fleet (atakebune) between the merchant ships.
-			const EDBShipStyle Style = bGreat && Index % 2 == 0 ? EDBShipStyle::Atakebune : EDBShipStyle::Bezaisen;
+			// The capital's harbor holds war ships between the merchant and fighting ships.
+			const EDBShipStyle Style = bGreat && Index % 2 == 0 ? EDBShipStyle::War : (Index == 1 ? EDBShipStyle::Fighting : EDBShipStyle::Merchant);
 			Ship(C, FVector(Shore + Length * 0.6f, Y + (Index % 2 == 0 ? 1300.f : -1100.f), 0.f), C.Random.FRand() < 0.5f ? 0.f : 180.f, Style);
 			for (int32 Boat = 0; Boat < 2; ++Boat)
 			{
 				Ship(C, FVector(Shore + C.Random.FRandRange(600.f, Length * 0.8f), Y + (Boat == 0 ? -420.f : 420.f), 0.f), C.Random.FRandRange(-15.f, 15.f),
-					EDBShipStyle::Kobaya);
+					EDBShipStyle::Boat);
 			}
 			Cargo(C, FVector(Shore - 900.f, Y + 400.f, 0.f));
 		}
@@ -453,7 +453,7 @@ namespace DBSettlements
 			for (int32 Boat = 0; Boat < 6; ++Boat)
 			{
 				const float Y = (Boat < 3 ? -R * 0.2f : R * 0.3f) + (Boat % 3 - 1) * 380.f;
-				Ship(C, FVector(Shore + C.Random.FRandRange(800.f, 2600.f), Y, 0.f), C.Random.FRandRange(-20.f, 20.f), EDBShipStyle::Kobaya);
+				Ship(C, FVector(Shore + C.Random.FRandRange(800.f, 2600.f), Y, 0.f), C.Random.FRandRange(-20.f, 20.f), EDBShipStyle::Boat);
 			}
 			Cargo(C, FVector(Shore - 700.f, 0.f, 0.f));
 			break;

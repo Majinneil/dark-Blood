@@ -55,17 +55,36 @@ void ADBRealmDirector::BeginPlay()
 	Sites.SetNum(DBRealm::GetSettlements().Num());
 	if (HasAuthority())
 	{
-		// Sailing ships wait in the water off every harbor.
+		// Sailing ships wait in the water off every harbor: the capital's harbor holds the whole fleet.
 		for (const FDBRealmSettlement& Site : DBRealm::GetSettlements())
 		{
 			if (Site.SeaDirection.IsZero())
 			{
 				continue;
 			}
+			TArray<EDBShipStyle> Fleet;
+			if (Site.Type == EDBSettlementType::FishingVillage)
+			{
+				Fleet = {EDBShipStyle::Boat, EDBShipStyle::Boat};
+			}
+			else if (FCString::Strcmp(Site.Name, TEXT("Hauptstadthafen")) == 0)
+			{
+				Fleet = {EDBShipStyle::Boat, EDBShipStyle::Fighting, EDBShipStyle::War, EDBShipStyle::Merchant};
+			}
+			else
+			{
+				Fleet = {EDBShipStyle::Boat, EDBShipStyle::Merchant, EDBShipStyle::Fighting};
+			}
 			const FVector2D Side(-Site.SeaDirection.Y, Site.SeaDirection.X);
-			const FVector2D At = Site.Center + Site.SeaDirection * (Site.ShoreDistance + 110.0) + Side * 60.0;
 			const float Yaw = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Side.Y, Side.X)));
-			ADBShip::SpawnAt(GetWorld(), At * 100.0, Yaw, FText::FromString(FString::Printf(TEXT("Pinasse von %s"), Site.Name)));
+			for (int32 Index = 0; Index < Fleet.Num(); ++Index)
+			{
+				const double Along = (Index - (Fleet.Num() - 1) * 0.5) * 75.0;
+				const double Out = Fleet[Index] == EDBShipStyle::Boat ? 60.0 : 115.0;
+				const FVector2D At = Site.Center + Site.SeaDirection * (Site.ShoreDistance + Out) + Side * Along;
+				const FText Name = FText::Format(FText::FromString(TEXT("{0} von {1}")), DBShipArt::GetSpec(Fleet[Index]).DisplayName, FText::FromString(Site.Name));
+				ADBShip::SpawnAt(GetWorld(), At * 100.0, Yaw, Name, Fleet[Index]);
+			}
 		}
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());

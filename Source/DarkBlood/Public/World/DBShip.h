@@ -1,9 +1,10 @@
 // A sailing ship of the open world. Interact on board to take the helm: the player character stays itself (camera,
 // abilities, saves), is attached at the helm, and its movement input steers the ship (W/S sails, A/D rudder). Others
 // ride along on the deck. The server moves the ship on the sea (it never sails onto land); clients receive the
-// replicated movement. The model is a Japanese bezaisen from the art kit (DBShipArt).
+// replicated movement. The model comes from the art kit (DBShipArt): war ship, fighting ship, merchant ship or boat.
 #pragma once
 
+#include "Art/DBShipArt.h"
 #include "GameFramework/Actor.h"
 #include "Interaction/DBInteractable.h"
 
@@ -27,7 +28,7 @@ public:
 	virtual FText GetInteractionText() const override;
 	virtual bool CanInteract(const APawn* User) const override;
 	virtual void Interact(APlayerController* User) override;
-	virtual float GetInteractionRange() const override { return 1700.f; }
+	virtual float GetInteractionRange() const override;
 
 	/** Server: steering input of the helmsman (X = rudder, Y = sails), each -1..1. */
 	void SetSteering(const FVector2D& Input);
@@ -36,7 +37,11 @@ public:
 	static ADBShip* FindSteeredBy(const APawn* Pawn);
 
 	/** Server: spawns a ship floating at a sea position (world XY, cm). */
-	static ADBShip* SpawnAt(UWorld* World, const FVector2D& Location, float Yaw, const FText& Name);
+	static ADBShip* SpawnAt(UWorld* World, const FVector2D& Location, float Yaw, const FText& Name, EDBShipStyle Style = EDBShipStyle::Merchant);
+
+	/** Ship type (DBShipArt): model, deck size and handling. Set before spawning finishes; replicated once. */
+	UPROPERTY(ReplicatedUsing = OnRep_Style, EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Ship")
+	EDBShipStyle Style = EDBShipStyle::Merchant;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dark Blood|Ship")
 	FText ShipName;
@@ -52,6 +57,10 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	UFUNCTION()
+	void OnRep_Style();
+	/** Deck size, handling and (off the dedicated server) the model of the current style. */
+	void ApplyStyle();
 	void TakeHelm(APawn* Pawn);
 	void ReleaseHelm();
 	/** Sea depth check ahead of the bow (open world layout; always free elsewhere). */
