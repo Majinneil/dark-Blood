@@ -358,8 +358,8 @@ namespace
 		const bool bSnow = Site.Type == S::SnowSettlement;
 		const bool bHighland = bSnow || Site.Type == S::MountainVillage;
 		const FStyle Village = WithYards(WithModels(FStyle{TEXT("Village"), bSnow ? 0.25f : 0.35f, 1, {B::SmallHouse, B::SmallHouse, B::LargeHouse, B::Warehouse}, 1400.f, 800.f},
-			// (The shirakawago model's thatch cards have no alpha and read as white paper: not used.)
-			TArray<const TCHAR*>{TEXT("minka_houses"), TEXT("japanese_house")}, bHighland ? 0.6f : 0.55f));
+			bHighland ? TArray<const TCHAR*>{TEXT("shirakawago_house"), TEXT("minka_houses")} : TArray<const TCHAR*>{TEXT("minka_houses"), TEXT("japanese_house")},
+			bHighland ? 0.65f : 0.55f));
 		// Village shrine behind a torii (kept free of houses).
 		const FVector ShrineAt(R * 0.55f, -R * 0.55f, 0.f);
 		C.Reserved.Emplace(ShrineAt, 1500.f);
