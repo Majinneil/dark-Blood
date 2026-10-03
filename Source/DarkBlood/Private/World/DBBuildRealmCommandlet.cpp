@@ -3,6 +3,8 @@
 #include "DarkBlood.h"
 #include "World/DBRealmLayout.h"
 
+#include "Art/DBModelLibrary.h"
+
 #if WITH_EDITOR
 #include "Async/ParallelFor.h"
 #include "Components/DirectionalLightComponent.h"
@@ -142,6 +144,14 @@ namespace
 		Boulder,
 		RockMoss,
 		RockFace,
+		// Free authored trees (DBModelLibrary, Sketchfab CC BY)
+		Cedar,
+		RedCedar,
+		MapleOrange,
+		MapleRed,
+		Cherry,
+		BambooStalk,
+		BambooClump,
 		Count
 	};
 
@@ -234,17 +244,37 @@ namespace
 					switch (Biome)
 					{
 					case B::Capital:
-						Species = Pick < 0.4f ? ESpecies::Sakura : ESpecies::TreeSmall;
+						Species = Pick < 0.35f ? ESpecies::Sakura : (Pick < 0.55f ? ESpecies::Cherry : (Pick < 0.7f ? ESpecies::MapleRed : ESpecies::TreeSmall));
 						break;
 					case B::CherryValley:
-						Species = Pick < 0.7f ? ESpecies::Sakura : ESpecies::TreeSmall;
+						Species = Pick < 0.45f ? ESpecies::Sakura : (Pick < 0.8f ? ESpecies::Cherry : ESpecies::TreeSmall);
 						break;
 					case B::MistMountains:
 					case B::IceWaste:
-						Species = ESpecies::Fir;
+						Species = Pick < 0.4f ? ESpecies::Fir : (Pick < 0.75f ? ESpecies::Cedar : ESpecies::RedCedar);
 						break;
 					case B::SpiritForest:
-						Species = Pick < 0.6f ? ESpecies::IslandTree : (Pick < 0.8f ? ESpecies::DeadLog : ESpecies::TreeSmall);
+						Species = Pick < 0.3f ? ESpecies::IslandTree : (Pick < 0.5f ? ESpecies::MapleRed : (Pick < 0.7f ? ESpecies::MapleOrange
+							: (Pick < 0.85f ? ESpecies::DeadLog : ESpecies::Cedar)));
+						break;
+					case B::BambooForest:
+						// A grove: a stand of stalks of different heights, often with leafy clumps between them.
+						if (Pick < 0.8f)
+						{
+							const int32 Stalks = Random.RandRange(6, 14);
+							for (int32 Stalk = 0; Stalk < Stalks; ++Stalk)
+							{
+								const FVector2D Offset = FVector2D(Random.FRandRange(-1.f, 1.f), Random.FRandRange(-1.f, 1.f)) * 260.0;
+								const FRotator Lean(Random.FRandRange(-4.f, 4.f), Random.FRandRange(0.f, 360.f), Random.FRandRange(-4.f, 4.f));
+								Result.Add({ESpecies::BambooStalk, FTransform(Lean, FVector(X * 100.0 + Offset.X, Y * 100.0 + Offset.Y, Height * 100.0 - 20.0),
+									FVector(Random.FRandRange(0.7f, 1.3f)))});
+							}
+							Species = Random.FRand() < 0.4f ? ESpecies::BambooClump : ESpecies::Count;
+						}
+						else
+						{
+							Species = ESpecies::TreeSmall;
+						}
 						break;
 					case B::FireMountains:
 					case B::DemonWaste:
@@ -252,7 +282,7 @@ namespace
 						Species = Pick < 0.5f ? ESpecies::DemonTree : ESpecies::DeadLog;
 						break;
 					default:
-						Species = Pick < 0.65f ? ESpecies::TreeSmall : ESpecies::IslandTree;
+						Species = Pick < 0.45f ? ESpecies::TreeSmall : (Pick < 0.7f ? ESpecies::IslandTree : (Pick < 0.85f ? ESpecies::Cedar : ESpecies::MapleOrange));
 						break;
 					}
 					switch (Species)
@@ -262,6 +292,12 @@ namespace
 					case ESpecies::Sakura: Scale = Random.FRandRange(1.4f, 2.3f); break;
 					case ESpecies::Fir: Scale = Random.FRandRange(2.2f, 3.8f); break;
 					case ESpecies::DemonTree: Scale = Random.FRandRange(1.8f, 3.5f); break;
+					case ESpecies::Cedar:
+					case ESpecies::RedCedar:
+					case ESpecies::MapleOrange:
+					case ESpecies::MapleRed:
+					case ESpecies::Cherry:
+					case ESpecies::BambooClump: Scale = Random.FRandRange(0.75f, 1.25f); break; // models stand at their library height
 					default: Scale = Random.FRandRange(1.f, 1.8f); break;
 					}
 				}
@@ -496,6 +532,8 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 		{
 			TArray<UStaticMesh*> Meshes;
 			const TArray<UMaterialInterface*>* Materials;
+			/** Authored model: all its parts are instanced together, normalized to the library height. */
+			const TCHAR* ModelKey = nullptr;
 		};
 		const TArray<UMaterialInterface*> None;
 		const FSpeciesAsset Assets[] = {
@@ -518,7 +556,23 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 			{{Mesh(TEXT("rock_face_01/rock_face_01_2k/StaticMeshes/rock_face_01_2k.rock_face_01_2k")),
 				 Mesh(TEXT("rock_face_02/rock_face_02_2k/StaticMeshes/rock_face_02_2k.rock_face_02_2k"))},
 				&None},
+			{{}, &None, TEXT("cedar_tree")},
+			{{}, &None, TEXT("red_cedar")},
+			{{}, &None, TEXT("maple_b")},
+			{{}, &None, TEXT("maple_red")},
+			{{}, &None, TEXT("cherry_tree")},
+			{{}, &None, TEXT("bamboo_stalks")},
+			{{}, &None, TEXT("bamboo_clump")},
 		};
+		TMap<FString, TArray<DBModels::FPlacedPart>> ModelParts;
+		for (const FSpeciesAsset& Asset : Assets)
+		{
+			if (Asset.ModelKey)
+			{
+				ModelParts.Add(Asset.ModelKey, DBModels::GetNormalizedParts(Asset.ModelKey));
+				UE_LOG(LogDarkBlood, Display, TEXT("DBREALM model species %s: %d parts"), Asset.ModelKey, ModelParts[FString(Asset.ModelKey)].Num());
+			}
+		}
 		static_assert(UE_ARRAY_COUNT(Assets) == static_cast<int32>(ESpecies::Count), "one asset entry per species");
 		TMap<FIntPoint, ADBRealmVegetation*> Cells;
 		FRandomStream Pick(4242);
@@ -526,8 +580,9 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 		for (const FPlacement& Placement : Vegetation)
 		{
 			const FSpeciesAsset& Asset = Assets[static_cast<int32>(Placement.Species)];
+			const TArray<DBModels::FPlacedPart>* Parts = Asset.ModelKey ? ModelParts.Find(FString(Asset.ModelKey)) : nullptr;
 			UStaticMesh* Chosen = Asset.Meshes.Num() > 0 ? Asset.Meshes[Pick.RandRange(0, Asset.Meshes.Num() - 1)] : nullptr;
-			if (!Chosen)
+			if (!Chosen && (!Parts || Parts->IsEmpty()))
 			{
 				continue;
 			}
@@ -540,7 +595,19 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 				Actor = Spawn<ADBRealmVegetation>(*World, CellCenter);
 				Actor->SetActorLabel(FString::Printf(TEXT("Vegetation_%02d_%02d"), Cell.X, Cell.Y));
 			}
-			Actor->AddInstance(Chosen, *Asset.Materials, Placement.Transform, true);
+			if (Parts && !Parts->IsEmpty())
+			{
+				// Bamboo stalks are thin: no collision (players walk through the grove's gaps anyway).
+				const bool bCollide = Placement.Species != ESpecies::BambooStalk;
+				for (const DBModels::FPlacedPart& Part : *Parts)
+				{
+					Actor->AddInstance(Part.Mesh, None, Part.Local * Placement.Transform, bCollide);
+				}
+			}
+			else
+			{
+				Actor->AddInstance(Chosen, *Asset.Materials, Placement.Transform, true);
+			}
 			++Placed;
 		}
 		UE_LOG(LogDarkBlood, Display, TEXT("DBREALM vegetation baked: %d instances in %d cells"), Placed, Cells.Num());

@@ -8,6 +8,7 @@
 #include "CoreMinimal.h"
 
 class FDBArtBatcher;
+class UStaticMesh;
 
 namespace DBModels
 {
@@ -36,4 +37,13 @@ namespace DBModels
 	/** Puts a model's parts into Batcher, turned to face +X, scaled so it is Length long (X) and standing with its bottom
 	 *  at Placement's origin. Returns false when the model is not imported. */
 	DARKBLOOD_API bool BuildScaledToLength(FDBArtBatcher& Batcher, const FString& Key, float Length, const FTransform& Placement);
+
+	/** A model's parts with the local transform that turns it to face +X, scales it to its library height (or Height) and
+	 *  stands its bottom center on the origin: compose with a placement to instance it (open world vegetation). */
+	struct FPlacedPart
+	{
+		UStaticMesh* Mesh = nullptr;
+		FTransform Local;
+	};
+	DARKBLOOD_API TArray<FPlacedPart> GetNormalizedParts(const FString& Key, float Height = 0.f);
 }

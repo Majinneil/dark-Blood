@@ -65,6 +65,16 @@ Kostenlose, herunterladbare Modelle ohne „NoAI“-Markierung, über das Sketch
 | „Traditional Japanese Bridge“ | matthewnixon | `bridge_red` | https://sketchfab.com/3d-models/7a58c496216f42bca9a37d725be2ef0f |
 | „Japanese Torii gate Game Asset“ | Bazylonator | `torii_game` | https://sketchfab.com/3d-models/e12d2fa1b2b94928b8b87cb7787e2462 |
 | „Torii gate“ | blash3D | `torii_large` | https://sketchfab.com/3d-models/abbd7a053bd84a08a207ca86bdc62783 |
+| „bamboo“ | evolveduk | `bamboo_small (importiert, derzeit nicht verwendet)` | https://sketchfab.com/3d-models/a02bf0e3ffe44617ad49daf3cd94fe59 |
+| „Bamboo“ | riysstech | `bamboo_stalks (Bambushaine)` | https://sketchfab.com/3d-models/0efc022837db43beb4c757155f004ec6 |
+| „Bamboo“ | arthur | `bamboo_clump` | https://sketchfab.com/3d-models/b2e6f889630e4ab593376a151836a3e1 |
+| „Japanese Cherry Tree (medium-Poly)“ | Sereib | `cherry_tree` | https://sketchfab.com/3d-models/e0306a4402b44fa08f55aa58518dcb9c |
+| „Japanese Black Pine“ | matt z chan | `black_pine (importiert, derzeit nicht verwendet)` | https://sketchfab.com/3d-models/f0cb4705f1c446c7bc393fdbfcdf024a |
+| „Cedar tree“ | Georgeous | `cedar_tree` | https://sketchfab.com/3d-models/adf5bdebd05340659dae92219a63f62d |
+| „Western Red Cedar *Inspired* Tree - SPRING Ver.“ | Sir Sonat | `red_cedar` | https://sketchfab.com/3d-models/82d8305f9fd74687bedaa8be36e292d6 |
+| „Japanese Maple“ | endlessvoidmc | `maple_b` | https://sketchfab.com/3d-models/003c6ab20e644655ba36fe54cb04765b |
+| „Jap Maple“ | kelvladmail | `maple_c (importiert, derzeit nicht verwendet)` | https://sketchfab.com/3d-models/5e6b338f674e4a6db88763a715342eef |
+| „Japanese Red Maple“ | Tokuwa | `maple_red` | https://sketchfab.com/3d-models/7593d53e3e954240ad69220da9a6e9ff |
 
 ## Fab – Standard-Lizenz (nicht im Repository)
 

@@ -27,6 +27,17 @@ namespace
 		{TEXT("junk_red_small"), 3000.f, 0.f},
 		{TEXT("junk_merchant"), 2600.f, -90.f, 0.f, TEXT("Material_006")},
 		{TEXT("wooden_boat"), 120.f, -90.f},
+		// Trees (forests of the realm)
+		{TEXT("bamboo_clump"), 1100.f, 0.f},
+		{TEXT("bamboo_small"), 700.f, 0.f},
+		{TEXT("bamboo_stalks"), 1000.f, 0.f},
+		{TEXT("black_pine"), 900.f, 0.f},
+		{TEXT("cedar_tree"), 2200.f, 0.f},
+		{TEXT("red_cedar"), 2600.f, 0.f},
+		{TEXT("cherry_tree"), 800.f, 0.f},
+		{TEXT("maple_b"), 750.f, 0.f},
+		{TEXT("maple_c"), 850.f, 0.f},
+		{TEXT("maple_red"), 900.f, 0.f},
 		// Details
 		{TEXT("lantern_hanging"), 260.f, 0.f},
 		{TEXT("lantern_stone"), 180.f, 0.f},
@@ -116,4 +127,37 @@ bool DBModels::BuildScaledToLength(FDBArtBatcher& Batcher, const FString& Key, f
 		Batcher.Mesh(Mesh, nullptr, Local * Placement);
 	}
 	return true;
+}
+
+TArray<DBModels::FPlacedPart> DBModels::GetNormalizedParts(const FString& Key, float Height)
+{
+	TArray<FPlacedPart> Result;
+	const FModelInfo* Info = Find(Key);
+	if (!Info)
+	{
+		return Result;
+	}
+	const FTransform Turn(FRotator(0.f, Info->Yaw, 0.f));
+	FBox Bounds(ForceInit);
+	for (const FString& Part : GetParts(Key))
+	{
+		if (UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *(Part + TEXT(".") + FPaths::GetBaseFilename(Part))))
+		{
+			Result.Add({Mesh, Turn});
+			Bounds += Mesh->GetBoundingBox().TransformBy(Turn);
+		}
+	}
+	if (Result.IsEmpty() || !Bounds.IsValid || Bounds.GetSize().Z < KINDA_SMALL_NUMBER)
+	{
+		Result.Reset();
+		return Result;
+	}
+	const float Scale = (Height > 0.f ? Height : Info->Height) / Bounds.GetSize().Z;
+	const FVector Center = Bounds.GetCenter();
+	const FTransform Fit(FRotator::ZeroRotator, FVector(-Center.X, -Center.Y, -Bounds.Min.Z - Bounds.GetSize().Z * Info->Sink) * Scale, FVector(Scale));
+	for (FPlacedPart& Part : Result)
+	{
+		Part.Local = Turn * Fit;
+	}
+	return Result;
 }
