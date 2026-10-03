@@ -485,10 +485,10 @@ namespace
 const FDBShipSpec& DBShipArt::GetSpec(EDBShipStyle Style)
 {
 	static const FDBShipSpec Specs[] = {
-		{4800.f, 1300.f, 520.f, 820.f, 850.f, 7.f, 3.f, NSLOCTEXT("DarkBlood", "ShipWar", "Kriegsschiff"), TEXT("junk_red_large"), 350.f},
-		{3400.f, 760.f, 380.f, 520.f, 1900.f, 18.f, 2.f, NSLOCTEXT("DarkBlood", "ShipFighting", "Kampfschiff"), TEXT("junk_red_small"), 250.f},
-		{3800.f, 1150.f, 420.f, 580.f, 1150.f, 10.f, 2.5f, NSLOCTEXT("DarkBlood", "ShipMerchant", "Handelsschiff"), TEXT("junk_merchant"), 300.f},
-		{900.f, 230.f, 70.f, 70.f, 1000.f, 35.f, 0.6f, NSLOCTEXT("DarkBlood", "ShipBoat", "Kleines Boot"), TEXT("wooden_boat"), 25.f},
+		{4800.f, 1300.f, 520.f, 820.f, 850.f, 7.f, 3.f, NSLOCTEXT("DarkBlood", "ShipWar", "Kriegsschiff"), TEXT("junk_red_large"), 350.f, 150.f},
+		{3400.f, 760.f, 380.f, 520.f, 1900.f, 18.f, 2.f, NSLOCTEXT("DarkBlood", "ShipFighting", "Kampfschiff"), TEXT("junk_red_small"), 250.f, 120.f},
+		{3800.f, 1150.f, 420.f, 580.f, 1150.f, 10.f, 2.5f, NSLOCTEXT("DarkBlood", "ShipMerchant", "Handelsschiff"), TEXT("junk_merchant"), 300.f, 130.f},
+		{900.f, 230.f, 70.f, 70.f, 1000.f, 35.f, 0.6f, NSLOCTEXT("DarkBlood", "ShipBoat", "Kleines Boot"), TEXT("wooden_boat"), 5.f, 15.f},
 	};
 	return Specs[FMath::Clamp(static_cast<int32>(Style), 0, static_cast<int32>(UE_ARRAY_COUNT(Specs)) - 1)];
 }

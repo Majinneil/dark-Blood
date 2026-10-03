@@ -18,10 +18,10 @@ namespace
 	/** The actor is the walkable deck box; its center lies this far below the deck surface. */
 	constexpr float DeckHalfHeight = 60.f;
 
-	/** Relative to the actor: standing on the raised stern deck. */
+	/** Relative to the actor (deck box center): standing on the main deck near the stern. */
 	FVector HelmOffset(const FDBShipSpec& Spec)
 	{
-		return FVector(-Spec.Length * 0.43f, 0.f, Spec.SternDeckZ - (Spec.DeckZ - DeckHalfHeight) + 95.f);
+		return FVector(-Spec.Length * 0.3f, 0.f, DeckHalfHeight + 95.f);
 	}
 }
 
@@ -63,13 +63,8 @@ void ADBShip::ApplyStyle()
 {
 	const FDBShipSpec& Spec = DBShipArt::GetSpec(Style);
 	Hull->SetBoxExtent(FVector(Spec.Length * 0.4f, Spec.Beam * 0.4f, DeckHalfHeight));
-	Model->SetRelativeLocation(FVector(0.f, 0.f, -(Spec.DeckZ - DeckHalfHeight)));
 	MaxSpeed = Spec.MaxSpeed;
 	TurnRate = Spec.TurnRate;
-	if (GetNetMode() == NM_DedicatedServer)
-	{
-		return;
-	}
 	for (UInstancedStaticMeshComponent* Piece : ModelPieces)
 	{
 		if (Piece)
@@ -78,14 +73,25 @@ void ADBShip::ApplyStyle()
 		}
 	}
 	ModelPieces.Reset();
-	// The model rolls with the waves, so its pieces are movable and do not collide (the level deck box does).
+	// The model rolls with the waves, so its pieces are movable and do not collide (the level deck box carries the riders).
+	constexpr float WaterLine = 0.f; // ships float on the sea at world Z 0
+	Model->SetWorldLocation(FVector(GetActorLocation().X, GetActorLocation().Y, WaterLine));
 	FDBArtBatcher Batcher(*this, *Model, ModelPieces);
 	Batcher.SetMovable(true);
 	Batcher.SetCollision(false);
-	if (!DBShipArt::BuildModel(Batcher, Style))
+	DeckAboveWater = Spec.DeckZ;
+	if (DBShipArt::BuildModel(Batcher, Style))
+	{
+		DeckAboveWater = Spec.ModelDeckZ;
+	}
+	else
 	{
 		DBShipArt::Build(Batcher, Style, 7, false); // kit ship, same seed on every machine
 	}
+	// Deck box top at the deck, model water line where it was.
+	Hull->SetWorldLocation(FVector(GetActorLocation().X, GetActorLocation().Y, WaterLine + DeckAboveWater - DeckHalfHeight));
+	Model->SetRelativeLocation(FVector(0.f, 0.f, -(DeckAboveWater - DeckHalfHeight)));
+	UE_LOG(LogDarkBlood, Log, TEXT("%s: deck %.0f cm above the water"), *ShipName.ToString(), DeckAboveWater);
 }
 
 void ADBShip::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

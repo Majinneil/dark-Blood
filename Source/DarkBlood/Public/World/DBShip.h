@@ -59,7 +59,7 @@ protected:
 private:
 	UFUNCTION()
 	void OnRep_Style();
-	/** Deck size, handling and (off the dedicated server) the model of the current style. */
+	/** Deck size, handling and the model of the current style. */
 	void ApplyStyle();
 	void TakeHelm(APawn* Pawn);
 	void ReleaseHelm();
@@ -81,5 +81,7 @@ private:
 
 	FVector2D Steering = FVector2D::ZeroVector;
 	float Speed = 0.f;
+	/** Walkable deck height above the water line: the authored model's deck, else the kit ship's deck (cm). */
+	float DeckAboveWater = 0.f;
 	float WaveTime = 0.f;
 };

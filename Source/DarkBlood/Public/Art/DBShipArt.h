@@ -39,6 +39,8 @@ struct FDBShipSpec
 	/** Authored model (DBModelLibrary) shown instead of the kit ship, and how deep its keel lies below the water line (cm). */
 	const TCHAR* ModelKey = nullptr;
 	float ModelDraft = 0.f;
+	/** Main deck of the model above the water line (cm), measured on its triangles (Tools/UE58/db_measure_ship_decks.py). */
+	float ModelDeckZ = 0.f;
 };
 
 namespace DBShipArt
