@@ -178,16 +178,16 @@ def meshes(model, names):
     return [unreal.load_asset("%s%s/%s_1k/StaticMeshes/%s" % (POLYHAVEN, model, model, name)) for name in names]
 
 
-# grass type: layer, [(meshes, density per 10 m2, end cull cm, scale range, shadows)]
+# grass type: layer, [(meshes, instances per 100 m2 (UE "per 10 m squared"), end cull cm, scale range, shadows)]
 GRASS = {
     "Meadow": [(meshes("grass_medium_01", ["grass_medium_01_large_a_LOD0", "grass_medium_01_large_b_LOD0", "grass_medium_01_mid_a_LOD0",
-                                           "grass_medium_01_tall_a_LOD0", "grass_medium_01_tall_b_LOD0"]), 28.0, 6500, (1.6, 2.8), False),
-               (meshes("grass_medium_02", ["grass_medium_02_c", "grass_medium_02_d", "grass_medium_02_e"]), 10.0, 6500, (1.8, 3.0), False),
-               (meshes("fern_02", ["fern_02_a", "fern_02_b"]), 0.4, 12000, (0.8, 1.3), True)],
-    "Forest": [(meshes("fern_02", ["fern_02_a", "fern_02_b", "fern_02_c", "fern_02_d"]), 3.0, 12000, (0.9, 1.5), True),
-               (meshes("shrub_02", ["shrub_02_a", "shrub_02_b", "shrub_02_c"]), 0.8, 16000, (0.8, 1.4), True),
-               (meshes("grass_medium_01", ["grass_medium_01_mid_a_LOD0", "grass_medium_01_mid_b_LOD0"]), 8.0, 5000, (1.5, 2.4), False)],
-    "Soil": [(meshes("grass_medium_01", ["grass_medium_01_small_a_LOD0", "grass_medium_01_tiny_a_LOD0", "grass_medium_01_mid_a_LOD0"]), 6.0, 5000,
+                                           "grass_medium_01_tall_a_LOD0", "grass_medium_01_tall_b_LOD0"]), 320.0, 5000, (1.6, 2.8), False),
+               (meshes("grass_medium_02", ["grass_medium_02_c", "grass_medium_02_d", "grass_medium_02_e"]), 80.0, 5000, (1.8, 3.0), False),
+               (meshes("fern_02", ["fern_02_a", "fern_02_b"]), 2.0, 10000, (0.8, 1.3), True)],
+    "Forest": [(meshes("fern_02", ["fern_02_a", "fern_02_b", "fern_02_c", "fern_02_d"]), 25.0, 10000, (0.9, 1.5), True),
+               (meshes("shrub_02", ["shrub_02_a", "shrub_02_b", "shrub_02_c"]), 5.0, 14000, (0.8, 1.4), True),
+               (meshes("grass_medium_01", ["grass_medium_01_mid_a_LOD0", "grass_medium_01_mid_b_LOD0"]), 90.0, 4500, (1.5, 2.4), False)],
+    "Soil": [(meshes("grass_medium_01", ["grass_medium_01_small_a_LOD0", "grass_medium_01_tiny_a_LOD0", "grass_medium_01_mid_a_LOD0"]), 60.0, 4500,
               (1.4, 2.4), False)],
     "Rock": [(meshes("rock_moss_set_01", ["rock_moss_set_01_rock01", "rock_moss_set_01_rock02", "rock_moss_set_01_rock03"]), 0.25, 20000, (0.6, 1.8),
               True)],
