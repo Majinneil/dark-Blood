@@ -29,6 +29,8 @@ namespace
 		float Lot = 1500.f;
 		float Setback = 900.f;
 		float Damage = 0.f;
+		/** Rural homes get a small packed-earth yard of their own (the meadow shows between them). */
+		bool bYards = false;
 		/** Authored house models (DBModelLibrary) that replace ordinary houses with this chance. */
 		TArray<const TCHAR*> Models;
 		float ModelChance = 0.f;
@@ -38,6 +40,12 @@ namespace
 	{
 		Style.Models = MoveTemp(Models);
 		Style.ModelChance = Chance;
+		return Style;
+	}
+
+	FStyle WithYards(FStyle Style)
+	{
+		Style.bYards = true;
 		return Style;
 	}
 
@@ -99,6 +107,10 @@ namespace
 			return;
 		}
 		C.Houses.Add(At);
+		if (Style.bYards)
+		{
+			C.Builder.Ground(At + FVector(250.f, 0.f, 0.f), FVector2D(1300.f, 1100.f), M::GroundEarth, 1.2f, 0.f, true, Yaw);
+		}
 		// Ordinary homes may be authored models instead (halls, shrines, guardhouses stay kit buildings).
 		const bool bOrdinary = Type == B::SmallHouse || Type == B::LargeHouse || Type == B::MerchantHouse;
 		if (bOrdinary && !Style.Models.IsEmpty() && C.Random.FRand() < Style.ModelChance
@@ -345,9 +357,9 @@ namespace
 		const bool bForest = Site.Type == S::ForestSettlement;
 		const bool bSnow = Site.Type == S::SnowSettlement;
 		const bool bHighland = bSnow || Site.Type == S::MountainVillage;
-		const FStyle Village = WithModels(FStyle{TEXT("Village"), bSnow ? 0.25f : 0.35f, 1, {B::SmallHouse, B::SmallHouse, B::LargeHouse, B::Warehouse}, 1400.f, 800.f},
+		const FStyle Village = WithYards(WithModels(FStyle{TEXT("Village"), bSnow ? 0.25f : 0.35f, 1, {B::SmallHouse, B::SmallHouse, B::LargeHouse, B::Warehouse}, 1400.f, 800.f},
 			// (The shirakawago model's thatch cards have no alpha and read as white paper: not used.)
-			TArray<const TCHAR*>{TEXT("minka_houses"), TEXT("japanese_house")}, bHighland ? 0.6f : 0.55f);
+			TArray<const TCHAR*>{TEXT("minka_houses"), TEXT("japanese_house")}, bHighland ? 0.6f : 0.55f));
 		// Village shrine behind a torii (kept free of houses).
 		const FVector ShrineAt(R * 0.55f, -R * 0.55f, 0.f);
 		C.Reserved.Emplace(ShrineAt, 1500.f);
@@ -402,9 +414,19 @@ namespace DBSettlements
 		FContext C{Builder, FRandomStream(Seed), Site, Site.Radius * 100.f, Seed * 100 + 1};
 		const float R = C.Radius;
 		// Packed ground under the settlement; at the coast it ends at the shore (+X faces the sea) instead of covering the water.
-		if (Site.SeaDirection.IsZero())
+		const bool bTrampled = Site.Type == S::Capital || Site.Type == S::BorderOutpost || Site.Type == S::CaravanTown || Site.Type == S::MiningTown
+			|| Site.Type == S::OasisTown;
+		if (Site.SeaDirection.IsZero() && bTrampled)
 		{
 			Builder.Ground(FVector::ZeroVector, FVector2D(R * 1.7f, R * 1.7f), M::GroundEarth, 1.f, 0.f, true);
+		}
+		else if (Site.SeaDirection.IsZero())
+		{
+			// Rural and temple sites stand in the meadow: a small square in the middle, yards at the houses, grass and
+			// wild plants between them.
+			// (Sparse: the scatter traces synchronously while the settlement is built; dense values cost seconds.)
+			Builder.Ground(FVector::ZeroVector, FVector2D(R * 0.3f, R * 0.3f), M::GroundEarth, 1.f, 0.f, true);
+			Builder.Scatter(FVector::ZeroVector, FVector(R * 0.95f, R * 0.95f, 600.f), EDBBiome::Meadow, 0.15f, 0.2f, C.Seed(), 0.15f);
 		}
 		else
 		{
@@ -476,7 +498,7 @@ namespace DBSettlements
 		}
 		case S::FishingVillage:
 		{
-			const FStyle Huts = WithModels(FStyle{TEXT("Village"), 0.2f, 1, {B::SmallHouse}, 1300.f, 700.f}, {TEXT("japanese_house")}, 0.5f);
+			const FStyle Huts = WithYards(WithModels(FStyle{TEXT("Village"), 0.2f, 1, {B::SmallHouse}, 1300.f, 700.f}, {TEXT("japanese_house")}, 0.5f));
 			const float Shore = static_cast<float>(Site.ShoreDistance * 100.0);
 			for (int32 Index = 0; Index < 7; ++Index)
 			{
@@ -495,8 +517,8 @@ namespace DBSettlements
 		}
 		case S::RiceVillage:
 		{
-			const FStyle Farm = WithModels(FStyle{TEXT("Village"), 0.3f, 1, {B::SmallHouse, B::SmallHouse, B::Warehouse}, 1400.f, 800.f},
-				{TEXT("minka_houses"), TEXT("japanese_house")}, 0.5f);
+			const FStyle Farm = WithYards(WithModels(FStyle{TEXT("Village"), 0.3f, 1, {B::SmallHouse, B::SmallHouse, B::Warehouse}, 1400.f, 800.f},
+				{TEXT("minka_houses"), TEXT("japanese_house")}, 0.5f));
 			Street(C, Farm, FVector(-R * 0.4f, 0.f, 0.f), FVector(R * 0.4f, 0.f, 0.f), 400.f);
 			House(C, Farm, FVector(0.f, R * 0.25f, 0.f), -90.f, B::VillageHall, 3, 4);
 			RicePaddies(C, R * 0.45f, R * 1.0f);
@@ -576,8 +598,8 @@ namespace DBSettlements
 		}
 		case S::RiverSettlement:
 		{
-			const FStyle River = WithModels(FStyle{TEXT("Village"), 0.4f, 1, {B::SmallHouse, B::LargeHouse, B::MerchantHouse}, 1400.f, 800.f},
-				{TEXT("japanese_house"), TEXT("minka_houses")}, 0.4f);
+			const FStyle River = WithYards(WithModels(FStyle{TEXT("Village"), 0.4f, 1, {B::SmallHouse, B::LargeHouse, B::MerchantHouse}, 1400.f, 800.f},
+				{TEXT("japanese_house"), TEXT("minka_houses")}, 0.4f));
 			Builder.Spline(EDBSplineDressing::Stream, {FVector(0.f, -R * 1.1f, 0.f), FVector(200.f, 0.f, 0.f), FVector(0.f, R * 1.1f, 0.f)}, 500.f, C.Seed());
 			if (ADBBridge* Bridge = Builder.Begin<ADBBridge>(FVector(200.f, 0.f, 0.f)))
 			{

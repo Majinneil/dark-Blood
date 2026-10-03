@@ -229,3 +229,20 @@ Startwaffe. Details: ITEMS_AND_CRAFTING.md.
 **GETESTET (headless)**: Waffe anlegen (AP 60→64), Truhe (Helm, Tränke, Material, Mon; einmal pro Charakter), Helm
 (+8 Rüstung, +15 Leben), Tamahagane-Katana schmieden (Zutaten und 80 Mon abgezogen, zweiter Versuch abgelehnt,
 AP →74), Heiltrank (+120), Tod → Haltbarkeit −5 %, Reparatur 7 Mon, Dämonenbeute. Gerendert: Inventar und Schmiede.
+
+## Zwischenstand Phase 6 – Offene Welt, Siedlungen, Schiffe (Stand 2026-10-03)
+
+**ERSTELLT**: Offene Welt `L_Realm` (16 × 16 km, 16 Regionen nach der Weltkarte, 17 Siedlungen inkl. Hauptstadthafen,
+Wald/Felsen in 1-km-Zellen, Meer mit Wellen-Material); Siedlungen mit geplanten Straßen, Blockfüllung und über Frames
+gebauten Instanz-Blöcken; vier segelbare Schiffstypen (Kriegs-, Kampf-, Handelsschiff, Boot) mit freien Dschunken-
+Modellen und gemessener Deckhöhe; 18 freie Sketchfab-Modelle (CC BY, siehe CREDITS.md) für Häuser, Burgen, Pagoden,
+Tempel, Torii; ländliche Siedlungen auf Wiese mit Dorfplatz und Höfen statt Erdscheibe. Details: WORLD_DESIGN.md,
+Leistung: PERFORMANCE.md.
+
+**GETESTET**: Build; gepackter Development-Build (Großstadt 105 FPS Hoch / 164 FPS Niedrig bei 1600×900); Segeln im
+Einzelspieler und Koop (Kit-Schiff); Stehen auf allen vier Modell-Decks und Segeln mit dem Boot; Kampf-Regression
+unverändert.
+
+**OFFEN**: 160 FPS auf „Hoch“ nur mit Frame Generation (FSR 3 oder DLSS – Entscheidung des Nutzers); Schwimmen;
+Schiffs-Innenräume und Besatzung; Koop-Test mit den Modell-Schiffen; Startkarten (`GameDefaultMap`) zeigen noch auf
+die Engine-Vorlage; Vasallen-Konzeptblätter unter `References/` sind noch nicht umgesetzt.

@@ -950,7 +950,7 @@ void UDBCheatManager::DBBoardShip(int32 Style)
 			if (const ACharacter* Character = Cast<ACharacter>(WeakPawn.Get()))
 			{
 				UE_LOG(LogDarkBlood, Display, TEXT("DBBoardShip: standing at %s on %s"), *Character->GetActorLocation().ToCompactString(),
-					*GetNameSafe(Character->GetMovementBase() ? Character->GetMovementBase()->GetOwner() : nullptr));
+					*GetNameSafe(Cast<UPrimitiveComponent>(Character->GetMovementBaseObject()) ? Cast<UPrimitiveComponent>(Character->GetMovementBaseObject())->GetOwner() : nullptr));
 			}
 		}), 1.5f, false);
 	}
