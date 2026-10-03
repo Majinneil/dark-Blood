@@ -11,7 +11,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 4 | Klassen & Skilltrees | ✅ Gameplay (4 Kits, 8 Signaturfähigkeiten, Skilltrees, UI; headless getestet) · 🟡 Animationen/VFX |
 | 5 | Inventar / Loot / Crafting | ✅ Gameplay (Werte, Resistenzen, Verbrauch, Beute, Crafting, Reparatur, UI; headless getestet) · 🟡 Icons/Meshes |
 | 5.5 | Visual Foundation (Codex-Paket) | ✅ Systeme, Materialsystem, Baukasten, Licht, Visual Slice (gerendert + Koop getestet) · 🟡 echte Assets (Texturen, Bäume, MetaHumans, Animationen) |
-| 6 | Open World | ⬜ (Regionen, Gefahrenstufen, Entdeckung als Basis vorhanden) |
+| 6 | Open World | 🟡 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, 4 segelbare Schiffe, freie Modelle (gerendert, Segeln + Koop getestet) · ⬜ Weltgestaltung (Wälder, Gras, Klippen, Regionsstimmung), Schwimmen |
 | 7 | NPC- und Siedlungssimulation | ⬜ |
 | 8 | Reise / Pferde / Kutschen / Survival | ⬜ |
 | 9 | Dungeon-System | ⬜ |
