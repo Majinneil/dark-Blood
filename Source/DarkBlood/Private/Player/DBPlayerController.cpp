@@ -164,6 +164,12 @@ void ADBPlayerController::ServerCreateCharacter_Implementation(const FString& Ch
 
 void ADBPlayerController::ClientStoreCharacterSnapshot_Implementation(const TArray<uint8>& CharacterData)
 {
+	// A client RPC on a controller without a connection (guest during server shutdown) runs on the server;
+	// storing it there would write the guest into the host's active slot.
+	if (!GetLocalPlayer())
+	{
+		return;
+	}
 	if (UDBSaveSubsystem* Saves = GetGameInstance()->GetSubsystem<UDBSaveSubsystem>())
 	{
 		Saves->StoreActiveCharacterData(CharacterData);
