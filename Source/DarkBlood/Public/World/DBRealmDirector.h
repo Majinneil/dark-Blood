@@ -10,6 +10,7 @@
 class ADBModularBuilding;
 class FDBArtBatcher;
 class UDBRealmMoodComponent;
+class UDBSettlementLifeComponent;
 class UInstancedStaticMeshComponent;
 
 /** Shared house geometry of a block of a settlement's houses: one instanced component per mesh / material / collision,
@@ -77,6 +78,13 @@ private:
 	/** Region fog, sun and grading under the local camera. */
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")
 	TObjectPtr<UDBRealmMoodComponent> Mood;
+
+	/** Server: villagers and demon attacks of settlements near players. */
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")
+	TObjectPtr<UDBSettlementLifeComponent> Life;
+
+public:
+	UDBSettlementLifeComponent* GetSettlementLife() const { return Life; }
 
 	float RegionTimer = 0.f;
 	float StreamTimer = 0.f;

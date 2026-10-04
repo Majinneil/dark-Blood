@@ -11,7 +11,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 4 | Klassen & Skilltrees | ✅ Gameplay (4 Kits, 8 Signaturfähigkeiten, Skilltrees, UI; headless getestet) · 🟡 Animationen/VFX |
 | 5 | Inventar / Loot / Crafting | ✅ Gameplay (Werte, Resistenzen, Verbrauch, Beute, Crafting, Reparatur, UI; headless getestet) · 🟡 Icons/Meshes |
 | 5.5 | Visual Foundation (Codex-Paket) | ✅ Systeme, Materialsystem, Baukasten, Licht, Visual Slice (gerendert + Koop getestet) · 🟡 echte Assets (Texturen, Bäume, MetaHumans, Animationen) |
-| 6 | Open World | 🟡 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, 4 segelbare Schiffe, freie Modelle (gerendert, Segeln + Koop getestet) · ⬜ Weltgestaltung (Wälder, Gras, Klippen, Regionsstimmung), Schwimmen |
+| 6 | Open World | ✅ 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, Schiffe, Wälder/Gras, Weltkarte `[M]`, Schwimmen, Regionsstimmung (gerendert + Koop getestet) · 🟡 Klippen/Wasserfälle/Inselküsten → Phase 11/17 |
 | 7 | NPC- und Siedlungssimulation | ⬜ |
 | 8 | Reise / Pferde / Kutschen / Survival | ⬜ |
 | 9 | Dungeon-System | ⬜ |
@@ -243,6 +243,22 @@ Leistung: PERFORMANCE.md.
 Einzelspieler und Koop (Kit-Schiff); Stehen auf allen vier Modell-Decks und Segeln mit dem Boot; Kampf-Regression
 unverändert.
 
-**OFFEN**: 160 FPS auf „Hoch“ nur mit Frame Generation (FSR 3 oder DLSS – Entscheidung des Nutzers); Schwimmen;
-Schiffs-Innenräume und Besatzung; Koop-Test mit den Modell-Schiffen; Startkarten (`GameDefaultMap`) zeigen noch auf
-die Engine-Vorlage; Vasallen-Konzeptblätter unter `References/` sind noch nicht umgesetzt.
+**OFFEN**: 160 FPS auf „Hoch“ nur mit Frame Generation (FSR 3 oder DLSS – Entscheidung des Nutzers);
+Schiffs-Innenräume und Besatzung; Koop-Test mit den Modell-Schiffen; Vasallen-Konzeptblätter unter `References/` sind
+noch nicht umgesetzt.
+
+## Abschluss Phase 6 – Open World (Stand 2026-10-05)
+
+**ERGÄNZT**: Startkarten (Spiel, Editor, Server) auf `L_Realm`; Weltkarte `[M]` (gemalte Karte, Spielerpfeil, Mitspieler,
+Siedlungen, aktuelles Gebiet; Projektion `DBRealm::ToMapPixel`); Schwimmen (`UDBCharacterMovementComponent`, alle
+Charaktere, Wasser = alles unter Meereshöhe); Regionsstimmung (`UDBRealmMoodComponent`: Nebel, Sonne, Farbkorrektur je
+Gebiet, weiche Übergänge); Testbefehl `DBWalk`. Behoben: Umgebungspartikel als 1-m-Kugeln, Koop-Speicherfehler beim
+Beenden mit verbundenen Gästen.
+
+**GETESTET**: Build ohne Warnungen; Regelkern 44/44; Karte gerendert (Kirschblütental, Hauptstadt); Schwimmen an der
+Wüstenküste ins Meer und an Land, Einzelspieler + Koop; Stimmungen in Feuergebirge, Dämonenöde, Bambuswäldern, Dem Ende,
+Eisöde gerendert, 80–85 FPS; Kampf-Regression unverändert.
+
+**VERSCHOBEN** (braucht Neuaufbau des Geländes bzw. Assets): Klippen, Wasserfälle, zerklüftete Inselküsten und
+schwebende Inseln (Himmelstempel, Das Ende) der Kartenvorlage → Phase 11 (Regionsinhalte) / 17 (Visual Overhaul);
+Gras auf gepflasterten Siedlungsplätzen; Schwimmanimation; Tauchen.

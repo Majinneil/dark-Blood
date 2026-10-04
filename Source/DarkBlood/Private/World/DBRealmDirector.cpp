@@ -8,6 +8,7 @@
 #include "Player/DBPlayerState.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBRealmMoodComponent.h"
+#include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
 #include "World/DBShip.h"
 #include "Art/DBArtBuilder.h"
@@ -34,6 +35,7 @@ FDBRealmSiteBatch::~FDBRealmSiteBatch() = default;
 ADBRealmDirector::ADBRealmDirector()
 {
 	Mood = CreateDefaultSubobject<UDBRealmMoodComponent>(TEXT("Mood"));
+	Life = CreateDefaultSubobject<UDBSettlementLifeComponent>(TEXT("Life"));
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.f;
 	bReplicates = false;

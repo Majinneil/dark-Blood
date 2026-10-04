@@ -126,4 +126,39 @@ namespace DarkBlood::Rules
 			Region.DemonInfluence = Rules.LiberatedInfluenceFloor + static_cast<float>(Above * Keep);
 		}
 	}
+
+	FSettlementState* FWorldState::FindSettlement(std::string_view SettlementId)
+	{
+		for (FSettlementState& Settlement : Settlements)
+		{
+			if (Settlement.SettlementId == SettlementId)
+			{
+				return &Settlement;
+			}
+		}
+		return nullptr;
+	}
+
+	FSettlementState& FWorldState::AddSettlement(FSettlementState Settlement)
+	{
+		Settlement.SimulatedHours = Clock.TotalHours;
+		Settlements.push_back(std::move(Settlement));
+		return Settlements.back();
+	}
+
+	void FWorldState::AdvanceSettlements(std::vector<FSettlementEvent>& OutEvents, const FSettlementRules& Rules)
+	{
+		for (FSettlementState& Settlement : Settlements)
+		{
+			const double Behind = Clock.TotalHours - Settlement.SimulatedHours;
+			if (Behind < 1.0)
+			{
+				continue; // only whole hours are simulated
+			}
+			const FRegionState* Region = FindRegion(Settlement.RegionId);
+			const float Influence = Region ? Region->DemonInfluence : 0.5f;
+			std::vector<FSettlementEvent> Events = AdvanceSettlement(Settlement, Behind, Influence, 0.0, Rules);
+			OutEvents.insert(OutEvents.end(), Events.begin(), Events.end());
+		}
+	}
 }

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "DarkBloodRules/Quest.h"
+#include "DarkBloodRules/Settlement.h"
 
 #include <string>
 #include <string_view>
@@ -75,6 +76,8 @@ namespace DarkBlood::Rules
 		/** Bosses killed at least once (vassals, mid-bosses, world bosses). Ordered for serialization. */
 		std::set<std::string, std::less<>> DefeatedBosses;
 		FQuestLog SharedQuests;
+		/** Abstract simulation of every settlement; their clocks run with the world clock (hour 0 = 00:00, day 1). */
+		std::vector<FSettlementState> Settlements;
 
 		DARKBLOODRULES_API FRegionState& AddRegion(std::string RegionId, ERegionKind Kind);
 		DARKBLOODRULES_API FRegionState* FindRegion(std::string_view RegionId);
@@ -92,6 +95,12 @@ namespace DarkBlood::Rules
 
 		/** Advances time and liberated-region recovery. Called by the server tick and by offline catch-up. */
 		DARKBLOODRULES_API void Advance(double GameHours, const FRegionRecoveryRules& Rules = FRegionRecoveryRules());
+
+		DARKBLOODRULES_API FSettlementState* FindSettlement(std::string_view SettlementId);
+		/** Adds a settlement whose clock starts at the current world time. */
+		DARKBLOODRULES_API FSettlementState& AddSettlement(FSettlementState Settlement);
+		/** Catches every settlement up to the world clock with its region's demon influence; appends what happened. */
+		DARKBLOODRULES_API void AdvanceSettlements(std::vector<FSettlementEvent>& OutEvents, const FSettlementRules& Rules = FSettlementRules());
 
 	private:
 		std::vector<FRegionState> Regions;

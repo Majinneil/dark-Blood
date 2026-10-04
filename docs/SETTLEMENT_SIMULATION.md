@@ -1,7 +1,8 @@
 # Siedlungssimulation
 
-**Status:** Entwurf (Phase 7). Noch kein Code. Grundlagen aus Phase 1: Weltuhr, Regionszustand mit
-zeitschrittunabhängiger Entwicklung, versionierter Welt-Datensatz.
+**Status:** Phase 7 ✅ Gameplay – abstrakte Simulation aller 17 Siedlungen im Regelkern (gespeichert), aktive Stufe mit
+Dorfbewohnern und echten Dämonenangriffen, wenn Spieler vor Ort sind; Regelkern-Tests und Headless-Tests. Offen: Mass-
+Menschenmengen, StateTree-Tagesabläufe, Animationen, Händler (Phase 7+/Assets).
 
 ## Ziel
 
@@ -13,41 +14,49 @@ auch ohne Spieler weiter.
 
 | Stufe | Bedingung | Umsetzung |
 |---|---|---|
-| 1 – ACTIVE | Spieler in der Nähe, gestreamt | volle NPC-Actors (KI via StateTree, Animation, Kampf, Arbeit), Mass-Entities für Menge |
-| 2 – REDUCED | gestreamt, weiter entfernt | reduzierte Tickrate (AI Significance), vereinfachte Animation (Animation Budget Allocator) |
-| 3 – ABSTRACT | nicht gestreamt | reine Mathematik im Regelkern (`DarkBloodRules`), z. B. alle 10 Spielminuten |
+| 1 – ACTIVE | Spieler näher als Radius + 400 m (aus bei + 700 m) | `UDBSettlementLifeComponent` (Server, am `ADBRealmDirector`): Dorfbewohner `ADBVillagerCharacter` (Bevölkerung / 12, 3–20, nachts ein Viertel), wandern durch die Siedlung, erzählen vom Zustand; Angriffe der Simulation werden zu Kämpfen (2 + Spieler, max. 6 niedere Dämonen) mit Meldung |
+| 2 – REDUCED | – | noch nicht nötig (wenige Actors); später AI Significance / Animation Budget |
+| 3 – ABSTRACT | immer | `DarkBloodRules/Settlement.h`: ganze Spielstunden, deterministisch, auf der Weltuhr |
 
-Übergänge: Beim Aktivieren werden NPCs aus dem abstrakten Zustand materialisiert (Anzahl, Berufe, Tagesplan →
-Spawn am plausiblen Ort). Beim Deaktivieren wird der Zustand zurückgeschrieben. Die abstrakte Simulation ist die
-einzige Wahrheit für Zahlen; aktive NPCs sind eine Darstellung davon.
+Die abstrakte Simulation ist die einzige Wahrheit für Zahlen; Bewohner sind eine Darstellung davon.
 
-## Datenmodell (Entwurf, Regelkern)
+## Regelkern
 
 ```
-FSettlementState { Id, RegionId, Population{ Kinder, Erwachsene, Alte }, Families, Guards,
-                   Stocks{ Nahrung, Holz, Stein, Erz, Geld }, Prosperity, Security, Threat,
-                   Buildings[]{ Typ, Zustand 0..1, Stufe }, Projects[]{ Typ, Fortschritt, Bedarf, Arbeiter },
-                   bStoryProtected }
-FSettlementRules  { Geburten/Sterberaten, Verbrauch, Produktion je Beruf, Baukosten, Angriffsmodell }
-AdvanceSettlement(State, GameHours, RegionDemonInfluence, Rules) -> Events[]  (deterministisch, getestet)
+FSettlementState { Id, RegionId, Children/Adults/Elders, Guards, Stocks{Food, Wood, Stone, Ore, Money},
+                   Prosperity, Security, Threat, Buildings[]{Houses, Farms, Workshops, Market, Walls, Barracks, Temple:
+                   Condition 0..1, Level}, Projects[]{Repair|Upgrade, Target, Progress, WorkNeeded}, bStoryProtected,
+                   SimulatedHours, Seed, HungryHours }
+AdvanceSettlement(State, GameHours, DemonInfluence, StartTimeOfDay, Rules) -> Events[]
+FWorldState::Settlements / AddSettlement / AdvanceSettlements (Uhr der Welt, Einfluss der Region)
 ```
 
-Einzel-NPCs mit Beziehungen/Altern/Berufen werden **abstrahiert** (Kohorten + benannte Schlüssel-NPCs). Nur
-benannte NPCs (Questgeber, Händler, Familienmitglieder mit Story-Bezug) werden individuell geführt.
+Pro Stunde: Produktion (Feldarbeit 55 % der Arbeiter × 4,5 Nahrung/Tag, Handwerk Holz/Stein/Erz, Handel nach Wohlstand
+und Markt), Verbrauch (1 Nahrung/Person/Tag), Hunger, Geburten (mit Nahrung), Altern, Todesfälle, Hungertod nach 24 h
+ohne Nahrung, Bedrohung = Einfluss × (1 − 0,3 × Mauern), Sicherheit aus Wachenquote (8 %), Mauern, Kaserne, Angriffe
+(nachts 0,08 × Bedrohung × (1 − 0,8 × Sicherheit), tagsüber 15 % davon): abgewehrt (Wachen fallen) oder Schaden an einem
+Gebäude, Opfer, geplünderte Vorräte. Täglich: Wachen anwerben (6 Uhr), Bauprojekt starten (7 Uhr; Reparatur vor
+Ausbau: Mauern unter Bedrohung, Felder bei Nahrungsmangel, sonst Häuser/Markt), Flüchtlinge kehren in befreite, sichere
+Regionen zurück (12 Uhr). Zufall aus Siedlungs-Seed + Stundenindex → ein 48-h-Schritt = 48 Einzelstunden.
 
-## Dämonenangriffe
+Balance (getestet): besetzte Siedlung (Bedrohung ~0,85) kommt knapp über die Runden, befreite wächst mit Überschuss.
 
-Wahrscheinlichkeit aus Regions-Dämoneneinfluss, Nacht, Sicherheit und Wachen. Ausgang abstrakt
-(Verluste Wachen/Bewohner, Gebäudeschäden) oder aktiv als Encounter, wenn Spieler anwesend sind.
-Story-geschützte Orte (`bStoryProtected`) können beschädigt, aber nie zerstört oder entvölkert werden, damit
-keine Story-Blockaden entstehen.
+## Story-Schutz
 
-## Befreiung (Verknüpfung mit Phase 1)
+`bStoryProtected` (Hauptstadt, Hauptstadthafen): nie unter 12 Bewohner, Gebäude nie unter 25 % Zustand.
 
-`FWorldState::Advance` senkt den Dämoneneinfluss befreiter Regionen. Die Siedlungssimulation liest diesen Wert:
-weniger Angriffe, Rückkehr von Flüchtlingen, Handel wächst, neue Bauprojekte.
+## Speicherung
 
-## Performance-Ziele
+`WorldRecordVersion = 2` hängt die Siedlungen an den Welt-Datensatz; Version-1-Welten laden ohne Siedlungen, das
+Spiel legt sie an (`UDBWorldStateComponent::EnsureSettlementsRegistered`, Startbewohner nach Siedlungstyp).
+Clients erhalten `FDBSettlementView` (Bevölkerung, Wachen, Nahrungstage, Wohlstand/Sicherheit/Bedrohung, schlechtester
+Gebäudezustand, Hunger, letzter Angriff).
 
-Abstrakte Simulation aller Siedlungen < 1 ms/Server-Frame im Mittel (zeitlich verteilt). Keine Architektur,
-die nur mit wenigen NPCs funktioniert: Mass für Menschenmengen, Actors nur für Interaktion.
+## Testbefehle
+
+`DBDumpSettlements`, `DBSkipHours <h>`, `DBSettlementAttack <Siedlung>`, `DBGoto Villager` + `[E]`.
+
+## Performance
+
+Eine Stunde aller 17 Siedlungen kostet Mikrosekunden; simuliert wird alle 2 Echtminuten (1 Spielstunde). Aktive Stufe:
+höchstens 20 Bewohner je Siedlung in Spielernähe.

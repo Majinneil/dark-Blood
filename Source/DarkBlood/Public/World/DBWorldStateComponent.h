@@ -31,6 +31,54 @@ struct FDBRegionStateView
 	bool bVassalDefeated = false;
 };
 
+/** Compact replicated view of one simulated settlement (the numbers live in the rules core on the server). */
+USTRUCT(BlueprintType)
+struct FDBSettlementView
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Settlement")
+	FName SettlementId;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Settlement")
+	int32 Population = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Settlement")
+	int32 Guards = 0;
+
+	/** Days of food in store. */
+	UPROPERTY(BlueprintReadOnly, Category = "Settlement")
+	int32 FoodDays = 0;
+
+	/** 0..255 */
+	UPROPERTY()
+	uint8 ProsperityByte = 128;
+
+	UPROPERTY()
+	uint8 SecurityByte = 128;
+
+	UPROPERTY()
+	uint8 ThreatByte = 128;
+
+	/** Lowest building condition, 0..255. */
+	UPROPERTY()
+	uint8 WorstConditionByte = 255;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Settlement")
+	bool bHungry = false;
+
+	/** Game hour of the last demon attack (-1: none). */
+	UPROPERTY(BlueprintReadOnly, Category = "Settlement")
+	float LastAttackHours = -1.f;
+
+	float GetProsperity() const { return ProsperityByte / 255.f; }
+	float GetSecurity() const { return SecurityByte / 255.f; }
+	float GetThreat() const { return ThreatByte / 255.f; }
+	float GetWorstCondition() const { return WorstConditionByte / 255.f; }
+};
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FDBOnSettlementEvent, const DarkBlood::Rules::FSettlementEvent&);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDBOnWorldStateChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDBOnBossDefeated, FName, BossId, EDBBossRank, Rank);
 
@@ -60,6 +108,18 @@ public:
 
 	/** Makes sure every region definition has a state entry (new content added to an old save). */
 	void EnsureRegionsRegistered();
+
+	/** Makes sure every settlement of the open world has a simulation entry (new worlds, version 1 saves). */
+	void EnsureSettlementsRegistered();
+
+	/** Development: lets time pass (the settlements catch up on the next tick). */
+	void SkipHours(double Hours);
+
+	/** Server: everything the settlement simulation reports (attacks, births, projects ...). */
+	FDBOnSettlementEvent OnSettlementEvent;
+
+	bool GetSettlementView(FName SettlementId, FDBSettlementView& OutView) const;
+	const TArray<FDBSettlementView>& GetSettlementViews() const { return Settlements; }
 
 	void RestoreFromRecord(const DarkBlood::Rules::FWorldState& InState);
 	const DarkBlood::Rules::FWorldState& GetRulesState() const { return State; }
@@ -127,4 +187,10 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_View)
 	bool bFinalRegionOpen = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_View)
+	TArray<FDBSettlementView> Settlements;
+
+	/** Server: game hour of each settlement's last demon attack (for the view). */
+	TMap<FName, float> LastAttackHours;
 };

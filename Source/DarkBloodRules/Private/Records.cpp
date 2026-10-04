@@ -397,6 +397,103 @@ namespace DarkBlood::Rules
 			return true;
 		}
 
+		// ---- Settlements ----------------------------------------------------------------------------
+
+		void WriteSettlements(FBinaryWriter& W, const std::vector<FSettlementState>& Settlements)
+		{
+			W.WriteU32(static_cast<uint32>(Settlements.size()));
+			for (const FSettlementState& S : Settlements)
+			{
+				W.WriteString(S.SettlementId);
+				W.WriteString(S.RegionId);
+				W.WriteI32(S.Children);
+				W.WriteI32(S.Adults);
+				W.WriteI32(S.Elders);
+				W.WriteI32(S.Guards);
+				W.WriteF64(S.Stocks.Food);
+				W.WriteF64(S.Stocks.Wood);
+				W.WriteF64(S.Stocks.Stone);
+				W.WriteF64(S.Stocks.Ore);
+				W.WriteF64(S.Stocks.Money);
+				W.WriteF32(S.Prosperity);
+				W.WriteF32(S.Security);
+				W.WriteF32(S.Threat);
+				W.WriteU32(static_cast<uint32>(S.Buildings.size()));
+				for (const FSettlementBuilding& Building : S.Buildings)
+				{
+					WriteEnum(W, Building.Type);
+					W.WriteF32(Building.Condition);
+					W.WriteI32(Building.Level);
+				}
+				W.WriteU32(static_cast<uint32>(S.Projects.size()));
+				for (const FSettlementProjectState& Project : S.Projects)
+				{
+					WriteEnum(W, Project.Kind);
+					WriteEnum(W, Project.Target);
+					W.WriteF64(Project.Progress);
+					W.WriteF64(Project.WorkNeeded);
+				}
+				W.WriteBool(S.bStoryProtected);
+				W.WriteF64(S.SimulatedHours);
+				W.WriteU32(S.Seed);
+				W.WriteI32(S.HungryHours);
+			}
+		}
+
+		bool ReadSettlements(FBinaryReader& R, std::vector<FSettlementState>& Settlements)
+		{
+			uint32 Count = 0;
+			if (!R.ReadCount(Count))
+			{
+				return false;
+			}
+			Settlements.assign(Count, FSettlementState());
+			for (FSettlementState& S : Settlements)
+			{
+				uint32 Buildings = 0;
+				if (!R.ReadString(S.SettlementId) || !R.ReadString(S.RegionId) || !R.ReadI32(S.Children) || !R.ReadI32(S.Adults) ||
+					!R.ReadI32(S.Elders) || !R.ReadI32(S.Guards) || !R.ReadF64(S.Stocks.Food) || !R.ReadF64(S.Stocks.Wood) ||
+					!R.ReadF64(S.Stocks.Stone) || !R.ReadF64(S.Stocks.Ore) || !R.ReadF64(S.Stocks.Money) || !R.ReadF32(S.Prosperity) ||
+					!R.ReadF32(S.Security) || !R.ReadF32(S.Threat) || !R.ReadCount(Buildings))
+				{
+					return false;
+				}
+				if (S.Children < 0 || S.Adults < 0 || S.Elders < 0 || S.Guards < 0 || S.Guards > S.Adults)
+				{
+					return false;
+				}
+				S.Buildings.assign(Buildings, FSettlementBuilding());
+				for (FSettlementBuilding& Building : S.Buildings)
+				{
+					if (!ReadEnum(R, Building.Type, static_cast<uint8>(ESettlementBuilding::Count)) || !R.ReadF32(Building.Condition) ||
+						!R.ReadI32(Building.Level))
+					{
+						return false;
+					}
+				}
+				uint32 Projects = 0;
+				if (!R.ReadCount(Projects))
+				{
+					return false;
+				}
+				S.Projects.assign(Projects, FSettlementProjectState());
+				for (FSettlementProjectState& Project : S.Projects)
+				{
+					if (!ReadEnum(R, Project.Kind, static_cast<uint8>(ESettlementProject::Upgrade) + 1) ||
+						!ReadEnum(R, Project.Target, static_cast<uint8>(ESettlementBuilding::Count)) || !R.ReadF64(Project.Progress) ||
+						!R.ReadF64(Project.WorkNeeded))
+					{
+						return false;
+					}
+				}
+				if (!R.ReadBool(S.bStoryProtected) || !R.ReadF64(S.SimulatedHours) || !R.ReadU32(S.Seed) || !R.ReadI32(S.HungryHours))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
 		// ---- World ----------------------------------------------------------------------------------
 
 		void WriteWorldPayload(FBinaryWriter& W, const FWorldRecord& Record)
@@ -418,9 +515,10 @@ namespace DarkBlood::Rules
 				W.WriteF64(Region.LiberatedAtHours);
 			}
 			WriteQuestLog(W, World.SharedQuests);
+			WriteSettlements(W, World.Settlements);
 		}
 
-		bool ReadWorldPayload(FBinaryReader& R, uint32 /*Version*/, FWorldRecord& Record)
+		bool ReadWorldPayload(FBinaryReader& R, uint32 Version, FWorldRecord& Record)
 		{
 			FWorldState& World = Record.World;
 			uint32 Count = 0;
@@ -440,7 +538,11 @@ namespace DarkBlood::Rules
 					return false;
 				}
 			}
-			return ReadQuestLog(R, World.SharedQuests);
+			if (!ReadQuestLog(R, World.SharedQuests))
+			{
+				return false;
+			}
+			return Version < 2 || ReadSettlements(R, World.Settlements);
 		}
 	}
 

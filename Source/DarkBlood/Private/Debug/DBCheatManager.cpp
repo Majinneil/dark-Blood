@@ -25,7 +25,9 @@
 #include "PrimitiveSceneProxy.h"
 #include "UObject/UObjectIterator.h"
 #include "Settings/DBGameUserSettings.h"
+#include "World/DBRealmDirector.h"
 #include "World/DBRealmLayout.h"
+#include "World/DBSettlementLifeComponent.h"
 #include "World/DBShip.h"
 #include "Visual/DBAnimationSetDefinition.h"
 #include "Visual/DBCharacterVisualComponent.h"
@@ -870,6 +872,53 @@ void UDBCheatManager::DBWalk(float Yaw, float Seconds)
 				DBRealm::SampleHeight(Meters.X, Meters.Y), *StaticEnum<EMovementMode>()->GetNameStringByValue(WeakCharacter->GetCharacterMovement()->MovementMode));
 		}
 	}), 0.01f, true);
+}
+
+void UDBCheatManager::DBDumpSettlements()
+{
+	if (ForwardToServer(TEXT("DBDumpSettlements"))) return;
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	if (!GameState)
+	{
+		return;
+	}
+	const UDBWorldStateComponent* World = GameState->GetWorldState();
+	const ADBRealmDirector* Director = ADBRealmDirector::Get(GetWorld());
+	UE_LOG(LogDBWorld, Display, TEXT("=== Settlements: day %d, %.2f h ==="), World->GetDay(), World->GetTimeOfDay());
+	for (const DarkBlood::Rules::FSettlementState& S : World->GetRulesState().Settlements)
+	{
+		float Worst = 1.f;
+		int32 Levels = 0;
+		for (const DarkBlood::Rules::FSettlementBuilding& Building : S.Buildings)
+		{
+			Worst = FMath::Min(Worst, Building.Condition);
+			Levels += Building.Level;
+		}
+		const FString Name = UTF8_TO_TCHAR(S.SettlementId.c_str());
+		const int32 Villagers = Director && Director->GetSettlementLife() ? Director->GetSettlementLife()->CountVillagers(Name) : -1;
+		UE_LOG(LogDBWorld, Display, TEXT("  %-16s %hs pop %d (%d/%d/%d) guards %d food %.0f wood %.0f stone %.0f mon %.0f pros %.2f sec %.2f threat %.2f worst %.2f levels %d projects %d villagers %d%s"),
+			*Name, S.RegionId.c_str(), S.GetPopulation(), S.Children, S.Adults, S.Elders, S.Guards, S.Stocks.Food, S.Stocks.Wood, S.Stocks.Stone,
+			S.Stocks.Money, S.Prosperity, S.Security, S.Threat, Worst, Levels, static_cast<int32>(S.Projects.size()), Villagers,
+			S.bStoryProtected ? TEXT(" [story]") : TEXT(""));
+	}
+}
+
+void UDBCheatManager::DBSkipHours(float Hours)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBSkipHours %f"), Hours))) return;
+	if (const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>())
+	{
+		GameState->GetWorldState()->SkipHours(Hours);
+		UE_LOG(LogDBWorld, Display, TEXT("DBSkipHours: %.1f h"), Hours);
+	}
+}
+
+void UDBCheatManager::DBSettlementAttack(const FString& Settlement)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBSettlementAttack %s"), *Settlement))) return;
+	const ADBRealmDirector* Director = ADBRealmDirector::Get(GetWorld());
+	const bool bStarted = Director && Director->GetSettlementLife() && Director->GetSettlementLife()->StartAttackEncounter(Settlement);
+	UE_LOG(LogDBWorld, Display, TEXT("DBSettlementAttack %s: %s"), *Settlement, bStarted ? TEXT("started") : TEXT("no player there / unknown"));
 }
 
 void UDBCheatManager::DBSpawnShip(float Distance, int32 Style)

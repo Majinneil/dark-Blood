@@ -101,6 +101,10 @@ public:
 	UFUNCTION(Exec) void DBTravel(const FString& Region, float OffsetX = 0.f, float OffsetY = 0.f);
 	/** Local: moves the own character through normal movement input towards a world yaw (0 = east, 90 = south). */
 	UFUNCTION(Exec) void DBWalk(float Yaw, float Seconds);
+	/** Settlement simulation: state of every settlement / let game hours pass / demon attack fight in a settlement. */
+	UFUNCTION(Exec) void DBDumpSettlements();
+	UFUNCTION(Exec) void DBSkipHours(float Hours);
+	UFUNCTION(Exec) void DBSettlementAttack(const FString& Settlement);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

@@ -18,7 +18,8 @@
 namespace DarkBlood::Rules
 {
 	constexpr uint32 CharacterRecordVersion = 1;
-	constexpr uint32 WorldRecordVersion = 1;
+	/** 2: settlement simulation (version 1 worlds load without settlements; the game creates them). */
+	constexpr uint32 WorldRecordVersion = 2;
 
 	enum class EBodyType : uint8
 	{
