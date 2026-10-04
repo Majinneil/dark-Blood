@@ -66,8 +66,14 @@ die Großstadt eine Pagode mit Laternen, die Tempelsiedlung großes Torii, Tempe
 Torii, der Grenzposten die Burg Kokura auf ihrem Hügel. Testbefehle `DBModelShowroom`, `DBModelShow <Schlüssel>`.
 
 Meer: eine 40-km-Fläche auf Z −0,3 m mit `M_DB_Sea` (dunkel, glänzend, opak; drei gegeneinander driftende
-Weltprojektionen der generierten Wellen-Normalmap `Tools/generate_sea_normal.py`). Keine Kollision – Figuren im Meer
-laufen derzeit auf dem Meeresgrund (Schwimmen fehlt noch).
+Weltprojektionen der generierten Wellen-Normalmap `Tools/generate_sea_normal.py`). Keine Kollision.
+
+**Schwimmen:** Alles unter Meereshöhe 0 ist Wasser. `UDBCharacterMovementComponent` (alle Charaktere) setzt die Kapsel in
+der offenen Welt in ein gemeinsames, formloses Wasser-`PhysicsVolume`, sobald das Wasser die Brust erreicht, und wieder
+heraus, wenn die Hüfte draußen ist; die Eintauchtiefe wird gegen die Oberfläche gerechnet (Auftrieb 1,3: Kopf über
+Wasser, 3,5 m/s). Jeder Rechner wendet dieselbe Regel an (Client-Vorhersage). Getestet: Westküste der Wüstenlande ins
+Meer und an den Strand, Einzelspieler und Koop. Offen: Schwimmanimation, Tauchen, Ausdauer/Ertrinken (Phase 8).
+Testbefehl `DBWalk <Gierwinkel> <s>` (0 = Osten, 90 = Süden).
 
 Karte: 16 Landscape-Kacheln (4 m Raster, 8 Bodenschichten `M_DB_Realm_Landscape`, Gras über Landscape-Grass-Types,
 deren Dichtekarten zur Laufzeit auf der GPU entstehen: `grass.GrassMap.UseRuntimeGeneration=1`),

@@ -33,6 +33,7 @@
 #include "GameplayEffect.h"
 #include "UObject/Package.h"
 #include "Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Framework/DBDevelopmentSlice.h"
 #include "Framework/DBGameMode.h"
@@ -840,6 +841,35 @@ void UDBCheatManager::DBTravel(const FString& Region, float OffsetX, float Offse
 	const double Ground = FMath::Max(DBRealm::SampleHeight(X, Y), 0.0);
 	Pawn->TeleportTo(FVector(X * 100.0, Y * 100.0, Ground * 100.0 + 250.0), Pawn->GetActorRotation());
 	UE_LOG(LogDarkBlood, Display, TEXT("DBTravel: %s (%s) at %.0f / %.0f m, ground %.0f m"), Target->DisplayName, *Target->RegionId.ToString(), X, Y, Ground);
+}
+
+void UDBCheatManager::DBWalk(float Yaw, float Seconds)
+{
+	ACharacter* Character = Cast<ACharacter>(GetOuterAPlayerController()->GetPawn());
+	if (!Character)
+	{
+		return;
+	}
+	const FVector Direction = FRotator(0.f, Yaw, 0.f).Vector();
+	const double EndTime = GetWorld()->GetTimeSeconds() + Seconds;
+	const TWeakObjectPtr<ACharacter> WeakCharacter = Character;
+	const TSharedRef<FTimerHandle> Handle = MakeShared<FTimerHandle>();
+	UE_LOG(LogDarkBlood, Display, TEXT("DBWalk: yaw %.0f for %.1f s"), Yaw, Seconds);
+	GetWorld()->GetTimerManager().SetTimer(*Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakCharacter, Direction, EndTime, Handle]()
+	{
+		if (WeakCharacter.IsValid() && GetWorld()->GetTimeSeconds() < EndTime)
+		{
+			WeakCharacter->AddMovementInput(Direction);
+			return;
+		}
+		GetWorld()->GetTimerManager().ClearTimer(*Handle);
+		if (WeakCharacter.IsValid())
+		{
+			const FVector Meters = WeakCharacter->GetActorLocation() / 100.0;
+			UE_LOG(LogDarkBlood, Display, TEXT("DBWalk: done at %.0f / %.0f m, height %.1f m (ground %.1f m), %s"), Meters.X, Meters.Y, Meters.Z,
+				DBRealm::SampleHeight(Meters.X, Meters.Y), *StaticEnum<EMovementMode>()->GetNameStringByValue(WeakCharacter->GetCharacterMovement()->MovementMode));
+		}
+	}), 0.01f, true);
 }
 
 void UDBCheatManager::DBSpawnShip(float Distance, int32 Style)

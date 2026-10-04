@@ -132,6 +132,8 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBOrbit Yaw [Pitch] [Abstand]` | Kamera um die eigene Figur drehen (180 = von vorn), für Sichtprüfungen |
 | `DBGraphics Qualität [Hochskalierung] [Raytracing]` | Grafik für Tests setzen (0–4, 0 = nativ … 4 = 33 %, 0/1); Spieler nutzen das Menü `[F10]` |
 | `DBPerfSnapshot` / `DBVisualAudit` | Frame-/GPU-Zeit, Draw Calls, Slice-Statistik / fehlende Visual-Referenzen |
+| `DBTravel <Region\|Siedlung> [X m] [Y m]` | In ein Gebiet / eine Siedlung der offenen Welt springen, optional versetzt |
+| `DBWalk <Gierwinkel> <s>` | Eigene Figur über normale Bewegungseingabe laufen/schwimmen lassen (lokal; 0 = Osten) |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
 Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),

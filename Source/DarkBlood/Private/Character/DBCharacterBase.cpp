@@ -2,6 +2,7 @@
 
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBAttributeSet.h"
+#include "Character/DBCharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -15,7 +16,7 @@
 #include "Visual/DBCharacterVisualComponent.h"
 
 ADBCharacterBase::ADBCharacterBase(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDBCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PlaceholderBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PlaceholderBody"));
 	PlaceholderBody->SetupAttachment(GetCapsuleComponent());
