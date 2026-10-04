@@ -71,9 +71,22 @@ laufen derzeit auf dem Meeresgrund (Schwimmen fehlt noch).
 
 Karte: 16 Landscape-Kacheln (4 m Raster, 8 Bodenschichten `M_DB_Realm_Landscape`, Gras über Landscape-Grass-Types,
 deren Dichtekarten zur Laufzeit auf der GPU entstehen: `grass.GrassMap.UseRuntimeGeneration=1`),
-164 000 Bäume und Felsen in 1-km-Zellen (`ADBRealmVegetation`, Nanite), Meer auf Höhe 0. Nanite-Landscape ist
+550 000 Bäume und Felsen in 1-km-Zellen (`ADBRealmVegetation`, Nanite), Meer auf Höhe 0. Nanite-Landscape ist
 möglich (`-Nanite`), braucht aber ~590 MB pro Kachel und mehr Speicher als 32 GB beim Bauen – daher aus.
 Testbefehl `DBTravel <Region|Siedlung>`.
+
+Klippen: In Nebelbergen, Feuergebirge, Eisöde, Dämonenöde, Vasallenfestung und dem Ende stuft sich das Gelände in
+Flecken zu Bänken mit steilen Wänden (38 m Stufen, die Höhen wandern mit Rauschen); wo diese Gebiete ans Meer stoßen,
+endet das Land in einer Steilküste. Die Wände bekommen automatisch die Fels-Bodenschicht und große, zur Neigung
+gekippte Felsen (`CliffRock`).
+
+Flüsse (`DBRealm::GetRiverCourses`): vier Flüsse von den Bergen zum Meer, als Punktfolge alle ~6 m entlang der
+mäandrierenden Kartenlinie. Der Wasserspiegel steigt flussabwärts nie; im Tiefland (unter 2,5 m) füllt das Meer das
+Bett, im Hochland folgt er dem Gelände und fällt oberhalb von 40 m in 16-m-Stufen (Wasserfälle). Das Gelände trägt ein
+flaches Bett 1,2 m unter dem Spiegel (watbar, bis es Schwimmen gibt), Ufer bis über den Spiegel, an Hängen einen Damm
+zur Talseite und darüber das Tal. Der Builder legt je Abschnitt eine geneigte Wasserfläche auf den Spiegel
+(`MI_DB_Water_River`, steile Abschnitte `MI_DB_Waterfall` mit abwärts laufendem Schaum), je Fluss gebündelt; in
+Siedlungen keine (dort ist der Boden eingeebnet).
 
 ## Regionen im Code
 

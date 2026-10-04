@@ -59,6 +59,10 @@ namespace
 	/** Landscape Z scale: +-1024 m around 0 in 16 bit. */
 	constexpr double ScaleZ = 400.0;
 	constexpr int32 LayerCount = static_cast<int32>(EDBRealmLayer::Count);
+	/** River water at or above this level gets its own surface; below it the sea plane fills the bed (DBRealmLayout). */
+	constexpr double RiverSurfaceMinLevel = 2.5;
+	/** A segment of a river course whose water drops more than this is a waterfall. */
+	constexpr double WaterfallMinDrop = 3.0;
 
 	double VertexX(int32 Column) { return -DBRealm::HalfSize + Column * QuadMeters; }
 	double VertexY(int32 Row) { return -DBRealm::HalfSize + Row * QuadMeters; }
@@ -69,7 +73,7 @@ namespace
 		return static_cast<uint16>(FMath::Clamp(FMath::RoundToInt(32768.0 + Meters * 100.0 * 128.0 / ScaleZ), 0, 65535));
 	}
 
-	/** Map-style preview (dominant paint, hillshade, water) as a 24-bit BMP. */
+	/** Map-style preview (dominant paint, hillshade, water; highland rivers blue, waterfalls white) as a 24-bit BMP. */
 	void WritePreview(const TArray<float>& Heights, const TArray<uint8>& Dominant, const FString& Path)
 	{
 		constexpr int32 Step = 4;
@@ -98,6 +102,38 @@ namespace
 				Pixels[Out + 0] = Color.B;
 				Pixels[Out + 1] = Color.G;
 				Pixels[Out + 2] = Color.R;
+			}
+		}
+		auto Mark = [&](const FVector2D& Position, int32 Radius, const FColor& Color)
+		{
+			const int32 X = FMath::RoundToInt((Position.X + DBRealm::HalfSize) / (QuadMeters * Step));
+			const int32 Y = FMath::RoundToInt((Position.Y + DBRealm::HalfSize) / (QuadMeters * Step));
+			for (int32 PY = FMath::Max(Y - Radius, 0); PY <= FMath::Min(Y + Radius, Size - 1); ++PY)
+			{
+				for (int32 PX = FMath::Max(X - Radius, 0); PX <= FMath::Min(X + Radius, Size - 1); ++PX)
+				{
+					const int32 Out = ((Size - 1 - PY) * Size + PX) * 3;
+					Pixels[Out + 0] = Color.B;
+					Pixels[Out + 1] = Color.G;
+					Pixels[Out + 2] = Color.R;
+				}
+			}
+		};
+		for (const TArray<FDBRiverPoint>& Course : DBRealm::GetRiverCourses())
+		{
+			for (int32 Index = 0; Index < Course.Num(); ++Index)
+			{
+				if (Course[Index].Water >= RiverSurfaceMinLevel)
+				{
+					Mark(Course[Index].Position, 0, FColor(40, 120, 200));
+				}
+			}
+			for (int32 Index = 0; Index + 1 < Course.Num(); ++Index)
+			{
+				if (Course[Index].Water - Course[Index + 1].Water > WaterfallMinDrop && Course[Index].Water >= RiverSurfaceMinLevel)
+				{
+					Mark(Course[Index].Position, 1, FColor::White);
+				}
 			}
 		}
 		const int32 RowBytes = Size * 3;
@@ -144,6 +180,8 @@ namespace
 		Boulder,
 		RockMoss,
 		RockFace,
+		/** Big rocks pressed into cliff walls, tilted to the slope. */
+		CliffRock,
 		// Free authored trees (DBModelLibrary, Sketchfab CC BY)
 		Cedar,
 		RedCedar,
@@ -161,7 +199,7 @@ namespace
 		FTransform Transform;
 	};
 
-	/** Trees and rocks by region character, on a jittered 10 m grid; nothing in water, on cliffs or in settlements. */
+	/** Trees and rocks by region character, on a jittered 10 m grid; rocks on cliffs, nothing in water or in settlements. */
 	TArray<FPlacement> PlaceVegetation(const TArray<float>& Heights, const TArray<TArray<uint8>>& Layers)
 	{
 		using B = EDBRealmBiome;
@@ -171,13 +209,12 @@ namespace
 		const TArray<FDBRealmSettlement>& Settlements = DBRealm::GetSettlements();
 		constexpr double Spacing = 10.0;
 		const int32 Steps = FMath::FloorToInt(2.0 * DBRealm::HalfSize / Spacing);
-		auto Sample = [&](double X, double Y, int32& OutIndex, float& OutNormalZ)
+		auto Sample = [&](double X, double Y, int32& OutIndex, FVector& OutNormal)
 		{
 			const int32 Column = FMath::Clamp(FMath::RoundToInt((X + DBRealm::HalfSize) / QuadMeters), 1, Verts - 2);
 			const int32 Row = FMath::Clamp(FMath::RoundToInt((Y + DBRealm::HalfSize) / QuadMeters), 1, Verts - 2);
 			OutIndex = Row * Verts + Column;
-			const FVector Normal(Heights[OutIndex - 1] - Heights[OutIndex + 1], Heights[OutIndex - Verts] - Heights[OutIndex + Verts], 2.0 * QuadMeters);
-			OutNormalZ = static_cast<float>(Normal.GetSafeNormal().Z);
+			OutNormal = FVector(Heights[OutIndex - 1] - Heights[OutIndex + 1], Heights[OutIndex - Verts] - Heights[OutIndex + Verts], 2.0 * QuadMeters).GetSafeNormal();
 			return Heights[OutIndex];
 		};
 		auto Weight = [&](EDBRealmLayer Layer, int32 Index) { return Layers[static_cast<int32>(Layer)][Index] / 255.f; };
@@ -190,9 +227,10 @@ namespace
 				const float Roll = Random.FRand();
 				const float Pick = Random.FRand();
 				int32 Index;
-				float NormalZ;
-				const float Height = Sample(X, Y, Index, NormalZ);
-				if (Height < 1.5f)
+				FVector Normal;
+				const float Height = Sample(X, Y, Index, Normal);
+				const float NormalZ = static_cast<float>(Normal.Z);
+				if (Height < 1.5f || DBRealm::IsUnderRiverWater(X, Y, Height))
 				{
 					continue;
 				}
@@ -203,6 +241,19 @@ namespace
 				}
 				if (bInSettlement)
 				{
+					continue;
+				}
+				// Cliffs: big rocks pressed into the walls (the landscape texture stretches on them), nothing else.
+				if (NormalZ < 0.6f)
+				{
+					if (Roll < 0.25f)
+					{
+						const FQuat Lean = FQuat::FindBetweenNormals(FVector::UpVector, Normal);
+						const FQuat Spin(FVector::UpVector, Random.FRandRange(0.f, 2.f * PI));
+						const float RockScale = Random.FRandRange(2.5f, 6.f);
+						const FVector Location(X * 100.0, Y * 100.0, Height * 100.0 - RockScale * 40.0);
+						Result.Add({ESpecies::CliffRock, FTransform(Lean * Spin, Location, FVector(RockScale))});
+					}
 					continue;
 				}
 				const float Forest = Weight(EDBRealmLayer::Forest, Index);
@@ -390,6 +441,20 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 		MinHeight, MaxHeight, 100.0 * LandVerts / HeightsMeters.Num(), *PreviewPath, FPlatformTime::Seconds() - StartSeconds);
 	const TArray<FPlacement> Vegetation = PlaceVegetation(HeightsMeters, Layers);
 	UE_LOG(LogDarkBlood, Display, TEXT("DBREALM vegetation: %d trees and rocks"), Vegetation.Num());
+	{
+		int32 HighlandPoints = 0;
+		int32 Falls = 0;
+		for (const TArray<FDBRiverPoint>& Course : DBRealm::GetRiverCourses())
+		{
+			for (int32 Index = 0; Index + 1 < Course.Num(); ++Index)
+			{
+				HighlandPoints += Course[Index].Water >= RiverSurfaceMinLevel ? 1 : 0;
+				Falls += Course[Index].Water - Course[Index + 1].Water > WaterfallMinDrop ? 1 : 0;
+			}
+		}
+		UE_LOG(LogDarkBlood, Display, TEXT("DBREALM rivers: %d courses, %d highland points, %d waterfall segments"), DBRealm::GetRiverCourses().Num(),
+			HighlandPoints, Falls);
+	}
 	if (bPreviewOnly)
 	{
 		return 0;
@@ -556,6 +621,12 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 			{{Mesh(TEXT("rock_face_01/rock_face_01_2k/StaticMeshes/rock_face_01_2k.rock_face_01_2k")),
 				 Mesh(TEXT("rock_face_02/rock_face_02_2k/StaticMeshes/rock_face_02_2k.rock_face_02_2k"))},
 				&None},
+			// Cliff rocks: the rounded scans, which look right at any tilt.
+			{{Mesh(TEXT("boulder_01/boulder_01_1k/StaticMeshes/boulder_01_1k.boulder_01_1k")),
+				 Mesh(TEXT("rock_moss_set_01/rock_moss_set_01_1k/StaticMeshes/rock_moss_set_01_rock01.rock_moss_set_01_rock01")),
+				 Mesh(TEXT("rock_moss_set_01/rock_moss_set_01_1k/StaticMeshes/rock_moss_set_01_rock02.rock_moss_set_01_rock02")),
+				 Mesh(TEXT("rock_moss_set_02/rock_moss_set_02_1k/StaticMeshes/rock_moss_set_02_rock07.rock_moss_set_02_rock07"))},
+				&None},
 			{{}, &None, TEXT("cedar_tree")},
 			{{}, &None, TEXT("red_cedar")},
 			{{}, &None, TEXT("maple_b")},
@@ -613,8 +684,87 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 		UE_LOG(LogDarkBlood, Display, TEXT("DBREALM vegetation baked: %d instances in %d cells"), Placed, Cells.Num());
 	}
 
-	// ---- 5. Sea, sky, light, start, director ----------------------------------------------------------------------
-	if (AStaticMeshActor* Sea = Spawn<AStaticMeshActor>(*World, FVector(0.0, 0.0, -30.0)))
+	// ---- 5. River water: surfaces on the highland stretches, waterfalls where the level drops ------------------------
+	// One tilted engine plane per course segment at the water level of DBRealm::GetRiverCourses (the terrain holds the
+	// channel and banks for it), batched per river. Lowland stretches have no surface of their own: the sea plane fills them.
+	{
+		UStaticMesh* Plane = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane"));
+		UMaterialInterface* SeaWater = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Instances/MI_DB_Water_Sea.MI_DB_Water_Sea"));
+		// Made by Tools/UE58/db_create_river_materials.py; until then the rivers use the sea water.
+		UMaterialInterface* RiverWater = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Instances/MI_DB_Water_River.MI_DB_Water_River"),
+			nullptr, LOAD_NoWarn | LOAD_Quiet);
+		UMaterialInterface* FallWater = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Instances/MI_DB_Waterfall.MI_DB_Waterfall"),
+			nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (!RiverWater || !FallWater)
+		{
+			UE_LOG(LogDarkBlood, Warning, TEXT("DBREALM river materials missing (run Tools/UE58/db_create_river_materials.py) - using the sea water"));
+		}
+		const TArray<UMaterialInterface*> RiverMaterials{RiverWater ? RiverWater : SeaWater};
+		const TArray<UMaterialInterface*> FallMaterials{FallWater ? FallWater : RiverMaterials[0]};
+		const TArray<FDBRealmSettlement>& Settlements = DBRealm::GetSettlements();
+		const TArray<TArray<FDBRiverPoint>>& Courses = DBRealm::GetRiverCourses();
+		int32 Surfaces = 0;
+		int32 Waterfalls = 0;
+		double Tallest = 0.0;
+		double WaterMeters = 0.0;
+		for (int32 CourseIndex = 0; CourseIndex < Courses.Num() && Plane; ++CourseIndex)
+		{
+			const TArray<FDBRiverPoint>& Course = Courses[CourseIndex];
+			ADBRealmVegetation* Water = nullptr;
+			for (int32 Index = 0; Index + 1 < Course.Num(); ++Index)
+			{
+				const FDBRiverPoint& A = Course[Index];
+				const FDBRiverPoint& B = Course[Index + 1];
+				if (FMath::Max(A.Water, B.Water) < RiverSurfaceMinLevel)
+				{
+					continue;
+				}
+				// Settlements level the ground under them (DBRealm::SampleHeight); a surface there would float or be buried.
+				bool bInSettlement = FVector2D::Distance(A.Position, DBRealm::GetCapital().Center) < DBRealm::CapitalFlatRadius * 2.4;
+				for (const FDBRealmSettlement& Site : Settlements)
+				{
+					bInSettlement |= FVector2D::Distance(A.Position, Site.Center) < Site.Radius * 2.2;
+				}
+				const double Length = FVector2D::Distance(A.Position, B.Position);
+				if (bInSettlement || Length < 0.1)
+				{
+					continue;
+				}
+				const FVector2D Direction = (B.Position - A.Position) / Length;
+				const double Slope = (B.Water - A.Water) / Length;
+				const bool bFalls = A.Water - B.Water > WaterfallMinDrop;
+				// 15 % overlap at both ends hides the seams in bends; a waterfall overlaps only downstream (upstream it
+				// would stand above the pool).
+				const double Upstream = bFalls ? 0.0 : 0.15 * Length;
+				const double Downstream = 0.15 * Length;
+				const FVector2D From = A.Position - Direction * Upstream;
+				const FVector2D To = B.Position + Direction * Downstream;
+				const FVector Start(From.X * 100.0, From.Y * 100.0, (A.Water - Slope * Upstream) * 100.0);
+				const FVector End(To.X * 100.0, To.Y * 100.0, (B.Water + Slope * Downstream) * 100.0);
+				const FVector Axis = End - Start;
+				// The engine plane is 1 m square in X/Y: X runs along the river, Y across it.
+				const FTransform Surface(Axis.Rotation(), (Start + End) * 0.5, FVector(Axis.Size() / 100.0, 2.0 * (A.HalfWidth + DBRealm::RiverSurfaceMargin), 1.0));
+				if (!Water)
+				{
+					Water = Spawn<ADBRealmVegetation>(*World, FVector(A.Position.X * 100.0, A.Position.Y * 100.0, A.Water * 100.0));
+					Water->SetActorLabel(FString::Printf(TEXT("River_%d"), CourseIndex));
+				}
+				Water->AddInstance(Plane, bFalls ? FallMaterials : RiverMaterials, Surface, false);
+				++Surfaces;
+				WaterMeters += Length;
+				if (bFalls)
+				{
+					++Waterfalls;
+					Tallest = FMath::Max(Tallest, A.Water - B.Water);
+				}
+			}
+		}
+		UE_LOG(LogDarkBlood, Display, TEXT("DBREALM rivers: %d surfaces (%.1f km of highland water), %d waterfall segments (tallest %.0f m)"), Surfaces,
+			WaterMeters / 1000.0, Waterfalls, Tallest);
+	}
+
+	// ---- 6. Sea, sky, light, start, director ----------------------------------------------------------------------
+	if (AStaticMeshActor* Sea = Spawn<AStaticMeshActor>(*World, FVector(0.0, 0.0, DBRealm::SeaLevel * 100.0)))
 	{
 		Sea->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
 		Sea->GetStaticMeshComponent()->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Instances/MI_DB_Water_Sea.MI_DB_Water_Sea")));
@@ -646,7 +796,7 @@ int32 UDBBuildRealmCommandlet::Main(const FString& Params)
 	Spawn<APlayerStart>(*World, CapitalCenter + FVector(0.0, 0.0, 120.0));
 	Spawn<ADBRealmDirector>(*World, CapitalCenter);
 
-	// ---- 6. Save ------------------------------------------------------------------------------------------------
+	// ---- 7. Save ------------------------------------------------------------------------------------------------
 	World->UpdateWorldComponents(true, false);
 	const bool bSaved = SaveAsset(MapPackage, World, FPackageName::GetMapPackageExtension());
 	UE_LOG(LogDarkBlood, Display, TEXT("DBREALM %s %s (%.1f s total)"), *MapName, bSaved ? TEXT("saved") : TEXT("SAVE FAILED"), FPlatformTime::Seconds() - StartSeconds);

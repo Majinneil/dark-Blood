@@ -11,7 +11,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 4 | Klassen & Skilltrees | ✅ Gameplay (4 Kits, 8 Signaturfähigkeiten, Skilltrees, UI; headless getestet) · 🟡 Animationen/VFX |
 | 5 | Inventar / Loot / Crafting | ✅ Gameplay (Werte, Resistenzen, Verbrauch, Beute, Crafting, Reparatur, UI; headless getestet) · 🟡 Icons/Meshes |
 | 5.5 | Visual Foundation (Codex-Paket) | ✅ Systeme, Materialsystem, Baukasten, Licht, Visual Slice (gerendert + Koop getestet) · 🟡 echte Assets (Texturen, Bäume, MetaHumans, Animationen) |
-| 6 | Open World | 🟡 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, 4 segelbare Schiffe, freie Modelle (gerendert, Segeln + Koop getestet) · ⬜ Weltgestaltung (Wälder, Gras, Klippen, Regionsstimmung), Schwimmen |
+| 6 | Open World | 🟡 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, 4 segelbare Schiffe, freie Modelle, Wälder, Gras (gerendert, Segeln + Koop getestet) · 🟡 Klippen, Steilküsten, Flüsse mit Wasserfällen (geschrieben, nicht gebaut) · ⬜ Regionsstimmung, Schwimmen |
 | 7 | NPC- und Siedlungssimulation | ⬜ |
 | 8 | Reise / Pferde / Kutschen / Survival | ⬜ |
 | 9 | Dungeon-System | ⬜ |
@@ -244,5 +244,28 @@ Einzelspieler und Koop (Kit-Schiff); Stehen auf allen vier Modell-Decks und Sege
 unverändert.
 
 **OFFEN**: 160 FPS auf „Hoch“ nur mit Frame Generation (FSR 3 oder DLSS – Entscheidung des Nutzers); Schwimmen;
-Schiffs-Innenräume und Besatzung; Koop-Test mit den Modell-Schiffen; Startkarten (`GameDefaultMap`) zeigen noch auf
-die Engine-Vorlage; Vasallen-Konzeptblätter unter `References/` sind noch nicht umgesetzt.
+Schiffs-Innenräume und Besatzung; Koop-Test mit den Modell-Schiffen; Vasallen-Konzeptblätter unter `References/` sind
+noch nicht umgesetzt.
+
+**NACHTRAG 2026-10-03/04 – Gras und Wälder**: Landschaftsgras in echter Dichte (Wiese, Waldboden mit Farnen und
+Sträuchern); Bambushaine, Zedern, Ahorn und Kirschen aus freien Modellen, 550 000 Pflanzen und Felsen
+(Editor 65–81 FPS auf „Hoch“ in den Wäldern). Gerendert.
+
+**NACHTRAG 2026-10-04 – Klippen, Steilküsten, Flüsse und Wasserfälle** (in einer Cloud-Sitzung ohne Engine geschrieben:
+**nicht gebaut, Karte nicht neu erzeugt**):
+- Klippenbänder in Nebelbergen, Feuergebirge, Eisöde, Dämonenöde, Vasallenfestung und dem Ende: Stufen aus Terrassen
+  und Felswänden (38 m), in Flecken zwischen natürlichen Graten, die Höhen wandern mit Rauschen. Steilküsten, wo diese
+  Gebiete ans Meer stoßen (Klippenkante 16–36 m statt Strand); die Hafengebiete behalten ihre Ufer.
+- Flüsse als Verläufe mit eigenem Wasserspiegel (`DBRealm::GetRiverCourses`): im Tiefland füllt das Meer das Bett wie
+  bisher, im Hochland folgt der Spiegel dem Gelände und fällt oberhalb von 40 m in 16-m-Stufen – Wasserfälle und
+  Kaskaden. Das Gelände trägt Bett (1,2 m tief, watbar), Ufer, Dämme an Hängen und das Tal; der Builder legt geneigte
+  Wasserflächen darauf (`M_DB_Sea` als `MI_DB_Water_River`, Wasserfälle mit `M_DB_Waterfall`: abwärts laufender
+  Schaum, `Tools/UE58/db_create_river_materials.py`). Felsen an Klippenwänden (zur Neigung gekippt), keine Bäume im Wasser.
+- Fehler behoben: die Flussliste las die mit 0 aufgefüllten Einträge nach dem Endmarker als Kartenpunkt (0,0) – drei
+  Flüsse zogen eine gerade Schlucht bis in die Nordwestecke, eine davon quer über den Kontinent bis zur Ostküste.
+- Startkarte für Spiel und Server ist jetzt `L_Realm` (der Editor öffnet weiter die leichte Vorlage).
+- Geprüft ohne Engine: `DBRealmLayout.cpp` mit Ersatz-Typen und eigenem Perlin-Rauschen kompiliert und ausgewertet
+  (Wasserspiegel steigt nie an; Bett überall unter Wasser bis auf 0,01 %; Wasserkanten über tieferem Boden 0,01 %,
+  höchstens 0,6 m; Siedlungshöhen bis auf die Schneesiedlung −17 m unverändert). Die echte Engine-Rauschfunktion
+  ergibt andere Formen – **vor dem Weiterbauen:** bauen, `db_create_river_materials.py`, `-run=DBBuildRealm -Preview`
+  (Flüsse blau, Wasserfälle weiß in `Saved/Realm/RealmPreview.bmp`), dann die Karte neu erzeugen und ansehen.

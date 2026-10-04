@@ -88,6 +88,17 @@ struct FDBRealmSettlement
 	double ShoreDistance = 0.0;
 };
 
+/** A point of a river course (DBRealm::GetRiverCourses). */
+struct FDBRiverPoint
+{
+	/** World position in meters. */
+	FVector2D Position;
+	/** Height of the water surface in meters; DBRealm::SeaLevel where the sea plane fills the bed (lowlands). */
+	double Water;
+	/** Half width of the flat channel bed in meters. */
+	double HalfWidth;
+};
+
 namespace DBRealm
 {
 	/** The 16 settlements, one of each type, placed in fitting regions. */
@@ -101,8 +112,22 @@ namespace DBRealm
 	DARKBLOOD_API const TArray<FDBRealmRegion>& GetRegions();
 	DARKBLOOD_API const FDBRealmRegion& GetCapital();
 
+	/** Height of the sea plane in meters. */
+	constexpr double SeaLevel = -0.3;
+	/** The water surface of a highland river reaches this far beyond the channel's HalfWidth (the banks rise above it there). */
+	constexpr double RiverSurfaceMargin = 6.0;
+
 	/** Terrain height in meters (sea level = 0; water covers everything below). */
 	DARKBLOOD_API double SampleHeight(double X, double Y);
+
+	/**
+	 * The rivers as courses from the source to the sea, one point every ~6 m. The water level never rises downstream;
+	 * in high ground it falls in steps (waterfalls), in the lowlands it is SeaLevel and the sea plane fills the bed.
+	 */
+	DARKBLOOD_API const TArray<TArray<FDBRiverPoint>>& GetRiverCourses();
+
+	/** True where a highland river's water surface covers ground of this height (no trees or rocks there). */
+	DARKBLOOD_API bool IsUnderRiverWater(double X, double Y, double GroundHeight);
 
 	/** Index into GetRegions() of the region that dominates this position. */
 	DARKBLOOD_API int32 FindRegionIndex(double X, double Y);

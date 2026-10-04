@@ -85,7 +85,7 @@ namespace
 	}
 
 	/** Rivers from the mountains to the sea (map pixels). */
-	const TArray<TArray<FVector2D>>& GetRivers()
+	const TArray<TArray<FVector2D>>& GetRiverPaths()
 	{
 		static const TArray<TArray<FVector2D>> Rivers = []()
 		{
@@ -99,12 +99,14 @@ namespace
 			for (const auto& Path : Paths)
 			{
 				TArray<FVector2D>& River = Result.AddDefaulted_GetRef();
+				// A path ends at {-1, -1}; the entries after it are zero, not map points.
 				for (const auto& Point : Path)
 				{
-					if (Point[0] >= 0.0)
+					if (Point[0] < 0.0)
 					{
-						River.Add(FromMap(Point[0], Point[1]));
+						break;
 					}
+					River.Add(FromMap(Point[0], Point[1]));
 				}
 			}
 			return Result;
@@ -112,23 +114,10 @@ namespace
 		return Rivers;
 	}
 
-	double DistanceToRivers(double X, double Y)
+	/** Meanders: the map's straight course is bent sideways by this offset (the course is where Position + Meander lies on the path). */
+	FVector2D Meander(const FVector2D& Position)
 	{
-		// Meanders: the query point wanders sideways, so the straight course becomes a winding one.
-		const FVector2D P(X + 260.0 * Fbm(X, Y, 900.0, 3, 51.0), Y + 260.0 * Fbm(X, Y, 900.0, 3, 52.0));
-		double Best = TNumericLimits<double>::Max();
-		for (const TArray<FVector2D>& River : GetRivers())
-		{
-			for (int32 Index = 0; Index + 1 < River.Num(); ++Index)
-			{
-				const FVector2D A = River[Index];
-				const FVector2D B = River[Index + 1];
-				const FVector2D AB = B - A;
-				const double T = FMath::Clamp(FVector2D::DotProduct(P - A, AB) / AB.SizeSquared(), 0.0, 1.0);
-				Best = FMath::Min(Best, FVector2D::Distance(P, A + AB * T));
-			}
-		}
-		return Best;
+		return FVector2D(260.0 * Fbm(Position.X, Position.Y, 900.0, 3, 51.0), 260.0 * Fbm(Position.X, Position.Y, 900.0, 3, 52.0));
 	}
 
 	/** Terrain character of one biome in meters (before blending, coast and rivers). */
@@ -192,6 +181,30 @@ namespace
 		case B::TheEnd: Out[6] = 0.6f; Out[7] = 0.1f; Out[2] = 0.3f; break;
 		default: Out[0] = 1.f; break;
 		}
+	}
+
+	/** How much a biome breaks into cliffs (benches with steep risers, sheer coasts): 0 none .. 1 full. */
+	double BiomeCliffs(EDBRealmBiome Biome)
+	{
+		using B = EDBRealmBiome;
+		switch (Biome)
+		{
+		case B::MistMountains: return 1.0;
+		case B::TheEnd: return 1.0;
+		case B::FireMountains: return 0.9;
+		case B::DemonWaste: return 0.8;
+		case B::IceWaste: return 0.7;
+		case B::VassalFortress: return 0.6;
+		default: return 0.0;
+		}
+	}
+
+	/** Cliff bands: the ground steps into benches with steep risers. The levels wander with noise, so no cliff follows a contour line. */
+	double CliffBands(double Height, double X, double Y, double Step)
+	{
+		const double Wander = Step * (0.6 * Fbm(X, Y, 700.0, 3, 61.0) + 0.25 * Fbm(X, Y, 220.0, 2, 65.0));
+		const double Level = (Height + Wander) / Step;
+		return (FMath::FloorToDouble(Level) + Smooth(0.72, 1.0, FMath::Frac(Level))) * Step - Wander;
 	}
 
 	/** Organic region borders: positions are warped by large-scale noise before measuring distances. */
@@ -299,11 +312,19 @@ namespace DBRealm
 		return Height;
 	}
 
-	double SampleRawHeight(double X, double Y)
+	/** Terrain without the rivers: Height before the coast blend and Land (0 = open sea .. 1 = land). */
+	struct FTerrainSample
+	{
+		double Height;
+		double Land;
+	};
+
+	FTerrainSample SampleTerrain(double X, double Y)
 	{
 		const TArray<FDBRealmRegion>& Regions = GetRegions();
 		double Sum = 0.0;
 		double Height = 0.0;
+		double Cliffs = 0.0;
 		double Coverage = -1.0;
 		for (const FDBRealmRegion& Region : Regions)
 		{
@@ -312,19 +333,21 @@ namespace DBRealm
 			{
 				Sum += Weight;
 				Height += Weight * BiomeHeight(Region.Biome, X, Y);
+				Cliffs += Weight * BiomeCliffs(Region.Biome);
 			}
 			Coverage = FMath::Max(Coverage, 1.0 - FVector2D::Distance(Warp(X, Y), Region.Center) / (Region.Radius * 1.65));
 		}
 		Height = Sum > 0.0 ? Height / Sum : 5.0;
+		Cliffs = Sum > 0.0 ? Cliffs / Sum : 0.0;
+
+		// Cliff bands in the mountains: patches of benches and walls between stretches of natural ridges. Only where the
+		// mountains dominate - half-strength bands along region borders would read as contour lines.
+		const double CliffPatches = Smooth(-0.1, 0.25, Fbm(X, Y, 1600.0, 3, 62.0));
+		Height = FMath::Lerp(Height, CliffBands(Height, X, Y, 38.0), Smooth(0.35, 0.75, Cliffs) * CliffPatches);
 
 		// The capital stands on a flat plateau (the story start and the visual slice are built there).
 		const double CapitalDistance = FVector2D::Distance(FVector2D(X, Y), GetCapital().Center);
 		Height = FMath::Lerp(70.0, Height, Smooth(CapitalFlatRadius, CapitalFlatRadius * 2.4, CapitalDistance));
-
-		// Rivers: a bed below sea level in the lowlands (the sea plane fills it); in high land a gorge 80 m deep.
-		const double River = DistanceToRivers(X, Y) + 25.0 * Fbm(X, Y, 300.0, 3, 21.0);
-		const double Bed = FMath::Max(-3.0, Height - 80.0);
-		Height = FMath::Lerp(Bed, Height, Smooth(18.0, 190.0, River));
 
 		// Coast: a ragged island in the sea with bays and headlands, open water along the realm border.
 		Coverage += 0.28 * Fbm(X, Y, 1800.0, 4, 22.0) + 0.14 * Fbm(X, Y, 500.0, 3, 23.0);
@@ -338,8 +361,217 @@ namespace DBRealm
 		}
 		const double Border = FMath::Min(HalfSize - FMath::Abs(X), HalfSize - FMath::Abs(Y));
 		Coverage = FMath::Min(Coverage, Border / 2600.0 - 0.3 + 0.2 * Fbm(X, Y, 1200.0, 3, 24.0));
-		const double Land = Smooth(0.0, 0.22, Coverage);
-		return FMath::Lerp(-38.0, Height, Land);
+
+		// Sheer coasts where the cliff regions meet the sea: the land rises to a cliff top and ends in a wall instead of
+		// a beach. The harbor regions (capital, coast, riverlands) have no cliff factor and keep their shores.
+		const double Sheer = FMath::Clamp(Cliffs * 1.4, 0.0, 1.0) * Smooth(-0.05, 0.3, Fbm(X, Y, 1300.0, 3, 63.0));
+		const double CliffTop = 16.0 + 20.0 * (0.5 + 0.5 * Fbm(X, Y, 400.0, 3, 64.0));
+		Height = FMath::Lerp(Height, FMath::Max(Height, CliffTop * Smooth(0.12, 0.02, Coverage)), Sheer);
+		const double Land = FMath::Lerp(Smooth(0.0, 0.22, Coverage), Smooth(0.0, 0.005, Coverage), Sheer);
+		return {Height, Land};
+	}
+
+	double ApplyCoast(const FTerrainSample& Terrain)
+	{
+		return FMath::Lerp(-38.0, Terrain.Height, Terrain.Land);
+	}
+
+	// ---- Rivers ----------------------------------------------------------------------------------------------------
+	// Each river becomes a course of points in world space (the map path bent by the meanders) with a water level that
+	// only falls downstream. In the lowlands the water is the sea plane in a bed below sea level; in high ground the level
+	// follows the terrain and drops in steps of RiverFallStep - the waterfalls. The terrain carves a channel below that
+	// level, the realm builder lays the water surface on it (GetRiverCourses).
+
+	constexpr double RiverSpacing = 6.0;
+	/** Water depth over the channel bed: wadeable, as long as there is no swimming. */
+	constexpr double RiverDepth = 1.2;
+	/** Above this water level the river runs in steps (pools and waterfalls); below it the level follows the ground. */
+	constexpr double RiverFallStart = 40.0;
+	constexpr double RiverFallStep = 16.0;
+	/** Water levels below this height are left to the sea plane (lowland rivers). */
+	constexpr double RiverLowland = 2.5;
+	/** Distance from a course within which the river shapes the terrain (channel, valley and the noise on it). */
+	constexpr double RiverReach = 270.0;
+	constexpr double RiverCell = 100.0;
+
+	struct FRiverSegmentRef
+	{
+		int32 Course;
+		int32 Index;
+	};
+
+	struct FRiverSystem
+	{
+		TArray<TArray<FDBRiverPoint>> Courses;
+		/** Segments within RiverReach of each RiverCell x RiverCell cell. */
+		TArray<TArray<FRiverSegmentRef>> Cells;
+		int32 CellsPerSide = 0;
+	};
+
+	FRiverSystem BuildRiverSystem()
+	{
+		FRiverSystem System;
+		for (const TArray<FVector2D>& Path : GetRiverPaths())
+		{
+			TArray<FDBRiverPoint>& Course = System.Courses.AddDefaulted_GetRef();
+			TArray<double> Distances;
+			double Lowest = TNumericLimits<double>::Max();
+			double Travelled = 0.0;
+			for (int32 Index = 0; Index + 1 < Path.Num(); ++Index)
+			{
+				const FVector2D A = Path[Index];
+				const FVector2D B = Path[Index + 1];
+				const int32 Steps = FMath::Max(1, FMath::CeilToInt(FVector2D::Distance(A, B) / RiverSpacing));
+				const bool bLastSegment = Index + 2 == Path.Num();
+				for (int32 Step = 0; Step < Steps + (bLastSegment ? 1 : 0); ++Step)
+				{
+					// The world position whose meandered position is this path point (fixed point; the meander is smooth).
+					const FVector2D OnPath = A + (B - A) * (static_cast<double>(Step) / Steps);
+					FVector2D Position = OnPath;
+					for (int32 Iteration = 0; Iteration < 8; ++Iteration)
+					{
+						Position = OnPath - Meander(Position);
+					}
+					const double Ground = ApplyCoast(SampleTerrain(Position.X, Position.Y));
+					Lowest = FMath::Min(Lowest, Ground - RiverDepth);
+					double Water = Lowest;
+					if (Water > RiverFallStart)
+					{
+						Water = RiverFallStart + FMath::FloorToDouble((Water - RiverFallStart) / RiverFallStep) * RiverFallStep;
+					}
+					if (Water < RiverLowland)
+					{
+						Water = SeaLevel;
+					}
+					if (!Course.IsEmpty())
+					{
+						Travelled += FVector2D::Distance(Course.Last().Position, Position);
+					}
+					Course.Add({Position, Water, 0.0});
+					Distances.Add(Travelled);
+				}
+			}
+			// The channel widens downstream.
+			for (int32 Index = 0; Index < Course.Num(); ++Index)
+			{
+				Course[Index].HalfWidth = 8.0 + 14.0 * Distances[Index] / FMath::Max(Travelled, 1.0);
+			}
+		}
+
+		System.CellsPerSide = FMath::CeilToInt(2.0 * HalfSize / RiverCell);
+		System.Cells.SetNum(System.CellsPerSide * System.CellsPerSide);
+		auto CellOf = [&System](double Meters) { return FMath::Clamp(FMath::FloorToInt((Meters + HalfSize) / RiverCell), 0, System.CellsPerSide - 1); };
+		for (int32 CourseIndex = 0; CourseIndex < System.Courses.Num(); ++CourseIndex)
+		{
+			const TArray<FDBRiverPoint>& Course = System.Courses[CourseIndex];
+			for (int32 Index = 0; Index + 1 < Course.Num(); ++Index)
+			{
+				const FVector2D A = Course[Index].Position;
+				const FVector2D B = Course[Index + 1].Position;
+				const int32 MinX = CellOf(FMath::Min(A.X, B.X) - RiverReach);
+				const int32 MaxX = CellOf(FMath::Max(A.X, B.X) + RiverReach);
+				const int32 MinY = CellOf(FMath::Min(A.Y, B.Y) - RiverReach);
+				const int32 MaxY = CellOf(FMath::Max(A.Y, B.Y) + RiverReach);
+				for (int32 CellY = MinY; CellY <= MaxY; ++CellY)
+				{
+					for (int32 CellX = MinX; CellX <= MaxX; ++CellX)
+					{
+						System.Cells[CellY * System.CellsPerSide + CellX].Add({CourseIndex, Index});
+					}
+				}
+			}
+		}
+		return System;
+	}
+
+	const FRiverSystem& GetRiverSystem()
+	{
+		static const FRiverSystem System = BuildRiverSystem();
+		return System;
+	}
+
+	struct FRiverHit
+	{
+		/** Distance to the nearest course in meters. */
+		double Distance = TNumericLimits<double>::Max();
+		/** Water level and channel half width at the nearest point of that course. */
+		double Water = SeaLevel;
+		double HalfWidth = 0.0;
+	};
+
+	bool FindNearestRiver(double X, double Y, FRiverHit& OutHit)
+	{
+		const FRiverSystem& System = GetRiverSystem();
+		const int32 CellX = FMath::FloorToInt((X + HalfSize) / RiverCell);
+		const int32 CellY = FMath::FloorToInt((Y + HalfSize) / RiverCell);
+		if (CellX < 0 || CellY < 0 || CellX >= System.CellsPerSide || CellY >= System.CellsPerSide)
+		{
+			return false;
+		}
+		const FVector2D P(X, Y);
+		bool bFound = false;
+		for (const FRiverSegmentRef& Ref : System.Cells[CellY * System.CellsPerSide + CellX])
+		{
+			const FDBRiverPoint& A = System.Courses[Ref.Course][Ref.Index];
+			const FDBRiverPoint& B = System.Courses[Ref.Course][Ref.Index + 1];
+			const FVector2D AB = B.Position - A.Position;
+			const double T = FMath::Clamp(FVector2D::DotProduct(P - A.Position, AB) / FMath::Max(AB.SizeSquared(), 1e-6), 0.0, 1.0);
+			const double Distance = FVector2D::Distance(P, A.Position + AB * T);
+			if (Distance < OutHit.Distance)
+			{
+				OutHit.Distance = Distance;
+				OutHit.Water = FMath::Lerp(A.Water, B.Water, T);
+				OutHit.HalfWidth = FMath::Lerp(A.HalfWidth, B.HalfWidth, T);
+				bFound = true;
+			}
+		}
+		return bFound;
+	}
+
+	/** Terrain height with the rivers cut in (and the coast applied). */
+	double CarveRivers(double X, double Y, const FTerrainSample& Terrain)
+	{
+		FRiverHit Hit;
+		if (!FindNearestRiver(X, Y, Hit))
+		{
+			return ApplyCoast(Terrain);
+		}
+		const double Valley = Hit.Distance + 25.0 * Fbm(X, Y, 300.0, 3, 21.0);
+		// Lowland: a bed below sea level that the sea plane fills; under higher ground a gorge 80 m deep.
+		const double LowlandBed = FMath::Lerp(FMath::Max(-3.0, Terrain.Height - 80.0), Terrain.Height, Smooth(18.0, 190.0, Valley));
+		const double Lowland = ApplyCoast({LowlandBed, Terrain.Land});
+		if (Hit.Water < RiverLowland)
+		{
+			return Lowland;
+		}
+		// High ground: a flat bed RiverDepth below the water and banks that hold it - they stand above the water from about
+		// HalfWidth + 3 m on, inside the water surface mesh (HalfWidth + RiverSurfaceMargin) - then a valley opening up to
+		// the terrain. Where the course crosses a slope, the downhill bank is a levee that falls back to the ground.
+		const double Ground = ApplyCoast(Terrain);
+		const double Rim = Hit.Water + 1.5;
+		const double Bank = Ground >= Rim ? Rim + (Ground - Rim) * Smooth(Hit.HalfWidth + 8.0, 190.0, Valley)
+										  : FMath::Lerp(Rim, Ground, Smooth(Hit.HalfWidth + 10.0, Hit.HalfWidth + 50.0, Hit.Distance));
+		const double Channel = FMath::Lerp(Hit.Water - RiverDepth, Bank, Smooth(Hit.HalfWidth, Hit.HalfWidth + 6.0, Hit.Distance));
+		const double Highland = FMath::Lerp(Channel, Ground, Smooth(190.0, 260.0, Valley));
+		// The step from the last highland point down to the sea plane lies within one segment.
+		return FMath::Lerp(Lowland, Highland, Smooth(SeaLevel, RiverLowland, Hit.Water));
+	}
+
+	double SampleRawHeight(double X, double Y)
+	{
+		return CarveRivers(X, Y, SampleTerrain(X, Y));
+	}
+
+	const TArray<TArray<FDBRiverPoint>>& GetRiverCourses()
+	{
+		return GetRiverSystem().Courses;
+	}
+
+	bool IsUnderRiverWater(double X, double Y, double GroundHeight)
+	{
+		FRiverHit Hit;
+		return FindNearestRiver(X, Y, Hit) && Hit.Water >= RiverLowland && Hit.Distance < Hit.HalfWidth + RiverSurfaceMargin
+			   && GroundHeight < Hit.Water + 0.5;
 	}
 
 	int32 FindRegionIndex(double X, double Y)
