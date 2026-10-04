@@ -76,6 +76,7 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_SkillTree, "Input.UI.SkillTree", "Open/close the skill tree.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_Inventory, "Input.UI.Inventory", "Open/close the inventory.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_Settings, "Input.UI.Settings", "Open/close the graphics settings.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_Map, "Input.UI.Map", "Open/close the world map.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage", "Base damage passed into the damage execution.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_PoiseDamage, "SetByCaller.PoiseDamage", "Poise damage passed into the damage execution.");

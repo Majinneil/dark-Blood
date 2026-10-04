@@ -73,7 +73,11 @@ Karte: 16 Landscape-Kacheln (4 m Raster, 8 Bodenschichten `M_DB_Realm_Landscape`
 deren Dichtekarten zur Laufzeit auf der GPU entstehen: `grass.GrassMap.UseRuntimeGeneration=1`),
 164 000 Bäume und Felsen in 1-km-Zellen (`ADBRealmVegetation`, Nanite), Meer auf Höhe 0. Nanite-Landscape ist
 möglich (`-Nanite`), braucht aber ~590 MB pro Kachel und mehr Speicher als 32 GB beim Bauen – daher aus.
-Testbefehl `DBTravel <Region|Siedlung>`.
+Testbefehl `DBTravel <Region|Siedlung>` (z. B. `DBTravel Hauptstadt` für die Stadt, `DBTravel Capital` für die Plateaumitte).
+
+**Weltkarte `[M]`** (Gamepad: Steuerkreuz links): die gemalte Weltkarte (`/Game/DarkBlood/UI/Map/T_WorldMap`, Import mit
+`Tools/UE58/db_import_world_map.py`) auf den Kontinent zugeschnitten, mit eigenem Pfeil (Blickrichtung), Mitspielern,
+Siedlungen und aktuellem Gebiet. Positionen nutzen dieselbe Projektion, aus der das Layout entstand (`DBRealm::ToMapPixel`).
 
 ## Regionen im Code
 

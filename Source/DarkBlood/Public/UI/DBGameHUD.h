@@ -31,6 +31,9 @@ public:
 
 	void ToggleInventory();
 
+	/** World map [M]. */
+	void ToggleMap();
+
 	/** Graphics settings [F10]. */
 	void ToggleSettings();
 	void ShowCrafting(AActor* Station);
@@ -49,6 +52,7 @@ private:
 	TSharedPtr<SWidget> SkillTreeRoot;
 	TSharedPtr<SWidget> InventoryRoot;
 	TSharedPtr<SWidget> SettingsRoot;
+	TSharedPtr<SWidget> MapRoot;
 	TSharedPtr<SDBCraftingWidget> CraftingWidget;
 	FDelegateHandle DialogueHandle;
 	bool bUIReady = false;

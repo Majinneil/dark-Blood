@@ -16,6 +16,7 @@
 #include "UI/SDBInventoryWidget.h"
 #include "UI/SDBSettingsWidget.h"
 #include "UI/SDBSkillTreeWidget.h"
+#include "UI/SDBWorldMapWidget.h"
 #include "Widgets/SWeakWidget.h"
 
 void ADBGameHUD::BeginPlay()
@@ -90,6 +91,10 @@ void ADBGameHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		if (InventoryRoot.IsValid())
 		{
 			Viewport->RemoveViewportWidgetContent(InventoryRoot.ToSharedRef());
+		}
+		if (MapRoot.IsValid())
+		{
+			Viewport->RemoveViewportWidgetContent(MapRoot.ToSharedRef());
 		}
 		if (CraftingWidget.IsValid())
 		{
@@ -202,6 +207,26 @@ void ADBGameHUD::ToggleInventory()
 	UpdateInputMode();
 }
 
+void ADBGameHUD::ToggleMap()
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	if (!bUIReady || !Viewport || CreatorRoot.IsValid())
+	{
+		return;
+	}
+	if (MapRoot.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(MapRoot.ToSharedRef());
+		MapRoot.Reset();
+	}
+	else
+	{
+		MapRoot = SNew(SDBWorldMapWidget).Owner(GetOwningPlayerController());
+		Viewport->AddViewportWidgetContent(MapRoot.ToSharedRef(), 45);
+	}
+	UpdateInputMode();
+}
+
 void ADBGameHUD::ToggleSettings()
 {
 	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
@@ -279,7 +304,8 @@ void ADBGameHUD::UpdateInputMode()
 	{
 		return;
 	}
-	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || SettingsRoot.IsValid() || CraftingWidget.IsValid())
+	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || SettingsRoot.IsValid() || CraftingWidget.IsValid()
+		|| MapRoot.IsValid())
 	{
 		// Mouse for the option buttons; keys 1-4 and E keep working through game input.
 		FInputModeGameAndUI Mode;

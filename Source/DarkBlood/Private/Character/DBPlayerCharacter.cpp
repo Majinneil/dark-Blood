@@ -267,7 +267,8 @@ void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 		Interaction->TryInteract();
 		return;
 	}
-	if (InputTag == DBTags::Input_UI_SkillTree || InputTag == DBTags::Input_UI_Inventory || InputTag == DBTags::Input_UI_Settings)
+	if (InputTag == DBTags::Input_UI_SkillTree || InputTag == DBTags::Input_UI_Inventory || InputTag == DBTags::Input_UI_Settings
+		|| InputTag == DBTags::Input_UI_Map)
 	{
 		if (const APlayerController* PC = GetController<APlayerController>())
 		{
@@ -276,6 +277,10 @@ void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 				if (InputTag == DBTags::Input_UI_Settings)
 				{
 					GameHUD->ToggleSettings();
+				}
+				else if (InputTag == DBTags::Input_UI_Map)
+				{
+					GameHUD->ToggleMap();
 				}
 				else
 				{

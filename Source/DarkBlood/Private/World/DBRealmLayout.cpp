@@ -3,9 +3,12 @@
 namespace
 {
 	// World map (1536 px wide image): the continent spans x 200..1480 px and y 0..700 px.
+	const FVector2D MapCenterPx(840.0, 350.0);
+	const FVector2D MetersPerPx(12.7, 23.2);
+
 	FVector2D FromMap(double Px, double Py)
 	{
-		return FVector2D((Px - 840.0) * 12.7, (Py - 350.0) * 23.2);
+		return (FVector2D(Px, Py) - MapCenterPx) * MetersPerPx;
 	}
 
 	double Noise(double X, double Y)
@@ -440,5 +443,10 @@ namespace DBRealm
 	{
 		static const TCHAR* Names[] = {TEXT("Meadow"), TEXT("Forest"), TEXT("Rock"), TEXT("Snow"), TEXT("Sand"), TEXT("Soil"), TEXT("Corrupt"), TEXT("Lava")};
 		return Names[FMath::Clamp(static_cast<int32>(Layer), 0, 7)];
+	}
+
+	FVector2D ToMapPixel(const FVector2D& Meters)
+	{
+		return Meters / MetersPerPx + MapCenterPx;
 	}
 }

@@ -111,4 +111,10 @@ namespace DBRealm
 	DARKBLOOD_API void SampleLayers(double X, double Y, double Height, double NormalZ, uint8 OutWeights[static_cast<int32>(EDBRealmLayer::Count)]);
 
 	DARKBLOOD_API const TCHAR* GetLayerName(EDBRealmLayer Layer);
+
+	/** Size of the world map image the layout follows (docs/VisualPack/Reference/DarkBlood_Weltkarte.png). */
+	inline const FVector2D MapImageSize(1536.0, 1024.0);
+
+	/** Pixel of the world map image for a position in meters (inverse of the layout's map projection). */
+	DARKBLOOD_API FVector2D ToMapPixel(const FVector2D& Meters);
 }
