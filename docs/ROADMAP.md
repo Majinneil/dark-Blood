@@ -12,8 +12,8 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 5 | Inventar / Loot / Crafting | ✅ Gameplay (Werte, Resistenzen, Verbrauch, Beute, Crafting, Reparatur, UI; headless getestet) · 🟡 Icons/Meshes |
 | 5.5 | Visual Foundation (Codex-Paket) | ✅ Systeme, Materialsystem, Baukasten, Licht, Visual Slice (gerendert + Koop getestet) · 🟡 echte Assets (Texturen, Bäume, MetaHumans, Animationen) |
 | 6 | Open World | ✅ 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, Schiffe, Wälder/Gras, Weltkarte `[M]`, Schwimmen, Regionsstimmung (gerendert + Koop getestet) · 🟡 Klippen/Wasserfälle/Inselküsten → Phase 11/17 |
-| 7 | NPC- und Siedlungssimulation | ⬜ |
-| 8 | Reise / Pferde / Kutschen / Survival | ⬜ |
+| 7 | NPC- und Siedlungssimulation | ✅ Gameplay (17 Siedlungen abstrakt simuliert + gespeichert, Dorfbewohner, Angriffe als Kämpfe; Regelkern + headless getestet) · 🟡 Mass-Mengen, Tagesabläufe, Händler, Animationen |
+| 8 | Reise / Pferde / Kutschen / Survival | ✅ Gameplay (Pferd, Kutschen-Schnellreise, Sättigung/Wärme, Schwimm-Ausdauer; Regelkern, headless, Koop getestet) · 🟡 Modelle/Animationen |
 | 9 | Dungeon-System | ⬜ |
 | 10 | Boss-Framework | ⬜ |
 | 11 | 14 Regionen | ⬜ |

@@ -103,6 +103,7 @@ public:
 	UFUNCTION(Exec) void DBWalk(float Yaw, float Seconds);
 	/** Settlement simulation: state of every settlement / let game hours pass / demon attack fight in a settlement. */
 	UFUNCTION(Exec) void DBDumpSettlements();
+	UFUNCTION(Exec) void DBDumpVillagers();
 	UFUNCTION(Exec) void DBSkipHours(float Hours);
 	UFUNCTION(Exec) void DBSettlementAttack(const FString& Settlement);
 	/** Survival: set satiety and warmth (0..100). */

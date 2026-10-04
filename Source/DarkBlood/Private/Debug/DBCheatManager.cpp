@@ -9,6 +9,7 @@
 #include "Character/DBNpcCharacter.h"
 #include "Character/DBPlayerCharacter.h"
 #include "Character/DBTrainingDummy.h"
+#include "Character/DBVillagerCharacter.h"
 #include "Combat/DBCombatStatics.h"
 #include "Combat/DBLockOnComponent.h"
 #include "Dialogue/DBDialogueComponent.h"
@@ -979,6 +980,20 @@ void UDBCheatManager::DBSurvival(float Satiety, float Warmth)
 	{
 		PlayerState->GetSurvival()->SetValues(Satiety, Warmth);
 	}
+}
+
+void UDBCheatManager::DBDumpVillagers()
+{
+	if (ForwardToServer(TEXT("DBDumpVillagers"))) return;
+	int32 Count = 0;
+	for (TActorIterator<ADBVillagerCharacter> It(GetWorld()); It; ++It)
+	{
+		const FVector Meters = It->GetActorLocation() / 100.0;
+		UE_LOG(LogDBWorld, Display, TEXT("  villager %-8s of %-12s at %.1f / %.1f m, speed %.0f cm/s"), *It->GetCombatDisplayName(), *It->GetSettlementId().ToString(),
+			Meters.X, Meters.Y, It->GetVelocity().Size2D());
+		++Count;
+	}
+	UE_LOG(LogDBWorld, Display, TEXT("DBDumpVillagers: %d"), Count);
 }
 
 void UDBCheatManager::DBSkipHours(float Hours)
