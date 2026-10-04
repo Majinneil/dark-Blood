@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DarkBloodCharacterVisualProfile",
+  "type": "object",
+  "required": ["id", "qualityTier", "bodyPreset", "facePreset"],
+  "properties": {
+    "id": {"type": "string"},
+    "qualityTier": {"enum": ["PLAYER", "HERO", "IMPORTANT_NPC", "CROWD"]},
+    "bodyPreset": {"type": "string"},
+    "facePreset": {"type": "string"},
+    "skinPreset": {"type": "string"},
+    "hairId": {"type": "string"},
+    "beardId": {"type": "string"},
+    "eyeColorId": {"type": "string"},
+    "scarIds": {"type": "array", "items": {"type": "string"}},
+    "outfitSetId": {"type": "string"},
+    "armorSetId": {"type": "string"},
+    "materialVariantId": {"type": "string"}
+  }
+}

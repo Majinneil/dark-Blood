@@ -1,0 +1,37 @@
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+.vs/
+.vscode/
+.idea/
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+
+# Rules core standalone build
+/build/
+/Tests/RulesTests/build/
+CMakeFiles/
+CMakeCache.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Engine template content copied locally by Tools/UE58/Setup-DevMannequin.ps1 (not redistributed)
+Content/Characters/Mannequins/
+Content/DarkBlood/Dev/Mannequin/
+
+# Raw downloads (Tools/UE58/polyhaven_fetch.py); the imported assets live in Content/DarkBlood/Art
+SourceArt/
+# Fab Standard-license animations: imported locally from each developer's own Fab library (Tools/UE58/db_import_fab.py)
+Content/DarkBlood/Dev/FabAnims/
+Content/DarkBlood/Dev/FabWeapons/
