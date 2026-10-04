@@ -9,6 +9,7 @@
 
 class ADBModularBuilding;
 class FDBArtBatcher;
+class UDBRealmMoodComponent;
 class UInstancedStaticMeshComponent;
 
 /** Shared house geometry of a block of a settlement's houses: one instanced component per mesh / material / collision,
@@ -72,6 +73,10 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FDBRealmSiteActors> Sites;
+
+	/** Region fog, sun and grading under the local camera. */
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")
+	TObjectPtr<UDBRealmMoodComponent> Mood;
 
 	float RegionTimer = 0.f;
 	float StreamTimer = 0.f;

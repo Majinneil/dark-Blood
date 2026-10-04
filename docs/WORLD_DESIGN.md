@@ -81,6 +81,12 @@ deren Dichtekarten zur Laufzeit auf der GPU entstehen: `grass.GrassMap.UseRuntim
 möglich (`-Nanite`), braucht aber ~590 MB pro Kachel und mehr Speicher als 32 GB beim Bauen – daher aus.
 Testbefehl `DBTravel <Region|Siedlung>` (z. B. `DBTravel Hauptstadt` für die Stadt, `DBTravel Capital` für die Plateaumitte).
 
+**Regionsstimmung:** `UDBRealmMoodComponent` am `ADBRealmDirector` färbt Nebel (Dichte, Farbe), Sonne (Stärke, Farbe) und
+Farbkorrektur (Sättigung, Gain, Vignette; eigenes ungebundenes Post-Process-Volumen mit Priorität −1) nach dem Gebiet unter
+der lokalen Kamera und blendet beim Grenzübertritt über ~2,5 s über – z. B. rote Asche im Feuergebirge, Nebel im Wald der
+Geister, blutroter Dunst über der Dämonenöde und Dem Ende, kühles Licht in der Eisöde. Lokal auf jedem Rechner, nichts
+repliziert. Gemessen: 80–85 FPS (Eisöde, Feuergebirge, 1600×900).
+
 **Weltkarte `[M]`** (Gamepad: Steuerkreuz links): die gemalte Weltkarte (`/Game/DarkBlood/UI/Map/T_WorldMap`, Import mit
 `Tools/UE58/db_import_world_map.py`) auf den Kontinent zugeschnitten, mit eigenem Pfeil (Blickrichtung), Mitspielern,
 Siedlungen und aktuellem Gebiet. Positionen nutzen dieselbe Projektion, aus der das Layout entstand (`DBRealm::ToMapPixel`).
