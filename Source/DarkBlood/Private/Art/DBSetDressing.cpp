@@ -934,7 +934,8 @@ void ADBAmbientFx::Build(FDBArtBatcher& Batcher)
 		P.Sway = Random.FRandRange(20.f, 80.f);
 		P.SwayRate = Random.FRandRange(0.6f, 1.6f);
 		P.Size = bPetal ? Random.FRandRange(0.05f, 0.08f) : (Kind == EDBAmbientFx::Fireflies ? Random.FRandRange(0.035f, 0.05f) : Random.FRandRange(0.025f, 0.045f));
-		Batcher.Mesh(Mesh, UDBArtMaterialSubsystem::Get(Material), FTransform(P.Base));
+		// Spawn at particle size: swarms away from the camera are never animated and must not stay 1 m meshes.
+		Batcher.Mesh(Mesh, UDBArtMaterialSubsystem::Get(Material), FTransform(FRotator::ZeroRotator, P.Base, FVector(P.Size)));
 	}
 	if (Pieces.Num() > 0)
 	{
