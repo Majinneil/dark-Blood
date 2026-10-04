@@ -4,6 +4,7 @@
 #include "Art/DBArtBuilder.h"
 #include "Art/DBModelLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Character/DBHorse.h"
 #include "Character/DBLesserDemon.h"
 #include "Character/DBNpcCharacter.h"
 #include "Character/DBPlayerCharacter.h"
@@ -25,6 +26,7 @@
 #include "PrimitiveSceneProxy.h"
 #include "UObject/UObjectIterator.h"
 #include "Settings/DBGameUserSettings.h"
+#include "World/DBCarriageStation.h"
 #include "World/DBRealmDirector.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBSettlementLifeComponent.h"
@@ -43,6 +45,7 @@
 #include "Inventory/DBInventoryComponent.h"
 #include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
+#include "Player/DBSurvivalComponent.h"
 #include "Player/DBProgressionComponent.h"
 #include "Quest/DBQuestComponent.h"
 #include "Quest/DBQuestSubsystem.h"
@@ -266,6 +269,14 @@ void UDBCheatManager::DBDumpCharacter()
 		Progression->GetXpIntoLevel(), Progression->GetXpToNextLevel(), Progression->GetUnspentSkillPoints(), Progression->GetPowerRating());
 	UE_LOG(LogDarkBlood, Display, TEXT("Currency %lld Mon, pending deliveries %d, region %s"), Inventory->GetCurrency(),
 		Inventory->GetPendingDeliveryCount(), *PlayerState->GetCurrentRegionId().ToString());
+	if (const UDBSurvivalComponent* Survival = PlayerState->GetSurvival())
+	{
+		const UAbilitySystemComponent* ASC = PlayerState->GetAbilitySystemComponent();
+		UE_LOG(LogDarkBlood, Display, TEXT("Survival: satiety %.0f warmth %.0f status 0x%02x cold %.2f, stamina regen %.2f/s, health regen %.2f/s"),
+			Survival->GetSatiety(), Survival->GetWarmth(), Survival->GetStatus(), Survival->GetColdExposure(),
+			ASC ? ASC->GetNumericAttribute(UDBAttributeSet::GetStaminaRegenAttribute()) : 0.f,
+			ASC ? ASC->GetNumericAttribute(UDBAttributeSet::GetHealthRegenAttribute()) : 0.f);
+	}
 	if (const UAbilitySystemComponent* ASC = PlayerState->GetAbilitySystemComponent())
 	{
 		UE_LOG(LogDarkBlood, Display, TEXT("Stats: HP %.0f  AP %.1f  SP %.1f  Armor %.1f  Crit %.2f  FireRes %.2f  SpiritRes %.2f"),
@@ -857,14 +868,30 @@ void UDBCheatManager::DBWalk(float Yaw, float Seconds)
 	const TWeakObjectPtr<ACharacter> WeakCharacter = Character;
 	const TSharedRef<FTimerHandle> Handle = MakeShared<FTimerHandle>();
 	UE_LOG(LogDarkBlood, Display, TEXT("DBWalk: yaw %.0f for %.1f s"), Yaw, Seconds);
-	GetWorld()->GetTimerManager().SetTimer(*Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakCharacter, Direction, EndTime, Handle]()
+	GetWorld()->GetTimerManager().SetTimer(*Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakCharacter, Direction, Yaw, EndTime, Handle]()
 	{
+		ADBPlayerCharacter* Player = Cast<ADBPlayerCharacter>(WeakCharacter.Get());
+		const ADBHorse* Horse = ADBHorse::FindRiddenBy(Player);
 		if (WeakCharacter.IsValid() && GetWorld()->GetTimeSeconds() < EndTime)
 		{
-			WeakCharacter->AddMovementInput(Direction);
+			// In the saddle the same input steers the horse (forward, relative to the given yaw).
+			if (Horse && Player)
+			{
+				Player->ServerSteerHorse(FVector2D(0.f, 1.f), Yaw);
+			}
+			else
+			{
+				WeakCharacter->AddMovementInput(Direction);
+			}
 			return;
 		}
 		GetWorld()->GetTimerManager().ClearTimer(*Handle);
+		if (Horse && Player)
+		{
+			Player->ServerSteerHorse(FVector2D::ZeroVector, Yaw);
+			UE_LOG(LogDarkBlood, Display, TEXT("DBWalk: riding, horse speed %.0f cm/s, stamina %.0f, %s at %s"), Horse->GetVelocity().Size2D(), Horse->GetHorseStamina(),
+				*StaticEnum<EMovementMode>()->GetNameStringByValue(Horse->GetCharacterMovement()->MovementMode), *(Horse->GetActorLocation() / 100.0).ToString());
+		}
 		if (WeakCharacter.IsValid())
 		{
 			const FVector Meters = WeakCharacter->GetActorLocation() / 100.0;
@@ -900,6 +927,57 @@ void UDBCheatManager::DBDumpSettlements()
 			*Name, S.RegionId.c_str(), S.GetPopulation(), S.Children, S.Adults, S.Elders, S.Guards, S.Stocks.Food, S.Stocks.Wood, S.Stocks.Stone,
 			S.Stocks.Money, S.Prosperity, S.Security, S.Threat, Worst, Levels, static_cast<int32>(S.Projects.size()), Villagers,
 			S.bStoryProtected ? TEXT(" [story]") : TEXT(""));
+	}
+}
+
+void UDBCheatManager::DBCarriage(const FString& Destination)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBCarriage %s"), *Destination))) return;
+	APlayerController* Controller = GetOuterAPlayerController();
+	const APawn* Pawn = Controller->GetPawn();
+	const TArray<FDBRealmSettlement>& Settlements = DBRealm::GetSettlements();
+	int32 Target = INDEX_NONE;
+	for (int32 Index = 0; Index < Settlements.Num() && Target == INDEX_NONE; ++Index)
+	{
+		Target = FString(Settlements[Index].Name).StartsWith(Destination, ESearchCase::IgnoreCase) ? Index : INDEX_NONE;
+	}
+	// The nearest station; testing walks the player there first.
+	ADBCarriageStation* Nearest = nullptr;
+	for (TActorIterator<ADBCarriageStation> It(GetWorld()); It && Pawn; ++It)
+	{
+		if (!Nearest || FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation()) < FVector::Dist(Nearest->GetActorLocation(), Pawn->GetActorLocation()))
+		{
+			Nearest = *It;
+		}
+	}
+	FText Reason;
+	const bool bTravelled = Nearest && Nearest->Travel(Controller, Target, Reason);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBCarriage %s: %s"), *Destination, bTravelled ? TEXT("ok") : *Reason.ToString());
+}
+
+void UDBCheatManager::DBRide()
+{
+	if (ForwardToServer(TEXT("DBRide"))) return;
+	APlayerController* Controller = GetOuterAPlayerController();
+	APawn* Pawn = Controller->GetPawn();
+	ADBHorse* Horse = ADBHorse::FindRiddenBy(Pawn);
+	if (!Horse)
+	{
+		Horse = ADBHorse::CallHorse(Pawn);
+	}
+	if (Horse)
+	{
+		Horse->Interact(Controller);
+		UE_LOG(LogDarkBlood, Display, TEXT("DBRide: %s"), ADBHorse::FindRiddenBy(Pawn) ? TEXT("mounted") : TEXT("dismounted"));
+	}
+}
+
+void UDBCheatManager::DBSurvival(float Satiety, float Warmth)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBSurvival %f %f"), Satiety, Warmth))) return;
+	if (ADBPlayerState* PlayerState = GetDBPlayerState(); PlayerState && PlayerState->GetSurvival())
+	{
+		PlayerState->GetSurvival()->SetValues(Satiety, Warmth);
 	}
 }
 

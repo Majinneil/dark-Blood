@@ -141,6 +141,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float HealAmount = 0.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float StaminaAmount = 0.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float ManaAmount = 0.f;
+	/** Food: satiety restored (survival, 0..100). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable") float SatietyAmount = 0.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bag")
 	bool bIsBag = false;

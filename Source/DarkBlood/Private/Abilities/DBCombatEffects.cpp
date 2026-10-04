@@ -65,6 +65,23 @@ UDBHealEffect::UDBHealEffect()
 	Modifiers.Add(SetByCallerModifier(UDBAttributeSet::GetHealthAttribute()));
 }
 
+UDBSurvivalEffect::UDBSurvivalEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	auto Multiply = [this](const FGameplayAttribute& Attribute, const FGameplayTag& Tag)
+	{
+		FSetByCallerFloat Magnitude;
+		Magnitude.DataTag = Tag;
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Attribute;
+		Modifier.ModifierOp = EGameplayModOp::MultiplyCompound;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(Magnitude);
+		Modifiers.Add(Modifier);
+	};
+	Multiply(UDBAttributeSet::GetStaminaRegenAttribute(), DBTags::SetByCaller_SurvivalStamina);
+	Multiply(UDBAttributeSet::GetHealthRegenAttribute(), DBTags::SetByCaller_SurvivalHealth);
+}
+
 UDBIronStanceEffect::UDBIronStanceEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;

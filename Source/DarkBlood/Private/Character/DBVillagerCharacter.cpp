@@ -13,6 +13,8 @@ ADBVillagerCharacter::ADBVillagerCharacter(const FObjectInitializer& ObjectIniti
 	: Super(ObjectInitializer)
 {
 	GetCharacterMovement()->MaxWalkSpeed = 140.f;
+	// Wanders by movement input without a controller (like the enemies).
+	GetCharacterMovement()->bRunPhysicsWithNoController = true;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
 	NpcId = TEXT("Villager");

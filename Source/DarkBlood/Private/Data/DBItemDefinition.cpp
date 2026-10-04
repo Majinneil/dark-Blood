@@ -36,6 +36,7 @@ DarkBlood::Rules::FItemDefinition UDBItemDefinition::ToRules() const
 	Out.Consumable.Heal = HealAmount;
 	Out.Consumable.Stamina = StaminaAmount;
 	Out.Consumable.Mana = ManaAmount;
+	Out.Consumable.Satiety = SatietyAmount;
 	return Out;
 }
 

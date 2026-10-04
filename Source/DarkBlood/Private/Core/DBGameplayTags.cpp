@@ -77,11 +77,16 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_Inventory, "Input.UI.Inventory", "Open/close the inventory.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_Settings, "Input.UI.Settings", "Open/close the graphics settings.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_UI_Map, "Input.UI.Map", "Open/close the world map.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_CallHorse, "Input.CallHorse", "Whistle for the own horse.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage", "Base damage passed into the damage execution.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_PoiseDamage, "SetByCaller.PoiseDamage", "Poise damage passed into the damage execution.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_StaminaCost, "SetByCaller.StaminaCost", "Stamina spent by an action.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Magnitude, "SetByCaller.Magnitude", "Generic magnitude (heal, mana, bonuses).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_SurvivalStamina, "SetByCaller.Survival.Stamina", "Survival: stamina regeneration multiplier.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_SurvivalHealth, "SetByCaller.Survival.Health", "Survival: health regeneration multiplier.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Swimming, "State.Swimming", "Swimming: stamina drains instead of regenerating.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Mounted, "State.Mounted", "Riding a horse: no attacks.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Knockdown, "Damage.Knockdown", "Hit knocks the target down regardless of poise.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Physical, "Damage.Type.Physical", "Physical damage (reduced by armor).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_Type_Fire, "Damage.Type.Fire", "Fire / ash damage.");

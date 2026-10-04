@@ -103,8 +103,10 @@ namespace DarkBlood::Rules
 		float Heal = 0.f;
 		float Stamina = 0.f;
 		float Mana = 0.f;
+		/** Food: satiety restored (survival). */
+		float Satiety = 0.f;
 
-		bool IsEmpty() const { return Heal <= 0.f && Stamina <= 0.f && Mana <= 0.f; }
+		bool IsEmpty() const { return Heal <= 0.f && Stamina <= 0.f && Mana <= 0.f && Satiety <= 0.f; }
 	};
 
 	struct FItemDefinition

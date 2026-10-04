@@ -103,12 +103,16 @@ UDBInputConfig* UDBInputConfig::CreateDevelopmentDefaults(UObject* Outer)
 		{TEXT("IA_Dev_Inventory"), DBTags::Input_UI_Inventory, EKeys::I, EKeys::Gamepad_Special_Right},
 		{TEXT("IA_Dev_Settings"), DBTags::Input_UI_Settings, EKeys::F10, EKeys::Gamepad_DPad_Right},
 		{TEXT("IA_Dev_Map"), DBTags::Input_UI_Map, EKeys::M, EKeys::Gamepad_DPad_Left},
+		{TEXT("IA_Dev_CallHorse"), DBTags::Input_CallHorse, EKeys::H, EKeys::Invalid},
 	};
 	for (const FAbilityBinding& Binding : AbilityBindings)
 	{
 		UInputAction* Action = MakeAction(Binding.Name, EInputActionValueType::Boolean);
 		Context->MapKey(Action, Binding.Keyboard);
-		Context->MapKey(Action, Binding.Gamepad);
+		if (Binding.Gamepad.IsValid())
+		{
+			Context->MapKey(Action, Binding.Gamepad);
+		}
 		Config->AbilityInputActions.Add(MakeBinding(Action, Binding.Tag));
 	}
 	return Config;

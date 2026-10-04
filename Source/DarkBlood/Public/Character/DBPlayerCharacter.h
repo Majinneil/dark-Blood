@@ -41,6 +41,16 @@ public:
 
 	USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
+	/** In the saddle the movement input steers the horse (relative to the camera yaw); Sprint gallops; [H] calls it. */
+	UFUNCTION(Server, Unreliable)
+	void ServerSteerHorse(FVector2D Input, float CameraYaw);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetGallop(bool bGallop);
+
+	UFUNCTION(Server, Reliable)
+	void ServerCallHorse();
+
 protected:
 	void InitAbilityActorInfo();
 	void OnDoubleJumpTagChanged(const FGameplayTag Tag, int32 NewCount);

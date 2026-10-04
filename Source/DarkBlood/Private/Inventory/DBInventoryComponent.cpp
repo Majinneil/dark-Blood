@@ -6,6 +6,7 @@
 #include "Data/DBGameDataSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/DBPlayerState.h"
+#include "Player/DBSurvivalComponent.h"
 #include "Player/DBProgressionComponent.h"
 #include "Abilities/DBCombatEffects.h"
 #include "AbilitySystemComponent.h"
@@ -520,8 +521,12 @@ void UDBInventoryComponent::ServerUseItem_Implementation(FDBSlotRef Slot)
 	Apply(UDBHealEffect::StaticClass(), DBTags::SetByCaller_Magnitude, Effect.Heal);
 	Apply(UDBStaminaCostEffect::StaticClass(), DBTags::SetByCaller_StaminaCost, Effect.Stamina);
 	Apply(UDBManaChangeEffect::StaticClass(), DBTags::SetByCaller_Magnitude, Effect.Mana);
-	UE_LOG(LogDarkBlood, Log, TEXT("%s uses %s (heal %.0f, stamina %.0f, mana %.0f)"), *PlayerState->GetPlayerName(), *ItemName, Effect.Heal,
-		Effect.Stamina, Effect.Mana);
+	if (Effect.Satiety > 0.f && PlayerState->GetSurvival())
+	{
+		PlayerState->GetSurvival()->Eat(Effect.Satiety);
+	}
+	UE_LOG(LogDarkBlood, Log, TEXT("%s uses %s (heal %.0f, stamina %.0f, mana %.0f, satiety %.0f)"), *PlayerState->GetPlayerName(), *ItemName, Effect.Heal,
+		Effect.Stamina, Effect.Mana, Effect.Satiety);
 	FinishRequest(TEXT("UseItem"), R::EInventoryResult::Ok, false);
 }
 

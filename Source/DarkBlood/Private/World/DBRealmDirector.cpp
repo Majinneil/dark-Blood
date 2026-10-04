@@ -7,6 +7,7 @@
 #include "GameFramework/Pawn.h"
 #include "Player/DBPlayerState.h"
 #include "World/DBRealmLayout.h"
+#include "World/DBCarriageStation.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
@@ -90,6 +91,8 @@ void ADBRealmDirector::BeginPlay()
 				ADBShip::SpawnAt(GetWorld(), At * 100.0, Yaw, Name, Fleet[Index]);
 			}
 		}
+		// Every settlement has a carriage to every other one.
+		ADBCarriageStation::SpawnStations(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }

@@ -8,6 +8,7 @@
 
 class SDBCharacterCreatorWidget;
 class SDBDialogueWidget;
+class SDBCarriageWidget;
 class SDBCraftingWidget;
 class SDBGameHudWidget;
 class SWidget;
@@ -38,6 +39,8 @@ public:
 	void ToggleSettings();
 	void ShowCrafting(AActor* Station);
 	void HideCrafting();
+	void ShowCarriage(AActor* Station);
+	void HideCarriage();
 
 	virtual void DrawHUD() override;
 
@@ -54,6 +57,7 @@ private:
 	TSharedPtr<SWidget> SettingsRoot;
 	TSharedPtr<SWidget> MapRoot;
 	TSharedPtr<SDBCraftingWidget> CraftingWidget;
+	TSharedPtr<SDBCarriageWidget> CarriageWidget;
 	FDelegateHandle DialogueHandle;
 	bool bUIReady = false;
 };

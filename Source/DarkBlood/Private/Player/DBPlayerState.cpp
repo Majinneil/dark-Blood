@@ -13,6 +13,7 @@
 #include "Inventory/DBInventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/DBProgressionComponent.h"
+#include "Player/DBSurvivalComponent.h"
 #include "Quest/DBQuestComponent.h"
 #include "World/DBRegionVolume.h"
 
@@ -28,6 +29,7 @@ ADBPlayerState::ADBPlayerState()
 	Progression = CreateDefaultSubobject<UDBProgressionComponent>(TEXT("Progression"));
 	Inventory = CreateDefaultSubobject<UDBInventoryComponent>(TEXT("Inventory"));
 	PersonalQuests = CreateDefaultSubobject<UDBQuestComponent>(TEXT("PersonalQuests"));
+	Survival = CreateDefaultSubobject<UDBSurvivalComponent>(TEXT("Survival"));
 
 	// GAS on the PlayerState needs a higher update rate than the default.
 	SetNetUpdateFrequency(100.f);

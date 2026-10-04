@@ -17,6 +17,8 @@
 #include "UI/SDBSettingsWidget.h"
 #include "UI/SDBSkillTreeWidget.h"
 #include "UI/SDBWorldMapWidget.h"
+#include "UI/SDBCarriageWidget.h"
+#include "World/DBCarriageStation.h"
 #include "Widgets/SWeakWidget.h"
 
 void ADBGameHUD::BeginPlay()
@@ -95,6 +97,10 @@ void ADBGameHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		if (MapRoot.IsValid())
 		{
 			Viewport->RemoveViewportWidgetContent(MapRoot.ToSharedRef());
+		}
+		if (CarriageWidget.IsValid())
+		{
+			Viewport->RemoveViewportWidgetContent(CarriageWidget.ToSharedRef());
 		}
 		if (CraftingWidget.IsValid())
 		{
@@ -273,9 +279,45 @@ void ADBGameHUD::HideCrafting()
 	UpdateInputMode();
 }
 
+void ADBGameHUD::ShowCarriage(AActor* Station)
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	ADBCarriageStation* Carriage = Cast<ADBCarriageStation>(Station);
+	if (!bUIReady || !Viewport || CreatorRoot.IsValid() || !Carriage)
+	{
+		return;
+	}
+	HideCarriage();
+	CarriageWidget = SNew(SDBCarriageWidget)
+		.Owner(GetOwningPlayerController())
+		.Station(Carriage)
+		.OnClose(FSimpleDelegate::CreateUObject(this, &ADBGameHUD::HideCarriage));
+	Viewport->AddViewportWidgetContent(CarriageWidget.ToSharedRef(), 55);
+	UpdateInputMode();
+}
+
+void ADBGameHUD::HideCarriage()
+{
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport(); Viewport && CarriageWidget.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(CarriageWidget.ToSharedRef());
+	}
+	CarriageWidget.Reset();
+	UpdateInputMode();
+}
+
 void ADBGameHUD::DrawHUD()
 {
 	Super::DrawHUD();
+	if (CarriageWidget.IsValid())
+	{
+		const APawn* Pawn = GetOwningPawn();
+		const AActor* Station = CarriageWidget->GetStation();
+		if (!Pawn || !Station || FVector::Dist2D(Pawn->GetActorLocation(), Station->GetActorLocation()) > 900.f)
+		{
+			HideCarriage();
+		}
+	}
 	// Walking away from the station closes its window.
 	if (CraftingWidget.IsValid())
 	{
@@ -305,7 +347,7 @@ void ADBGameHUD::UpdateInputMode()
 		return;
 	}
 	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || SettingsRoot.IsValid() || CraftingWidget.IsValid()
-		|| MapRoot.IsValid())
+		|| MapRoot.IsValid() || CarriageWidget.IsValid())
 	{
 		// Mouse for the option buttons; keys 1-4 and E keep working through game input.
 		FInputModeGameAndUI Mode;

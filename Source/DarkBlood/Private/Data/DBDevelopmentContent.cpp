@@ -358,7 +358,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	AddItem(TEXT("DemonHorn"), TEXT("Daemonenhorn"), EDBItemCategory::Material, 99, [](UDBItemDefinition& D) { D.Rarity = EDBItemRarity::Uncommon; });
 	AddItem(TEXT("Leather"), TEXT("Leder"), EDBItemCategory::Material, 99, [](UDBItemDefinition&) {});
 	AddItem(TEXT("SpiritPaper"), TEXT("Geisterpapier"), EDBItemCategory::Material, 99, [](UDBItemDefinition&) {});
-	AddItem(TEXT("RiceBall"), TEXT("Onigiri"), EDBItemCategory::Food, 20, [](UDBItemDefinition& D) { D.HealAmount = 40.f; D.StaminaAmount = 30.f; });
+	AddItem(TEXT("RiceBall"), TEXT("Onigiri"), EDBItemCategory::Food, 20, [](UDBItemDefinition& D) { D.HealAmount = 40.f; D.StaminaAmount = 30.f; D.SatietyAmount = 35.f; });
 	AddItem(TEXT("HealingDraught"), TEXT("Heiltrank"), EDBItemCategory::Potion, 10, [](UDBItemDefinition& D) { D.HealAmount = 120.f; D.BaseValue = 25; });
 	AddItem(TEXT("ManaTea"), TEXT("Geistertee"), EDBItemCategory::Potion, 10, [](UDBItemDefinition& D) { D.ManaAmount = 60.f; D.BaseValue = 25; });
 	AddItem(TEXT("KingsSeal"), TEXT("Siegel des Koenigs"), EDBItemCategory::Quest, 1, [](UDBItemDefinition&) {});

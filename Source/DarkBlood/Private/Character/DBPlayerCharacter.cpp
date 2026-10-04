@@ -7,6 +7,7 @@
 #include "Interaction/DBInteractionComponent.h"
 #include "Inventory/DBInventoryComponent.h"
 #include "World/DBShip.h"
+#include "Character/DBHorse.h"
 #include "UI/DBGameHUD.h"
 #include "Components/CapsuleComponent.h"
 #include "Visual/DBCharacterVisualComponent.h"
@@ -178,6 +179,10 @@ void ADBPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 				ShipSteering = FVector2D::ZeroVector;
 				ServerSteerShip(FVector2D::ZeroVector);
 			}
+			if (ADBHorse::FindRiddenBy(this))
+			{
+				ServerSteerHorse(FVector2D::ZeroVector, 0.f);
+			}
 		});
 	}
 	if (const UInputAction* Look = InputConfig->FindNativeInputAction(DBTags::Input_Look))
@@ -215,6 +220,11 @@ void ADBPlayerCharacter::Input_Move(const FInputActionValue& Value)
 	{
 		ShipSteering = Axis;
 		ServerSteerShip(Axis);
+		return;
+	}
+	if (ADBHorse::FindRiddenBy(this))
+	{
+		ServerSteerHorse(Axis, Controller ? Controller->GetControlRotation().Yaw : GetActorRotation().Yaw);
 		return;
 	}
 	// Attacks, dodges and hit reactions own the movement while they run.
@@ -267,6 +277,25 @@ void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 		Interaction->TryInteract();
 		return;
 	}
+	if (InputTag == DBTags::Input_CallHorse)
+	{
+		ServerCallHorse();
+		return;
+	}
+	// In the saddle: Sprint gallops; no attacks, dodges or abilities (windows and interaction still work).
+	if (ADBHorse::FindRiddenBy(this))
+	{
+		if (InputTag == DBTags::Input_Sprint)
+		{
+			ServerSetGallop(true);
+		}
+		const bool bWindow = InputTag == DBTags::Input_UI_SkillTree || InputTag == DBTags::Input_UI_Inventory || InputTag == DBTags::Input_UI_Settings
+			|| InputTag == DBTags::Input_UI_Map;
+		if (!bWindow)
+		{
+			return;
+		}
+	}
 	if (InputTag == DBTags::Input_UI_SkillTree || InputTag == DBTags::Input_UI_Inventory || InputTag == DBTags::Input_UI_Settings
 		|| InputTag == DBTags::Input_UI_Map)
 	{
@@ -302,8 +331,40 @@ void ADBPlayerCharacter::Input_AbilityPressed(FGameplayTag InputTag)
 	}
 }
 
+void ADBPlayerCharacter::ServerSteerHorse_Implementation(FVector2D Input, float CameraYaw)
+{
+	if (ADBHorse* Horse = ADBHorse::FindRiddenBy(this))
+	{
+		Horse->SetSteering(Input, CameraYaw);
+	}
+}
+
+void ADBPlayerCharacter::ServerSetGallop_Implementation(bool bGallop)
+{
+	if (ADBHorse* Horse = ADBHorse::FindRiddenBy(this))
+	{
+		Horse->SetGallop(bGallop);
+	}
+}
+
+void ADBPlayerCharacter::ServerCallHorse_Implementation()
+{
+	if (ADBHorse::CallHorse(this))
+	{
+		if (ADBPlayerController* DBController = GetController<ADBPlayerController>())
+		{
+			DBController->ClientShowNotification(NSLOCTEXT("DarkBlood", "HorseCalled", "Dein Pferd kommt."));
+		}
+	}
+}
+
 void ADBPlayerCharacter::Input_AbilityReleased(FGameplayTag InputTag)
 {
+	if (InputTag == DBTags::Input_Sprint && ADBHorse::FindRiddenBy(this))
+	{
+		ServerSetGallop(false);
+		return;
+	}
 	if (UDBAbilitySystemComponent* ASC = GetDBAbilitySystemComponent())
 	{
 		ASC->AbilityInputTagReleased(InputTag);

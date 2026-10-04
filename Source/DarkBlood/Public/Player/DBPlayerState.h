@@ -19,6 +19,7 @@ class UDBGameplayAbility;
 class UDBInventoryComponent;
 class UDBProgressionComponent;
 class UDBQuestComponent;
+class UDBSurvivalComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDBOnProfileChanged, ADBPlayerState*, PlayerState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDBOnRegionChanged, ADBPlayerState*, PlayerState, FName, RegionId);
@@ -41,6 +42,7 @@ public:
 	UDBProgressionComponent* GetProgression() const { return Progression; }
 	UDBInventoryComponent* GetInventory() const { return Inventory; }
 	UDBQuestComponent* GetPersonalQuests() const { return PersonalQuests; }
+	UDBSurvivalComponent* GetSurvival() const { return Survival; }
 
 	const FDBCharacterProfile& GetProfile() const { return Profile; }
 
@@ -110,6 +112,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood")
 	TObjectPtr<UDBQuestComponent> PersonalQuests;
+
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Survival")
+	TObjectPtr<UDBSurvivalComponent> Survival;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Profile)
 	FDBCharacterProfile Profile;

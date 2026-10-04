@@ -105,6 +105,12 @@ public:
 	UFUNCTION(Exec) void DBDumpSettlements();
 	UFUNCTION(Exec) void DBSkipHours(float Hours);
 	UFUNCTION(Exec) void DBSettlementAttack(const FString& Settlement);
+	/** Survival: set satiety and warmth (0..100). */
+	UFUNCTION(Exec) void DBSurvival(float Satiety, float Warmth);
+	/** Calls the own horse and mounts it, or dismounts. */
+	UFUNCTION(Exec) void DBRide();
+	/** Travels by carriage from the nearest station (normal checks: range, fare). */
+	UFUNCTION(Exec) void DBCarriage(const FString& Destination);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

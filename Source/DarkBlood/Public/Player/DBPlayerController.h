@@ -66,6 +66,14 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientOpenCrafting(AActor* Station);
 
+	/** Server -> client: open the destination list of a carriage station. */
+	UFUNCTION(Client, Reliable)
+	void ClientOpenCarriage(AActor* Station);
+
+	/** Client -> server: travel by carriage from a station to a settlement (validated: range, fare). */
+	UFUNCTION(Server, Reliable)
+	void ServerTravelByCarriage(AActor* Station, int32 Destination);
+
 	/** Server -> client: short on-screen message (quest started/completed ...). */
 	UFUNCTION(Client, Reliable)
 	void ClientShowNotification(const FText& Text);

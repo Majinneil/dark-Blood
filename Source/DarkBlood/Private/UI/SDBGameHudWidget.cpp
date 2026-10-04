@@ -19,6 +19,7 @@
 #include "Interaction/DBInteractionComponent.h"
 #include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
+#include "Player/DBSurvivalComponent.h"
 #include "Quest/DBQuestComponent.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Layout/SBorder.h"
@@ -83,6 +84,24 @@ void SDBGameHudWidget::Construct(const FArguments& InArgs)
 				[
 					MakeBar(LOCTEXT("Mana", "Mana"), FLinearColor(0.15f, 0.3f, 0.8f), Attribute(UDBAttributeSet::GetManaAttribute()),
 						Attribute(UDBAttributeSet::GetMaxManaAttribute()))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)
+				[
+					MakeBar(LOCTEXT("Satiety", "Saettigung"), FLinearColor(0.8f, 0.5f, 0.15f), [this]()
+					{
+						const APlayerController* PC = Owner.Get();
+						const ADBPlayerState* PS = PC ? PC->GetPlayerState<ADBPlayerState>() : nullptr;
+						return PS && PS->GetSurvival() ? PS->GetSurvival()->GetSatiety() : 0.f;
+					}, []() { return 100.f; })
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)
+				[
+					MakeBar(LOCTEXT("Warmth", "Waerme"), FLinearColor(0.45f, 0.75f, 0.95f), [this]()
+					{
+						const APlayerController* PC = Owner.Get();
+						const ADBPlayerState* PS = PC ? PC->GetPlayerState<ADBPlayerState>() : nullptr;
+						return PS && PS->GetSurvival() ? PS->GetSurvival()->GetWarmth() : 0.f;
+					}, []() { return 100.f; })
 				]
 			]
 		]

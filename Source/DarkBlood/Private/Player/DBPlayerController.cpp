@@ -14,6 +14,7 @@
 #include "Input/DBInputConfig.h"
 #include "Player/DBPlayerState.h"
 #include "Save/DBSaveSubsystem.h"
+#include "World/DBCarriageStation.h"
 
 ADBPlayerController::ADBPlayerController()
 {
@@ -289,5 +290,24 @@ void ADBPlayerController::ClientOpenCrafting_Implementation(AActor* Station)
 	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
 	{
 		GameHUD->ShowCrafting(Station);
+	}
+}
+
+void ADBPlayerController::ClientOpenCarriage_Implementation(AActor* Station)
+{
+	UE_LOG(LogDarkBlood, Display, TEXT("Carriage opened: %s"), *GetNameSafe(Station));
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->ShowCarriage(Station);
+	}
+}
+
+void ADBPlayerController::ServerTravelByCarriage_Implementation(AActor* Station, int32 Destination)
+{
+	FText Reason;
+	ADBCarriageStation* Carriage = Cast<ADBCarriageStation>(Station);
+	if (!Carriage || !Carriage->Travel(this, Destination, Reason))
+	{
+		ClientShowNotification(Reason.IsEmpty() ? NSLOCTEXT("DarkBlood", "CarriageRefused", "Die Kutsche faehrt nicht.") : Reason);
 	}
 }

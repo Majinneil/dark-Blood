@@ -62,6 +62,16 @@ public:
 	UDBHealEffect();
 };
 
+/** Survival (hunger, cold): multiplies StaminaRegen and HealthRegen (SetByCaller.Survival.Stamina / .Health). */
+UCLASS()
+class DARKBLOOD_API UDBSurvivalEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UDBSurvivalEffect();
+};
+
 /** Warrior Iron Stance while active: +Armor and +MaxPoise (SetByCaller.Magnitude scales both). */
 UCLASS()
 class DARKBLOOD_API UDBIronStanceEffect : public UGameplayEffect
