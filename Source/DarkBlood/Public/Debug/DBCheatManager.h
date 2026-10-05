@@ -126,6 +126,11 @@ public:
 	UFUNCTION(Exec) void DBBossDump();
 	UFUNCTION(Exec) void DBBossHurt(float HealthFraction);
 	UFUNCTION(Exec) void DBBossDefeat(const FString& Boss);
+
+	/** Regions (Phase 11): packs, camps and region states; teleport to a region's demon camp; spawn a pack now. */
+	UFUNCTION(Exec) void DBRegionDump();
+	UFUNCTION(Exec) void DBCamp(const FString& Region);
+	UFUNCTION(Exec) void DBRegionPack();
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

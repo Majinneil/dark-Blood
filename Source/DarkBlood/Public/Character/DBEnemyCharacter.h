@@ -39,6 +39,12 @@ public:
 
 	FName GetEnemyId() const { return EnemyId; }
 
+	/** Server, between a deferred spawn and FinishSpawning: level, stats times StatMultiplier (health, armor, attack, poise,
+	 *  XP), shown name and quest id (regional demons, camp guards). Name and level replicate for the nameplate. */
+	void ConfigureSpawn(int32 InLevel, float StatMultiplier, const FText& InDisplayName, FName InEnemyId, FName InLootTableId = NAME_None);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, float DamageMagnitude) override;
@@ -54,10 +60,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy")
 	FName EnemyId;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Dark Blood|Enemy")
 	FText DisplayName;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy|Stats", meta = (ClampMin = 1))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Dark Blood|Enemy|Stats", meta = (ClampMin = 1))
 	int32 Level = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dark Blood|Enemy|Stats", meta = (ClampMin = 1))

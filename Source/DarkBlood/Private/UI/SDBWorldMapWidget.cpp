@@ -17,6 +17,7 @@
 #include "Widgets/SLeafWidget.h"
 #include "Widgets/Text/STextBlock.h"
 #include "World/DBDungeon.h"
+#include "World/DBRegionLife.h"
 #include "World/DBRealmLayout.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodWorldMap"
@@ -109,8 +110,24 @@ namespace
 					FText::AsNumber(Site.Difficulty)), 10, DungeonRed);
 			}
 
-			// Vassal and demon king arenas: a square in the boss color, grey once the boss fell.
 			const UWorld* MapWorld = Owner.IsValid() ? Owner->GetWorld() : nullptr;
+			// Demon camps: a triangle, grey once broken.
+			for (const FDBRealmRegion& Region : DBRealm::GetRegions())
+			{
+				const FVector Camp = DBRegions::GetCampLocation(Region.RegionId);
+				if (Camp.IsZero())
+				{
+					continue;
+				}
+				const ADBDemonCamp* Actor = MapWorld ? ADBDemonCamp::Find(MapWorld, Region.RegionId) : nullptr;
+				const FLinearColor Color = Actor && Actor->IsBroken() ? FLinearColor(0.45f, 0.45f, 0.45f) : FLinearColor(1.f, 0.55f, 0.15f);
+				const FVector2f At = ToLocal(FVector2D(Camp) / 100.0, Size);
+				const TArray<FVector2f> Triangle = {At + FVector2f(0.f, -8.f), At + FVector2f(7.f, 6.f), At + FVector2f(-7.f, 6.f), At + FVector2f(0.f, -8.f)};
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Triangle, ESlateDrawEffect::None, Shadow, true, 5.f);
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Triangle, ESlateDrawEffect::None, Color, true, 2.5f);
+			}
+
+			// Vassal and demon king arenas: a square in the boss color, grey once the boss fell.
 			for (const UDBBossDefinition* Boss : DBBosses::GetAll())
 			{
 				const FVector Arena = DBBosses::GetArenaLocation(*Boss);

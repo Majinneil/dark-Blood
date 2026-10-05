@@ -21,6 +21,8 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Data/DBGameDataSubsystem.h"
+#include "Data/DBRegionDefinition.h"
 #include "Framework/DBGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerState.h"
@@ -468,6 +470,13 @@ void ADBBossCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* Damag
 			Region && Region->bVassalDefeated && Region->Kind == R::ERegionKind::VassalRegion ? LOCTEXT("Freed", "Die Region ist befreit.")
 			: State && State->IsDemonKingReachable() ? LOCTEXT("ThroneOpen", "Der Weg zum Daemonenkoenig ist frei.")
 													  : FText::GetEmpty());
+	}
+	else if (Definition->Rank == EDBBossRank::MidBoss)
+	{
+		const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+		const UDBRegionDefinition* Region = Data ? Data->FindRegion(Definition->RegionId) : nullptr;
+		Message = FText::Format(LOCTEXT("CommanderDown", "{0} ist gefallen! Das Lager ist zerschlagen, {1} ist umkaempft."), MakeBossName(*Definition),
+			Region ? Region->DisplayName : FText::FromName(Definition->RegionId));
 	}
 	else if (Definition->Rank == EDBBossRank::DemonKing)
 	{

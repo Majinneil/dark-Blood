@@ -5,6 +5,8 @@
 #include "Art/DBModelLibrary.h"
 #include "Boss/DBBoss.h"
 #include "Boss/DBBossDefinition.h"
+#include "World/DBRegionLife.h"
+#include "DarkBloodRules/Region.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "Character/DBHorse.h"
@@ -326,7 +328,12 @@ void UDBCheatManager::DBDumpWorld()
 	}
 	for (const FDBQuestProgressView& Quest : GameState->GetSharedQuests()->GetQuests())
 	{
-		UE_LOG(LogDBQuest, Display, TEXT("  shared quest %s status=%d"), *Quest.QuestId.ToString(), static_cast<int32>(Quest.Status));
+		FString Counts;
+		for (const int32 Count : Quest.ObjectiveCounts)
+		{
+			Counts += FString::Printf(TEXT(" %d"), Count);
+		}
+		UE_LOG(LogDBQuest, Display, TEXT("  shared quest %s status=%d objectives%s"), *Quest.QuestId.ToString(), static_cast<int32>(Quest.Status), *Counts);
 	}
 }
 
@@ -1217,6 +1224,83 @@ void UDBCheatManager::DBBossDefeat(const FString& Boss)
 	const DarkBlood::Rules::FWorldState& State = GameState->GetWorldState()->GetRulesState();
 	UE_LOG(LogDarkBlood, Display, TEXT("DBBossDefeat %s: %d bosses; vassals %d/%d, Das Ende %s, demon king %s"), *Boss, Count, State.CountDefeatedVassals(),
 		DarkBlood::Rules::NumVassals, State.IsFinalRegionOpen() ? TEXT("open") : TEXT("sealed"), State.IsDemonKingReachable() ? TEXT("reachable") : TEXT("sealed"));
+}
+
+namespace
+{
+	FName ResolveRegion(const FString& Region)
+	{
+		if (Region.IsNumeric())
+		{
+			return FName(*FString::Printf(TEXT("Region%02d"), FCString::Atoi(*Region)));
+		}
+		for (const FDBRealmRegion& Candidate : DBRealm::GetRegions())
+		{
+			if (Candidate.RegionId.ToString().Equals(Region, ESearchCase::IgnoreCase) || FString(Candidate.DisplayName).StartsWith(Region, ESearchCase::IgnoreCase))
+			{
+				return Candidate.RegionId;
+			}
+		}
+		return FName(*Region);
+	}
+}
+
+void UDBCheatManager::DBRegionDump()
+{
+	if (ForwardToServer(TEXT("DBRegionDump"))) return;
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	if (!GameState)
+	{
+		return;
+	}
+	const DarkBlood::Rules::FWorldState& State = GameState->GetWorldState()->GetRulesState();
+	const bool bNight = GameState->GetWorldState()->IsNight();
+	for (const DarkBlood::Rules::FRegionState& Region : State.GetRegions())
+	{
+		const FName RegionId(UTF8_TO_TCHAR(Region.RegionId.c_str()));
+		const ADBDemonCamp* Camp = ADBDemonCamp::Find(GetWorld(), RegionId);
+		UE_LOG(LogDarkBlood, Display, TEXT("DBREGION %-9s %-9hs influence %.2f packs/player %d (%s) camp %s"), *RegionId.ToString(), DarkBlood::Rules::ToString(Region.Control),
+			Region.DemonInfluence, DarkBlood::Rules::GetRegionalPackBudget(Region, bNight), bNight ? TEXT("night") : TEXT("day"),
+			Camp ? (Camp->IsBroken() ? TEXT("broken") : Camp->GetCommander() ? TEXT("fighting") : TEXT("standing")) : TEXT("-"));
+	}
+	if (const ADBRealmDirector* Director = ADBRealmDirector::Get(GetWorld()); Director && Director->GetRegionLife())
+	{
+		Director->GetRegionLife()->LogState();
+	}
+	if (const ADBPlayerState* Player = GetDBPlayerState())
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBREGION player in %s"), *Player->GetCurrentRegionId().ToString());
+	}
+}
+
+void UDBCheatManager::DBCamp(const FString& Region)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBCamp %s"), *Region))) return;
+	const FName RegionId = ResolveRegion(Region);
+	const FVector Camp = DBRegions::GetCampLocation(RegionId);
+	APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn || Camp.IsZero())
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBCamp: no camp in '%s'"), *Region);
+		return;
+	}
+	// 48 m short of the camp (inside its wake radius), facing it.
+	const FVector2D Here = FVector2D(Camp) / 100.0 + FVector2D(-48.0, 0.0);
+	const FVector Destination(Here.X * 100.0, Here.Y * 100.0, FMath::Max(DBRealm::SampleHeight(Here.X, Here.Y), 0.0) * 100.0 + 250.0);
+	Pawn->TeleportTo(Destination, FRotator::ZeroRotator);
+	if (AController* Controller = Pawn->GetController())
+	{
+		Controller->SetControlRotation(FRotator(-8.f, 0.f, 0.f));
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBCamp %s at (%.0f, %.0f) m"), *RegionId.ToString(), Camp.X / 100.0, Camp.Y / 100.0);
+}
+
+void UDBCheatManager::DBRegionPack()
+{
+	if (ForwardToServer(TEXT("DBRegionPack"))) return;
+	const ADBRealmDirector* Director = ADBRealmDirector::Get(GetWorld());
+	const bool bSpawned = Director && Director->GetRegionLife() && Director->GetRegionLife()->SpawnPackNear(GetDBPlayerState(), true);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBRegionPack: %s"), bSpawned ? TEXT("spawned") : TEXT("no pack (region without demons or no free ground)"));
 }
 
 void UDBCheatManager::DBRide()

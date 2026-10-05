@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/DBPlayerState.h"
 #include "Player/DBProgressionComponent.h"
 #include "Inventory/DBInventoryComponent.h"
@@ -89,6 +90,36 @@ void ADBEnemyCharacter::InitializeCombatState()
 UAbilitySystemComponent* ADBEnemyCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystem;
+}
+
+void ADBEnemyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADBEnemyCharacter, DisplayName);
+	DOREPLIFETIME(ADBEnemyCharacter, Level);
+}
+
+void ADBEnemyCharacter::ConfigureSpawn(int32 InLevel, float StatMultiplier, const FText& InDisplayName, FName InEnemyId, FName InLootTableId)
+{
+	const float Multiplier = FMath::Max(0.1f, StatMultiplier);
+	Level = FMath::Max(1, InLevel);
+	MaxHealth *= Multiplier;
+	MaxPoise *= FMath::Sqrt(Multiplier);
+	Armor *= Multiplier;
+	AttackPower *= Multiplier;
+	XpReward = FMath::RoundToInt(XpReward * Multiplier);
+	if (!InDisplayName.IsEmpty())
+	{
+		DisplayName = InDisplayName;
+	}
+	if (!InEnemyId.IsNone())
+	{
+		EnemyId = InEnemyId;
+	}
+	if (!InLootTableId.IsNone())
+	{
+		LootTableId = InLootTableId;
+	}
 }
 
 FString ADBEnemyCharacter::GetCombatDisplayName() const

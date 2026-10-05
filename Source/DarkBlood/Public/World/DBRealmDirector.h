@@ -10,6 +10,7 @@
 class ADBModularBuilding;
 class FDBArtBatcher;
 class UDBRealmMoodComponent;
+class UDBRegionLifeComponent;
 class UDBSettlementLifeComponent;
 class UInstancedStaticMeshComponent;
 
@@ -83,8 +84,13 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")
 	TObjectPtr<UDBSettlementLifeComponent> Life;
 
+	/** Demon packs round the players (Phase 11). */
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Realm")
+	TObjectPtr<UDBRegionLifeComponent> RegionLife;
+
 public:
 	UDBSettlementLifeComponent* GetSettlementLife() const { return Life; }
+	UDBRegionLifeComponent* GetRegionLife() const { return RegionLife; }
 
 	float RegionTimer = 0.f;
 	float StreamTimer = 0.f;

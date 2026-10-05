@@ -6,6 +6,7 @@
 #include "World/DBDungeon.h"
 #include "World/DBRealmLayout.h"
 
+#include "DarkBloodRules/Region.h"
 #include "DarkBloodRules/WorldState.h"
 
 TArray<float> UDBBossDefinition::GetPhaseThresholds() const
@@ -121,6 +122,41 @@ namespace
 			All.Add(Make(Def));
 		}
 
+		// Region commanders (mid-bosses, Phase 11, docs/REGIONS.md): each vassal region's demon camp is led by one. Beating
+		// it makes the region contested; it fights with its vassal's first-phase mechanics and calls its guards later.
+		static const TCHAR* CommanderNames[] = {TEXT("Blutklinge"), TEXT("Frostwaechter"), TEXT("Schattenpfeil"), TEXT("Donnerrufer"), TEXT("Glutfaust"),
+			TEXT("Knochenhauptmann"), TEXT("Seuchenbringer"), TEXT("Trugbild"), TEXT("Rudelfuehrer"), TEXT("Eisenhauptmann"), TEXT("Gezeitenhauptmann"),
+			TEXT("Sturmklinge"), TEXT("Nachtschatten"), TEXT("Leerenhueter")};
+		static TArray<FString> CommanderStrings; // FBossDef keeps raw pointers
+		CommanderStrings.Reset(UE_ARRAY_COUNT(CommanderNames) * 2);
+		for (const FBossDef& Def : Vassals)
+		{
+			if (Def.Order < 1 || Def.Order > DarkBlood::Rules::NumVassalRegions)
+			{
+				continue;
+			}
+			const FString& Id = CommanderStrings.Add_GetRef(FString::Printf(TEXT("MidBoss_%s"), Def.Region));
+			const FString& Title = CommanderStrings.Add_GetRef(FString::Printf(TEXT("Hauptmann von %s"), Def.Name));
+			FBossDef Commander = Def;
+			Commander.Id = *Id;
+			Commander.Name = CommanderNames[Def.Order - 1];
+			Commander.Title = *Title;
+			Commander.Rank = EDBBossRank::MidBoss;
+			Commander.Health = Def.Health * DarkBlood::Rules::GetCommanderStrength(Def.Order);
+			Commander.Attack = Def.Attack * 0.8f;
+			Commander.Scale = 1.2f;
+			Commander.SecondMechanics = Summon;
+			UDBBossDefinition* Boss = Make(Commander);
+			Boss->Order = 0;
+			Boss->Level = FMath::Max(1, Boss->Level - 3);
+			Boss->XpReward = FMath::RoundToInt(Boss->XpReward * 0.4f);
+			Boss->SkillPoints = 0;
+			Boss->LootTableId = TEXT("LT_Commander");
+			Boss->Portrait.Reset();
+			Boss->ArenaRadius = 1800.f;
+			All.Add(Boss);
+		}
+
 		// The demon king: three forms (Daemonischer Kaiser, Dark-Blood-Korruption, vollstaendige Daemonenform).
 		UDBBossDefinition* King = Make({TEXT("B_DemonKing"), TEXT("Der Daemonenkoenig"), TEXT("Herr des Dunklen Blutes"), EDBBossRank::DemonKing, TEXT("TheEnd"), 0,
 			Blood, FLinearColor(0.95f, 0.04f, 0.04f), 12000.f, 65.f, 150.f, 1.8f, Charge | Slam, 0});
@@ -202,6 +238,74 @@ const UDBBossDefinition* DBBosses::FindByName(const FString& IdOrName)
 	return nullptr;
 }
 
+FVector DBBosses::FindOpenGround(const FVector2D& Base, double RadiusMeters, const TArray<FVector2D>& Taken, double MinDistanceMeters, const FString& What)
+{
+	const double Radius = RadiusMeters;
+	const double Clearance = Radius + 150.0;
+	FVector2D Best = Base;
+	double BestScore = TNumericLimits<double>::Max();
+	double BestHeight = DBRealm::SampleHeight(Base.X, Base.Y);
+	// First pass: the whole ring on dry land; if nothing qualifies, only its center (coasts).
+	for (int32 Pass = 0; Pass < 2 && BestScore == TNumericLimits<double>::Max(); ++Pass)
+	for (int32 Ring = 0; Ring <= 14; ++Ring)
+	{
+		const int32 Steps = Ring == 0 ? 1 : 6 + Ring * 2;
+		for (int32 Step = 0; Step < Steps; ++Step)
+		{
+			const double Angle = 2.0 * UE_DOUBLE_PI * Step / Steps + Ring * 0.37;
+			const FVector2D Candidate = Base + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * (Ring * 60.0);
+			const bool bClearOfTowns = !DBRealm::GetSettlements().ContainsByPredicate([&](const FDBRealmSettlement& Site)
+			{
+				return FVector2D::Distance(Candidate, Site.Center) < Site.Radius + Clearance;
+			});
+			const bool bClearOfGates = !DBDungeon::GetSites().ContainsByPredicate([&](const FDBDungeonSite& Site)
+			{
+				return FVector2D::Distance(Candidate, Site.Entrance) < Clearance;
+			});
+			const bool bClearOfArenas = !Taken.ContainsByPredicate([&](const FVector2D& Other) { return FVector2D::Distance(Candidate, Other) < MinDistanceMeters; });
+			if (!bClearOfArenas || !bClearOfTowns || !bClearOfGates || !DBRealm::IsInside(Candidate.X * 1.06, Candidate.Y * 1.06))
+			{
+				continue;
+			}
+			// Height spread over the ring: center, half radius and edge.
+			double Low = TNumericLimits<double>::Max();
+			double High = TNumericLimits<double>::Lowest();
+			double Sum = 0.0;
+			int32 Samples = 0;
+			for (const double Fraction : {0.0, 0.5, 1.0})
+			{
+				const int32 Points = Fraction == 0.0 ? 1 : 12;
+				for (int32 Point = 0; Point < Points; ++Point)
+				{
+					const double PointAngle = 2.0 * UE_DOUBLE_PI * Point / Points;
+					const double Height = DBRealm::SampleHeight(Candidate.X + FMath::Cos(PointAngle) * Radius * Fraction, Candidate.Y + FMath::Sin(PointAngle) * Radius * Fraction);
+					Low = FMath::Min(Low, Height);
+					High = FMath::Max(High, Height);
+					Sum += Height;
+					++Samples;
+				}
+			}
+			if (Pass == 0 ? Low < 1.5 : DBRealm::SampleHeight(Candidate.X, Candidate.Y) < 1.0)
+			{
+				continue; // water inside the ring
+			}
+			const double Score = (High - Low) + FVector2D::Distance(Candidate, Base) * 0.01;
+			if (Score < BestScore)
+			{
+				BestScore = Score;
+				Best = Candidate;
+				BestHeight = Sum / Samples;
+			}
+		}
+	}
+	if (BestScore == TNumericLimits<double>::Max())
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("%s: no dry, open ground near (%.0f, %.0f) m"), *What, Base.X, Base.Y);
+	}
+	const FVector Location(Best.X * 100.0, Best.Y * 100.0, BestHeight * 100.0);
+	return Location;
+}
+
 FVector DBBosses::GetArenaLocation(const UDBBossDefinition& Boss)
 {
 	if (Boss.Rank != EDBBossRank::Vassal && Boss.Rank != EDBBossRank::DemonKing)
@@ -249,69 +353,7 @@ FVector DBBosses::GetArenaLocation(const UDBBossDefinition& Boss)
 			}
 		}
 	}
-	const double Radius = Boss.ArenaRadius / 100.0;
-	const double Clearance = Radius + 150.0;
-	FVector2D Best = Base;
-	double BestScore = TNumericLimits<double>::Max();
-	double BestHeight = DBRealm::SampleHeight(Base.X, Base.Y);
-	// First pass: the whole ring on dry land; if nothing qualifies, only its center (coasts).
-	for (int32 Pass = 0; Pass < 2 && BestScore == TNumericLimits<double>::Max(); ++Pass)
-	for (int32 Ring = 0; Ring <= 14; ++Ring)
-	{
-		const int32 Steps = Ring == 0 ? 1 : 6 + Ring * 2;
-		for (int32 Step = 0; Step < Steps; ++Step)
-		{
-			const double Angle = 2.0 * UE_DOUBLE_PI * Step / Steps + Ring * 0.37;
-			const FVector2D Candidate = Base + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * (Ring * 60.0);
-			const bool bClearOfTowns = !DBRealm::GetSettlements().ContainsByPredicate([&](const FDBRealmSettlement& Site)
-			{
-				return FVector2D::Distance(Candidate, Site.Center) < Site.Radius + Clearance;
-			});
-			const bool bClearOfGates = !DBDungeon::GetSites().ContainsByPredicate([&](const FDBDungeonSite& Site)
-			{
-				return FVector2D::Distance(Candidate, Site.Entrance) < Clearance;
-			});
-			const bool bClearOfArenas = !Taken.ContainsByPredicate([&](const FVector2D& Other) { return FVector2D::Distance(Candidate, Other) < 350.0; });
-			if (!bClearOfArenas || !bClearOfTowns || !bClearOfGates || !DBRealm::IsInside(Candidate.X * 1.06, Candidate.Y * 1.06))
-			{
-				continue;
-			}
-			// Height spread over the ring: center, half radius and edge.
-			double Low = TNumericLimits<double>::Max();
-			double High = TNumericLimits<double>::Lowest();
-			double Sum = 0.0;
-			int32 Samples = 0;
-			for (const double Fraction : {0.0, 0.5, 1.0})
-			{
-				const int32 Points = Fraction == 0.0 ? 1 : 12;
-				for (int32 Point = 0; Point < Points; ++Point)
-				{
-					const double PointAngle = 2.0 * UE_DOUBLE_PI * Point / Points;
-					const double Height = DBRealm::SampleHeight(Candidate.X + FMath::Cos(PointAngle) * Radius * Fraction, Candidate.Y + FMath::Sin(PointAngle) * Radius * Fraction);
-					Low = FMath::Min(Low, Height);
-					High = FMath::Max(High, Height);
-					Sum += Height;
-					++Samples;
-				}
-			}
-			if (Pass == 0 ? Low < 1.5 : DBRealm::SampleHeight(Candidate.X, Candidate.Y) < 1.0)
-			{
-				continue; // water inside the ring
-			}
-			const double Score = (High - Low) + FVector2D::Distance(Candidate, Base) * 0.01;
-			if (Score < BestScore)
-			{
-				BestScore = Score;
-				Best = Candidate;
-				BestHeight = Sum / Samples;
-			}
-		}
-	}
-	if (BestScore == TNumericLimits<double>::Max())
-	{
-		UE_LOG(LogDarkBlood, Warning, TEXT("Boss arena %s: no dry, open ground near (%.0f, %.0f) m"), *Boss.BossId.ToString(), Base.X, Base.Y);
-	}
-	const FVector Location(Best.X * 100.0, Best.Y * 100.0, BestHeight * 100.0);
+	const FVector Location = FindOpenGround(Base, Boss.ArenaRadius / 100.0, Taken, 350.0, TEXT("Boss arena ") + Boss.BossId.ToString());
 	Cache.Add(Boss.BossId, Location);
 	return Location;
 }

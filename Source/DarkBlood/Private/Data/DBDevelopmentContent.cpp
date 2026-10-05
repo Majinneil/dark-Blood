@@ -4,6 +4,7 @@
 #include "Abilities/DBClassAbilities.h"
 #include "Abilities/DBCombatAbilities.h"
 #include "Abilities/DBMeleeAttackAbility.h"
+#include "Boss/DBBossDefinition.h"
 #include "Core/DBGameplayTags.h"
 #include "Data/DBClassDefinition.h"
 #include "Data/DBDialogueDefinition.h"
@@ -19,6 +20,8 @@
 #include "Misc/PackageName.h"
 #include "Materials/MaterialInterface.h"
 #include "Visual/DBAnimationSetDefinition.h"
+
+#include "DarkBloodRules/WorldState.h"
 #include "Visual/DBCharacterVisualDefinition.h"
 
 namespace
@@ -508,6 +511,9 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	// Bosses (Phase 10): every player in the fight gets the guaranteed drops and rolls on its own.
 	Loot(TEXT("LT_Vassal"), {Grant(TEXT("DemonOre"), 4), Grant(TEXT("SpiritPaper"), 3), Grant(TEXT("HealingDraught"), 3)},
 		{LootEntry(TEXT("Tamahagane"), 2, 4, 8), LootEntry(TEXT("DemonHorn"), 2, 3, 5)}, 2, 1, 300, 500);
+	// Regions (Phase 11): the commander of a demon camp.
+	Loot(TEXT("LT_Commander"), {Grant(TEXT("DemonOre"), 2), Grant(TEXT("HealingDraught"), 2)},
+		{LootEntry(TEXT("Tamahagane"), 2, 2, 4), LootEntry(TEXT("DemonHorn"), 2, 1, 3), LootEntry(TEXT("SpiritPaper"), 1, 1, 2)}, 2, 1, 120, 240);
 	Loot(TEXT("LT_DemonKing"), {Grant(TEXT("DemonOre"), 10), Grant(TEXT("SpiritPaper"), 10), Grant(TEXT("HealingDraught"), 5)},
 		{LootEntry(TEXT("Tamahagane"), 1, 10, 15)}, 2, 1, 3000, 5000);
 	Loot(TEXT("LT_DungeonGuardian"), {Grant(TEXT("DemonOre"), 2), Grant(TEXT("SpiritPaper"), 2)},
@@ -569,6 +575,62 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		Quest->Reward.SkillPoints = 1;
 		Quest->Reward.StoryFlags = {TEXT("Story.EastGateCleared")};
 		Quest->Reward.Items = {Grant(TEXT("Bag_Adventurer"), 1)};
+		Data.RegisterQuest(Quest);
+		bAddedAny = true;
+	}
+
+	// ---- Region liberation quests (Phase 11, docs/REGIONS.md) ------------------------------------
+	// Start when the party first enters a vassal region: thin the region's demons, break its demon camp (commander),
+	// defeat its vassal. Objectives in any order; shared progress for the party.
+	for (const UDBBossDefinition* Vassal : DBBosses::GetAll())
+	{
+		if (Vassal->Rank != EDBBossRank::Vassal || Vassal->Order > DarkBlood::Rules::NumVassalRegions)
+		{
+			continue;
+		}
+		const FString Region = Vassal->RegionId.ToString();
+		const FName QuestId(*(TEXT("RQ_") + Region));
+		if (Data.FindQuest(QuestId))
+		{
+			continue;
+		}
+		const UDBRegionDefinition* RegionDef = Data.FindRegion(Vassal->RegionId);
+		const UDBBossDefinition* Commander = DBBosses::Find(FName(*(TEXT("MidBoss_") + Region)));
+		UDBQuestDefinition* Quest = NewObject<UDBQuestDefinition>(&Data, NAME_None, RF_Transient);
+		Quest->QuestId = QuestId;
+		Quest->Title = FText::Format(NSLOCTEXT("DarkBloodQuests", "Liberation", "Befreiung: {0}"), RegionDef ? RegionDef->DisplayName : FText::FromString(Region));
+		Quest->Category = EDBQuestCategory::Regional;
+		Quest->Scope = EDBQuestScope::Shared;
+		Quest->RegionId = Vassal->RegionId;
+		Quest->bSequential = false;
+		Quest->bAutoComplete = true;
+		Quest->bCanAbandon = false;
+		FDBQuestObjective Demons;
+		Demons.ObjectiveId = TEXT("ThinTheDemons");
+		Demons.Kind = EDBObjectiveKind::Kill;
+		Demons.Target = FName(*(TEXT("Demon_") + Region));
+		Demons.Required = 6;
+		Demons.Description = NSLOCTEXT("DarkBloodQuests", "ThinTheDemons", "Erschlage Daemonen im Gebiet");
+		Quest->Objectives.Add(Demons);
+		FDBQuestObjective Camp;
+		Camp.ObjectiveId = TEXT("BreakTheCamp");
+		Camp.Kind = EDBObjectiveKind::Kill;
+		Camp.Target = Commander ? Commander->BossId : FName(*(TEXT("MidBoss_") + Region));
+		Camp.Required = 1;
+		Camp.Description = FText::Format(NSLOCTEXT("DarkBloodQuests", "BreakTheCamp", "Zerschlage das Daemonenlager ({0})"),
+			Commander ? Commander->DisplayName : FText::GetEmpty());
+		Quest->Objectives.Add(Camp);
+		FDBQuestObjective Lord;
+		Lord.ObjectiveId = TEXT("DefeatTheVassal");
+		Lord.Kind = EDBObjectiveKind::Kill;
+		Lord.Target = Vassal->BossId;
+		Lord.Required = 1;
+		Lord.Description = FText::Format(NSLOCTEXT("DarkBloodQuests", "DefeatTheVassal", "Besiege {0}, {1}"), Vassal->DisplayName, Vassal->Title);
+		Quest->Objectives.Add(Lord);
+		Quest->Reward.Xp = 600 + Vassal->Order * 250;
+		Quest->Reward.Currency = 200 + Vassal->Order * 60;
+		Quest->Reward.SkillPoints = 1;
+		Quest->Reward.StoryFlags = {FName(*(TEXT("Story.Liberated.") + Region))};
 		Data.RegisterQuest(Quest);
 		bAddedAny = true;
 	}

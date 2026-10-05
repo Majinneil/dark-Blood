@@ -15,6 +15,7 @@
 #include "Player/DBProgressionComponent.h"
 #include "Player/DBSurvivalComponent.h"
 #include "Quest/DBQuestComponent.h"
+#include "Quest/DBQuestSubsystem.h"
 #include "World/DBRegionVolume.h"
 
 namespace R = DarkBlood::Rules;
@@ -212,6 +213,14 @@ void ADBPlayerState::UpdateCurrentRegion()
 	{
 		CurrentRegionId = NewRegion;
 		DiscoverRegion(NewRegion);
+		// Entering a vassal region starts its liberation quest for the party (once; Phase 11).
+		const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
+		const UDBRegionDefinition* Region = Data ? Data->FindRegion(NewRegion) : nullptr;
+		UDBQuestSubsystem* Quests = UDBQuestSubsystem::Get(this);
+		if (HasAuthority() && Region && Region->Kind == EDBRegionKind::VassalRegion && Quests)
+		{
+			Quests->StartQuest(FName(*(TEXT("RQ_") + NewRegion.ToString())), this);
+		}
 		OnRegionChanged.Broadcast(this, CurrentRegionId);
 	}
 }

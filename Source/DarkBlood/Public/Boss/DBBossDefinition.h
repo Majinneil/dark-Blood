@@ -137,4 +137,7 @@ namespace DBBosses
 	DARKBLOOD_API const UDBBossDefinition* FindByName(const FString& IdOrName);
 	/** Where the boss' arena stands (world, cm); zero for bosses without an arena (dungeon guardian). */
 	DARKBLOOD_API FVector GetArenaLocation(const UDBBossDefinition& Boss);
+	/** The flattest dry spot near Base (m) for a ring of RadiusMeters: inside the realm, clear of settlements, dungeon
+	 *  gates and the Taken spots (MinDistanceMeters). World cm, ground height at the ring average. */
+	DARKBLOOD_API FVector FindOpenGround(const FVector2D& Base, double RadiusMeters, const TArray<FVector2D>& Taken, double MinDistanceMeters, const FString& What);
 }

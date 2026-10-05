@@ -10,6 +10,7 @@
 #include "World/DBRealmLayout.h"
 #include "World/DBCarriageStation.h"
 #include "World/DBDungeon.h"
+#include "World/DBRegionLife.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
@@ -39,6 +40,7 @@ ADBRealmDirector::ADBRealmDirector()
 {
 	Mood = CreateDefaultSubobject<UDBRealmMoodComponent>(TEXT("Mood"));
 	Life = CreateDefaultSubobject<UDBSettlementLifeComponent>(TEXT("Life"));
+	RegionLife = CreateDefaultSubobject<UDBRegionLifeComponent>(TEXT("RegionLife"));
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.f;
 	bReplicates = false;
@@ -99,6 +101,8 @@ void ADBRealmDirector::BeginPlay()
 		ADBDungeonPortal::SpawnEntrances(GetWorld());
 		// Arenas of the 16 vassals and the demon king.
 		ADBBossArena::SpawnArenas(GetWorld());
+		// A demon camp in every vassal region (Phase 11).
+		ADBDemonCamp::SpawnCamps(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }

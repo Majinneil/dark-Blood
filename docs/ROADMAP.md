@@ -16,7 +16,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 8 | Reise / Pferde / Kutschen / Survival | ✅ Gameplay (Pferd, Kutschen-Schnellreise, Sättigung/Wärme, Schwimm-Ausdauer; Regelkern, headless, Koop getestet) · 🟡 Modelle/Animationen |
 | 9 | Dungeon-System | ✅ Gameplay (8 Dungeons, Generator aus Seeds, Kämpfe/Fallen/Schatz/Schrein/Wächter, Fortschritt gespeichert; Regelkern, headless, Koop, gerendert getestet) · 🟡 eigene Themen-Modelle, Rätsel |
 | 10 | Boss-Framework | ✅ Gameplay (16 Vasallen + Dämonenkönig mit 3 Formen + Dungeon-Wächter, Arenen, Spezialangriffe, Phasen, Raserei, Koop-Skalierung, Boss-Leiste, Kartenmarker; Regelkern, headless, Koop, gerendert getestet) · 🟡 Modelle, Animationen, Musik, Intros |
-| 11 | 14 Regionen | ⬜ |
+| 11 | 14 Regionen | ✅ Gameplay (Dämonenrudel je Gebiet nach Zustand und Tageszeit, 14 Dämonenlager mit Hauptmann, Befreiungsquests, Kartenmarker; Regelkern, headless, Koop, gerendert getestet, 76–92 FPS) · 🟡 eigene Gegnermodelle, Landmarken, Musik |
 | 12 | 16 Vasallen | 🟡 alle 16 spielbar mit Framework-Mechaniken (Phase 10) · ⬜ eigene Abilities, Modelle, Arenen-Gestaltung je Vasall |
 | 13 | DAS ENDE | ⬜ |
 | 14 | Dämonenkönig | ⬜ |
@@ -281,3 +281,18 @@ Boss und Phasen auf dem Client repliziert; gerendert: Arena, Boss-Leiste, Gefahr
 
 **OFFEN**: Heldenmodelle und Animationen nach den Entwürfen, Telegraph-VFX, Musik, Intros/Finisher, eigene
 Abilities/StateTree je Boss (Phase 12/14), Arena-Transformation des Königs.
+
+## Abschluss Phase 11 – Regionsinhalte (Stand 2026-10-05)
+
+**ERGÄNZT**: Gebietsdämonen (`UDBRegionLifeComponent`): Rudel um jeden Spieler, Anzahl nach Gebietszustand und
+Tageszeit, Stufe und Werte aus dem Stufenband des Gebiets, Elite-Anführer; 14 Dämonenlager (`ADBDemonCamp`) mit
+Hauptmann (Zwischenboss, 14 neue Bossdefinitionen) und Wachen, das Lager macht das Gebiet umkämpft; Befreiungsquests
+`RQ_Region01`–`RQ_Region14` starten beim Betreten; Lagermarker auf der Karte; Arenen mit echten Modellen (Laternen,
+Tempelstatuen, Torii) und leuchtender Blutbarriere; Boss-Porträts in der Boss-Leiste. Details:
+[REGIONS.md](REGIONS.md).
+
+**GETESTET**: Regelkern 64/64 (neu: Rudelbudget, Stufen, Werte); headless: Quest startet beim Betreten, Rudel auf
+Gebietsstufe, Fortschritt 6/1/1, Lager in drei Gebieten (Kirschblütental, Feuergebirge, Küstenland) im richtigen Gebiet,
+Hauptmann fällt → umkämpft (Einfluss 0,7, 1 Rudel), Vasall → befreit (0 Rudel am Tag); Koop: Quest, Hauptmann, Beute
+und Namen auf dem Client, gemeinsames Rudelbudget; gerendert: Lager, Questtracker, Arena. FPS 76–92 (mit freiem
+Grafikspeicher; ein im Hintergrund geladenes 7,4-GB-Ollama-Modell drückte sie auf 18).
