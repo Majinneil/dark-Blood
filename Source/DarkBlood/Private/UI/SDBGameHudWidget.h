@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Styling/SlateBrush.h"
+#include "UObject/StrongObjectPtr.h"
 #include "Widgets/SCompoundWidget.h"
 
 class APlayerController;
@@ -34,8 +36,13 @@ private:
 	/** Nearest living boss within 60 m of the local player (the boss bar). */
 	const class ADBBossCharacter* FindBoss() const;
 	FText GetBossTitle() const;
+	/** Portrait of that boss (loaded once per boss), null without one. */
+	const FSlateBrush* GetBossPortrait() const;
 
 	TWeakObjectPtr<APlayerController> Owner;
 	FText Notification;
 	double NotificationUntil = 0.0;
+	mutable FSlateBrush BossPortraitBrush;
+	mutable FName BossPortraitId;
+	mutable TStrongObjectPtr<class UTexture2D> BossPortraitTexture;
 };

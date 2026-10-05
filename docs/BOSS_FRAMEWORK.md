@@ -45,8 +45,8 @@ der Dungeon-Stufe (×0,5 + 0,25 je Stufe).
 | `UDBBossDefinition` | `Boss/DBBossDefinition.h` | Id, Name, Titel, Rang, Gebiet, Element, Farbe, Werte, Belohnung, Phasen (Schwelle, Mechaniken, Größe, Name), Raserei, Arenaradius, Porträt und Visual-Profil als weiche Referenz. DEVELOPMENT: im Code angelegt (`DBBosses::GetAll`) |
 | `ADBBossCharacter` | `Boss/DBBoss.h` | Nahkampf-KI plus Spezialangriffe, Phasenwechsel mit 2 s Unverwundbarkeit, Raserei, Koop-Skalierung, Belohnung für alle Kämpfer |
 | `ADBBossTelegraph` | `Boss/DBBoss.h` | Warnring, der wächst und dann trifft; Zonen brennen weiter (1 Treffer/s) |
-| `ADBBossArena` | `Boss/DBBoss.h` | Steinboden, 12 Säulen, Blutbarriere während des Kampfs, Versiegelung (DAS ENDE, Thron), Zurücksetzen, wenn 5 s niemand im Ring ist |
-| Boss-Leiste | `UI/SDBGameHudWidget` | nächster lebender Boss im Umkreis von 60 m: Name, Titel, Phase, Leben |
+| `ADBBossArena` | `Boss/DBBoss.h` | Steinboden, 12 Steinlaternen (Sketchfab), zwei Tempel-Wächterstatuen (Fab, MTSU-Fotogrammetrie), Torii als Eingang (Fab), leuchtende halbdurchsichtige Blutbarriere in Bossfarbe (`M_DB_BloodBarrier`, `Tools/UE58/db_create_barrier_material.py`) während des Kampfs, Versiegelung (DAS ENDE, Thron), Zurücksetzen, wenn 5 s niemand im Ring ist |
+| Boss-Leiste | `UI/SDBGameHudWidget` | nächster lebender Boss im Umkreis von 60 m: Porträt (aus den Konzeptblättern, `Tools/UE58/db_import_boss_portraits.py`), Name, Titel, Phase, Leben |
 | Kartenmarker | `UI/SDBWorldMapWidget` | Quadrat in Bossfarbe je Arena, grau nach dem Sieg |
 
 ### Spezialangriffe

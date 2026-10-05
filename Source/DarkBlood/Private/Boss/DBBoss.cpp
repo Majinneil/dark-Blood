@@ -6,6 +6,7 @@
 #include "Abilities/DBMeleeAttackAbility.h"
 #include "AbilitySystemGlobals.h"
 #include "Art/DBArtMaterials.h"
+#include "Art/DBModelLibrary.h"
 #include "Boss/DBBossDefinition.h"
 #include "Character/DBLesserDemon.h"
 #include "Combat/DBCombatStatics.h"
@@ -664,19 +665,97 @@ void ADBBossArena::BuildRing()
 		Floor->RegisterComponent();
 		Posts.Add(Floor);
 	}
-	// Twelve stone pillars mark the ring; a wall of blood rises between them while the fight lasts.
+	const bool bKing = Definition->Rank == EDBBossRank::DemonKing;
+	auto AddPart = [this](UStaticMesh* Mesh, const FTransform& Transform, UMaterialInterface* Override)
+	{
+		UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+		Part->SetMobility(EComponentMobility::Static);
+		Part->SetupAttachment(Root);
+		Part->SetStaticMesh(Mesh);
+		Part->SetRelativeTransform(Transform);
+		if (Override)
+		{
+			for (int32 Slot = 0; Slot < Mesh->GetStaticMaterials().Num(); ++Slot)
+			{
+				Part->SetMaterial(Slot, Override);
+			}
+		}
+		Part->SetCanEverAffectNavigation(false);
+		Part->RegisterComponent();
+		Posts.Add(Part);
+		return Part;
+	};
+	// An authored model scaled to Height, its bottom on At, turned by ModelRotation (import orientation) and Yaw.
+	auto AddModel = [&AddPart](const TArray<const TCHAR*>& Paths, const FRotator& ModelRotation, float Height, const FVector& At, float Yaw,
+		UMaterialInterface* Override = nullptr)
+	{
+		TArray<UStaticMesh*> Meshes;
+		FBox Bounds(ForceInit);
+		const FTransform Turn(ModelRotation);
+		for (const TCHAR* Path : Paths)
+		{
+			const FString Name(Path);
+			if (UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *(Name + TEXT(".") + FPaths::GetBaseFilename(Name)), nullptr, LOAD_NoWarn | LOAD_Quiet))
+			{
+				Meshes.Add(Mesh);
+				Bounds += Mesh->GetBoundingBox().TransformBy(Turn);
+			}
+		}
+		if (Meshes.IsEmpty() || !Bounds.IsValid || Bounds.GetSize().Z < KINDA_SMALL_NUMBER)
+		{
+			return false;
+		}
+		const float Scale = Height / Bounds.GetSize().Z;
+		const FVector Center = Bounds.GetCenter();
+		const FTransform Fit(FRotator::ZeroRotator, FVector(-Center.X, -Center.Y, -Bounds.Min.Z) * Scale, FVector(Scale));
+		const FTransform Placement(FRotator(0.f, Yaw, 0.f), At);
+		for (UStaticMesh* Mesh : Meshes)
+		{
+			AddPart(Mesh, Turn * Fit * Placement, Override);
+		}
+		return true;
+	};
+	const float Top = 25.f; // floor surface
+	// Stone lanterns (Sketchfab CC BY) round the ring, unlit on purpose (no extra shadow-casting lights).
+	const TArray<DBModels::FPlacedPart> Lantern = DBModels::GetNormalizedParts(TEXT("lantern_stone"), 240.f);
 	for (int32 Index = 0; Index < 12; ++Index)
 	{
-		const float Angle = 2.f * UE_PI * Index / 12.f;
-		UStaticMeshComponent* Post = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
-		Post->SetMobility(EComponentMobility::Static);
-		Post->SetupAttachment(Root);
-		Post->SetStaticMesh(Cube);
-		Post->SetRelativeLocation(FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 100.f));
-		Post->SetRelativeScale3D(FVector(1.2f, 1.2f, 10.f));
-		Post->SetMaterial(0, UDBArtMaterialSubsystem::Get(Definition->Rank == EDBBossRank::DemonKing ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneTemple));
-		Post->RegisterComponent();
-		Posts.Add(Post);
+		const float Degrees = 360.f * Index / 12.f + 15.f;
+		const FVector At = FRotator(0.f, Degrees, 0.f).Vector() * (Radius - 220.f) + FVector(0.f, 0.f, Top);
+		const FTransform Placement(FRotator(0.f, Degrees + 180.f, 0.f), At);
+		if (Lantern.IsEmpty())
+		{
+			AddPart(Cube, FTransform(FRotator::ZeroRotator, At + FVector(0.f, 0.f, 150.f), FVector(0.6f, 0.6f, 3.f)),
+				UDBArtMaterialSubsystem::Get(bKing ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneTemple));
+			continue;
+		}
+		for (const DBModels::FPlacedPart& Part : Lantern)
+		{
+			AddPart(Part.Mesh, Part.Local * Placement, bKing ? UDBArtMaterialSubsystem::Get(EDBArtMaterial::StoneCorrupted) : nullptr);
+		}
+	}
+	// Two temple guardians (MTSU photogrammetry, CC BY) across from the gate, facing the center.
+	for (const float Degrees : {-28.f, 28.f})
+	{
+		const FVector At = FRotator(0.f, Degrees, 0.f).Vector() * Radius * 0.84f + FVector(0.f, 0.f, Top);
+		AddPart(Cube, FTransform(FRotator(0.f, Degrees, 0.f), At + FVector(0.f, 0.f, 30.f), FVector(2.2f, 2.2f, 0.6f)),
+			UDBArtMaterialSubsystem::Get(bKing ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneRuin));
+		AddModel({TEXT("/Game/DarkBlood/Art/Fab/Statue_Ibaraki_MTSU/scene/StaticMeshes/scene")}, FRotator::ZeroRotator, bKing ? 420.f : 340.f,
+			At + FVector(0.f, 0.f, 60.f), Degrees + 180.f, bKing ? UDBArtMaterialSubsystem::Get(EDBArtMaterial::DarkBloodStone) : nullptr);
+	}
+	// The gate (Fab torii, CC BY) where the way in crosses the ring (west, where DBBossArena puts players).
+	AddModel({TEXT("/Game/DarkBlood/Art/Fab/Torii_Pikas/scene/StaticMeshes/Torri_Gate_Torri_gate_0"), TEXT("/Game/DarkBlood/Art/Fab/Torii_Pikas/scene/StaticMeshes/Torri_Gate_Rope_Gold_0")},
+		FRotator(0.f, 90.f, 0.f), 640.f, FVector(-Radius, 0.f, Top), 0.f);
+
+	// The blood barrier: a glowing translucent wall in the boss' color while the fight lasts.
+	UMaterialInterface* BarrierMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_BloodBarrier.M_DB_BloodBarrier"),
+		nullptr, LOAD_NoWarn | LOAD_Quiet);
+	UMaterialInterface* WallMaterial = UDBArtMaterialSubsystem::Get(EDBArtMaterial::BloodRiver);
+	if (BarrierMaterial)
+	{
+		UMaterialInstanceDynamic* Tinted = UMaterialInstanceDynamic::Create(BarrierMaterial, this);
+		Tinted->SetVectorParameterValue(TEXT("BarrierColor"), Definition->Color);
+		WallMaterial = Tinted;
 	}
 	const int32 Segments = 40;
 	const float Length = 2.f * UE_PI * Radius / Segments + 30.f;
@@ -687,10 +766,11 @@ void ADBBossArena::BuildRing()
 		Wall->SetMobility(EComponentMobility::Static);
 		Wall->SetupAttachment(Root);
 		Wall->SetStaticMesh(Cube);
-		Wall->SetRelativeLocation(FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 200.f));
+		Wall->SetRelativeLocation(FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, Top + 200.f));
 		Wall->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(Angle) + 90.f, 0.f));
-		Wall->SetRelativeScale3D(FVector(Length / 100.f, 0.3f, 8.f));
-		Wall->SetMaterial(0, UDBArtMaterialSubsystem::Get(EDBArtMaterial::BloodRiver));
+		Wall->SetRelativeScale3D(FVector(Length / 100.f, 0.08f, 5.f));
+		Wall->SetMaterial(0, WallMaterial);
+		Wall->SetCastShadow(false);
 		Wall->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
 		Wall->RegisterComponent();
 		Barrier.Add(Wall);

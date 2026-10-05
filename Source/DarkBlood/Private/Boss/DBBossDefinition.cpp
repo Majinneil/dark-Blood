@@ -68,6 +68,9 @@ namespace
 		Boss->XpReward = 1200 + Def.Order * 250;
 		Boss->SkillPoints = 1;
 		Boss->LootTableId = TEXT("LT_Vassal");
+		// Head panel of the concept sheet (Tools/UE58/db_import_boss_portraits.py).
+		const FString Portrait = FString::Printf(TEXT("/Game/DarkBlood/UI/Bosses/T_Portrait_%s.T_Portrait_%s"), Def.Id, Def.Id);
+		Boss->Portrait = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(Portrait));
 		FDBBossPhase First;
 		First.HealthThreshold = 1.f;
 		First.Mechanics = Def.FirstMechanics;
@@ -151,6 +154,7 @@ namespace
 		Guardian->Level = 10;
 		Guardian->XpReward = 200;
 		Guardian->SkillPoints = 0;
+		Guardian->Portrait.Reset();
 		Guardian->LootTableId = NAME_None; // the dungeon's hoard is the reward
 		All.Add(Guardian);
 		return All;

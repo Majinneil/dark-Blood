@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Boss/DBBoss.h"
 #include "Boss/DBBossDefinition.h"
+#include "Engine/Texture2D.h"
 #include "EngineUtils.h"
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBGameplayAbility.h"
@@ -26,6 +27,7 @@
 #include "Quest/DBQuestComponent.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Widgets/Images/SImage.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Notifications/SProgressBar.h"
 #include "Widgets/SBoxPanel.h"
@@ -128,8 +130,29 @@ void SDBGameHudWidget::Construct(const FArguments& InArgs)
 		// Boss bar (top center): the nearest boss in a fight, with its title and phase
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 28.f, 0.f, 0.f)
 		[
-			SNew(SVerticalBox)
+			SNew(SHorizontalBox)
 			.Visibility_Lambda([this]() { return FindBoss() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			// Portrait from the concept sheet, framed in the boss color.
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.f, 0.f, 10.f, 0.f)
+			[
+				SNew(SBorder).BorderImage(White).Padding(2.f)
+				.Visibility_Lambda([this]() { return GetBossPortrait() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+				.BorderBackgroundColor_Lambda([this]() -> FSlateColor
+				{
+					const ADBBossCharacter* Boss = FindBoss();
+					const UDBBossDefinition* Definition = Boss ? Boss->GetDefinition() : nullptr;
+					return Definition ? Definition->Color : FLinearColor::White;
+				})
+				[
+					SNew(SBox).WidthOverride(64.f).HeightOverride(64.f)
+					[
+						SNew(SImage).Image_Lambda([this]() { return GetBossPortrait(); })
+					]
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
 			[
 				SNew(STextBlock)
@@ -156,6 +179,7 @@ void SDBGameHudWidget::Construct(const FArguments& InArgs)
 						return Boss ? Boss->GetHealthFraction() : 0.f;
 					})
 				]
+			]
 			]
 		]
 
@@ -317,6 +341,27 @@ const ADBBossCharacter* SDBGameHudWidget::FindBoss() const
 		}
 	}
 	return Nearest;
+}
+
+const FSlateBrush* SDBGameHudWidget::GetBossPortrait() const
+{
+	const ADBBossCharacter* Boss = FindBoss();
+	const UDBBossDefinition* Definition = Boss ? Boss->GetDefinition() : nullptr;
+	if (!Definition || Definition->Portrait.IsNull())
+	{
+		return nullptr;
+	}
+	if (BossPortraitId != Definition->BossId)
+	{
+		BossPortraitId = Definition->BossId;
+		UTexture2D* Texture = Definition->Portrait.LoadSynchronous();
+		BossPortraitTexture.Reset(Texture);
+		BossPortraitBrush = FSlateBrush();
+		BossPortraitBrush.SetResourceObject(Texture);
+		BossPortraitBrush.DrawAs = Texture ? ESlateBrushDrawType::Image : ESlateBrushDrawType::NoDrawType;
+		BossPortraitBrush.ImageSize = FVector2D(64.f, 64.f);
+	}
+	return BossPortraitBrush.GetResourceObject() ? &BossPortraitBrush : nullptr;
 }
 
 FText SDBGameHudWidget::GetBossTitle() const
