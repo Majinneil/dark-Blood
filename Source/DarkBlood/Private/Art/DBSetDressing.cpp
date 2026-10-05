@@ -925,6 +925,8 @@ void ADBAmbientFx::Build(FDBArtBatcher& Batcher)
 		return;
 	}
 	Batcher.SetCollision(false);
+	// The swarm moves every frame and the root is movable: a static swarm would not attach and sit at the world origin.
+	Batcher.SetMovable(true);
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		FParticle& P = Particles.AddDefaulted_GetRef();

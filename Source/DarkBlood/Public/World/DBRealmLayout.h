@@ -95,6 +95,9 @@ namespace DBRealm
 
 	/** Half the side of the landscape in meters (4064 quads x 4 m / 2). */
 	constexpr double HalfSize = 8128.0;
+	/** Whether a position (m) lies on the realm's landscape square (dungeon interiors are built outside it). */
+	inline bool IsInside(double X, double Y) { return FMath::Abs(X) < HalfSize && FMath::Abs(Y) < HalfSize; }
+
 	/** The capital plateau is flat within this radius (the visual slice and the story start stand on it). */
 	constexpr double CapitalFlatRadius = 420.0;
 

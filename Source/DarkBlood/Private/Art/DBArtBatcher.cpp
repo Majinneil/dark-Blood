@@ -38,7 +38,22 @@ UInstancedStaticMeshComponent* FDBArtBatcher::FindOrCreate(UStaticMesh* Mesh, UM
 	{
 		return *Found;
 	}
-	UInstancedStaticMeshComponent* Component = NewObject<UInstancedStaticMeshComponent>(&Owner, NAME_None, RF_Transient);
+	// Replicated owners (dungeons, ships) build the same pieces in the same order on every machine. Stable names make
+	// them net addressable, so a character standing on them can replicate its movement base.
+	FName Name = NAME_None;
+	if (Owner.GetIsReplicated())
+	{
+		Name = FName(TEXT("ArtPiece"), Components.Num() + 1);
+		if (StaticFindObjectFast(nullptr, &Owner, Name))
+		{
+			Name = NAME_None; // rebuilt before the old pieces were collected
+		}
+	}
+	UInstancedStaticMeshComponent* Component = NewObject<UInstancedStaticMeshComponent>(&Owner, Name, RF_Transient);
+	if (Name != NAME_None)
+	{
+		Component->SetNetAddressable();
+	}
 	Component->SetupAttachment(&Parent);
 	Component->SetStaticMesh(Mesh);
 	if (Material && Slot == INDEX_NONE)

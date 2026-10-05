@@ -347,6 +347,21 @@ void UDBWorldStateComponent::SkipHours(double Hours)
 	SyncReplicatedView();
 }
 
+void UDBWorldStateComponent::NotifyDungeonCleared(FName DungeonId)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		State.MarkDungeonCleared(DBBridge::ToStd(DungeonId));
+		UE_LOG(LogDBWorld, Display, TEXT("Dungeon %s cleared (%d times)"), *DungeonId.ToString(),
+			State.FindDungeon(DBBridge::ToStd(DungeonId)) ? State.FindDungeon(DBBridge::ToStd(DungeonId))->TimesCleared : 0);
+	}
+}
+
+bool UDBWorldStateComponent::IsDungeonCleared(FName DungeonId) const
+{
+	return State.IsDungeonCleared(DBBridge::ToStd(DungeonId));
+}
+
 bool UDBWorldStateComponent::GetSettlementView(FName SettlementId, FDBSettlementView& OutView) const
 {
 	for (const FDBSettlementView& View : Settlements)

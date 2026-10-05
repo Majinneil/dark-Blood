@@ -501,6 +501,12 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	Loot(TEXT("LT_TrainingDummy"), {}, {LootEntry(TEXT("Leather"), 1, 1, 1), LootEntry(TEXT("Tamahagane"), 1, 1, 1)}, 1, 2, 0, 3);
 	Loot(TEXT("LT_Chest_Courtyard"), {Grant(TEXT("Helm_Ashigaru"), 1), Grant(TEXT("HealingDraught"), 2), Grant(TEXT("Tamahagane"), 3)},
 		{LootEntry(TEXT("Leather"), 1, 1, 2)}, 1, 0, 40, 60);
+	// Dungeons (Phase 9): treasure rooms and the guardian's hoard.
+	Loot(TEXT("LT_DungeonChest"), {Grant(TEXT("HealingDraught"), 2)},
+		{LootEntry(TEXT("Tamahagane"), 3, 2, 4), LootEntry(TEXT("DemonOre"), 2, 1, 2), LootEntry(TEXT("SpiritPaper"), 2, 1, 2), LootEntry(TEXT("RiceBall"), 2, 2, 3)},
+		2, 1, 60, 120);
+	Loot(TEXT("LT_DungeonGuardian"), {Grant(TEXT("DemonOre"), 2), Grant(TEXT("SpiritPaper"), 2)},
+		{LootEntry(TEXT("Tamahagane"), 2, 3, 5), LootEntry(TEXT("HealingDraught"), 2, 1, 2), LootEntry(TEXT("DemonHorn"), 1, 2, 3)}, 2, 1, 120, 220);
 
 	// ---- Quests (story slice: courtyard -> east gate) ------------------------------------------
 	auto Objective = [](const TCHAR* Id, EDBObjectiveKind Kind, const TCHAR* Target, int32 Required, const TCHAR* Description)

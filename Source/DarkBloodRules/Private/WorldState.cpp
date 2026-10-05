@@ -127,6 +127,36 @@ namespace DarkBlood::Rules
 		}
 	}
 
+	const FDungeonProgress* FWorldState::FindDungeon(std::string_view DungeonId) const
+	{
+		for (const FDungeonProgress& Dungeon : Dungeons)
+		{
+			if (Dungeon.DungeonId == DungeonId)
+			{
+				return &Dungeon;
+			}
+		}
+		return nullptr;
+	}
+
+	void FWorldState::MarkDungeonCleared(std::string_view DungeonId)
+	{
+		FDungeonProgress* Progress = const_cast<FDungeonProgress*>(FindDungeon(DungeonId));
+		if (!Progress)
+		{
+			Dungeons.push_back(FDungeonProgress{std::string(DungeonId), 0, -1.0});
+			Progress = &Dungeons.back();
+		}
+		++Progress->TimesCleared;
+		Progress->ClearedAtHours = Clock.TotalHours;
+	}
+
+	bool FWorldState::IsDungeonCleared(std::string_view DungeonId, const FDungeonRules& Rules) const
+	{
+		const FDungeonProgress* Progress = FindDungeon(DungeonId);
+		return Progress && DarkBlood::Rules::IsDungeonCleared(*Progress, Clock.TotalHours, Rules);
+	}
+
 	FSettlementState* FWorldState::FindSettlement(std::string_view SettlementId)
 	{
 		for (FSettlementState& Settlement : Settlements)

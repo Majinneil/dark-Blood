@@ -3,6 +3,7 @@
 #pragma once
 
 #include "DarkBloodRules/Quest.h"
+#include "DarkBloodRules/Dungeon.h"
 #include "DarkBloodRules/Settlement.h"
 
 #include <string>
@@ -78,6 +79,8 @@ namespace DarkBlood::Rules
 		FQuestLog SharedQuests;
 		/** Abstract simulation of every settlement; their clocks run with the world clock (hour 0 = 00:00, day 1). */
 		std::vector<FSettlementState> Settlements;
+		/** Clears of each dungeon (cleared dungeons stay empty for a while). */
+		std::vector<FDungeonProgress> Dungeons;
 
 		DARKBLOODRULES_API FRegionState& AddRegion(std::string RegionId, ERegionKind Kind);
 		DARKBLOODRULES_API FRegionState* FindRegion(std::string_view RegionId);
@@ -101,6 +104,11 @@ namespace DarkBlood::Rules
 		DARKBLOODRULES_API FSettlementState& AddSettlement(FSettlementState Settlement);
 		/** Catches every settlement up to the world clock with its region's demon influence; appends what happened. */
 		DARKBLOODRULES_API void AdvanceSettlements(std::vector<FSettlementEvent>& OutEvents, const FSettlementRules& Rules = FSettlementRules());
+
+		DARKBLOODRULES_API const FDungeonProgress* FindDungeon(std::string_view DungeonId) const;
+		/** Records a clear at the current world time (counts every clear). */
+		DARKBLOODRULES_API void MarkDungeonCleared(std::string_view DungeonId);
+		DARKBLOODRULES_API bool IsDungeonCleared(std::string_view DungeonId, const FDungeonRules& Rules = FDungeonRules()) const;
 
 	private:
 		std::vector<FRegionState> Regions;

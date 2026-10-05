@@ -28,6 +28,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Settings/DBGameUserSettings.h"
 #include "World/DBCarriageStation.h"
+#include "World/DBDungeon.h"
 #include "World/DBRealmDirector.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBSettlementLifeComponent.h"
@@ -954,6 +955,93 @@ void UDBCheatManager::DBCarriage(const FString& Destination)
 	FText Reason;
 	const bool bTravelled = Nearest && Nearest->Travel(Controller, Target, Reason);
 	UE_LOG(LogDarkBlood, Display, TEXT("DBCarriage %s: %s"), *Destination, bTravelled ? TEXT("ok") : *Reason.ToString());
+}
+
+void UDBCheatManager::DBDungeonEnter(const FString& Dungeon)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBDungeonEnter %s"), *Dungeon))) return;
+	const int32 Site = DBDungeon::FindSite(Dungeon);
+	const bool bEntered = Site != INDEX_NONE && ADBDungeonInstance::Enter(GetOuterAPlayerController(), Site);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBDungeonEnter %s: %s"), *Dungeon, bEntered ? TEXT("ok") : TEXT("unknown dungeon"));
+}
+
+void UDBCheatManager::DBDungeonRoom(const FString& Room)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBDungeonRoom %s"), *Room))) return;
+	APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	ADBDungeonInstance* Instance = Pawn ? ADBDungeonInstance::FindAt(GetWorld(), Pawn->GetActorLocation()) : nullptr;
+	if (!Instance)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBDungeonRoom: not inside a dungeon"));
+		return;
+	}
+	// A room index or a kind (Boss, Treasure, Trap, Rest, Entrance, Combat).
+	const DarkBlood::Rules::FDungeonLayout& Layout = Instance->GetLayout();
+	int32 Index = Room.IsNumeric() ? FCString::Atoi(*Room) : INDEX_NONE;
+	for (int32 Candidate = 0; Index == INDEX_NONE && Candidate < static_cast<int32>(Layout.Rooms.size()); ++Candidate)
+	{
+		if (Room.Equals(UTF8_TO_TCHAR(DarkBlood::Rules::ToString(Layout.Rooms[static_cast<size_t>(Candidate)].Kind)), ESearchCase::IgnoreCase))
+		{
+			Index = Candidate;
+		}
+	}
+	if (Index < 0 || Index >= static_cast<int32>(Layout.Rooms.size()))
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBDungeonRoom: no room '%s'"), *Room);
+		return;
+	}
+	Pawn->TeleportTo(Instance->GetRoomCenter(Index) + FVector(0.f, 0.f, 120.f), Pawn->GetActorRotation());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBDungeonRoom: room %d (%hs)"), Index, DarkBlood::Rules::ToString(Layout.Rooms[static_cast<size_t>(Index)].Kind));
+}
+
+void UDBCheatManager::DBDungeonDump()
+{
+	if (ForwardToServer(TEXT("DBDungeonDump"))) return;
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	const TArray<FDBDungeonSite>& Sites = DBDungeon::GetSites();
+	for (int32 Site = 0; Site < Sites.Num(); ++Site)
+	{
+		const ADBDungeonInstance* Instance = ADBDungeonInstance::Find(GetWorld(), Site);
+		const bool bCleared = GameState && GameState->GetWorldState() && GameState->GetWorldState()->IsDungeonCleared(Sites[Site].Id);
+		UE_LOG(LogDarkBlood, Display, TEXT("  %-20s %-10s stage %d gate %.0f / %.0f m%s%s"), *Sites[Site].Name, *Sites[Site].RegionId.ToString(), Sites[Site].Difficulty,
+			Sites[Site].Entrance.X, Sites[Site].Entrance.Y, bCleared ? TEXT(" [cleared]") : TEXT(""), Instance ? TEXT(" [open]") : TEXT(""));
+		if (!Instance)
+		{
+			continue;
+		}
+		const DarkBlood::Rules::FDungeonLayout& Layout = Instance->GetLayout();
+		for (int32 Room = 0; Room < static_cast<int32>(Layout.Rooms.size()); ++Room)
+		{
+			const DarkBlood::Rules::FDungeonRoom& Data = Layout.Rooms[static_cast<size_t>(Room)];
+			UE_LOG(LogDarkBlood, Display, TEXT("      room %2d %-8hs depth %d enemies %d state %d alive %d"), Room, DarkBlood::Rules::ToString(Data.Kind), Data.Depth, Data.Enemies,
+				Instance->GetRoomState(Room), Instance->CountLivingEnemies(Room));
+		}
+	}
+}
+
+void UDBCheatManager::DBKillNearby(float RadiusMeters)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBKillNearby %f"), RadiusMeters))) return;
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	int32 Killed = 0;
+	for (TActorIterator<ADBEnemyCharacter> It(GetWorld()); It && Pawn; ++It)
+	{
+		UAbilitySystemComponent* ASC = It->GetAbilitySystemComponent();
+		if (It->IsDead() || !ASC || FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation()) > RadiusMeters * 100.f)
+		{
+			continue;
+		}
+		UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
+		Effect->DurationPolicy = EGameplayEffectDurationType::Instant;
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = UDBAttributeSet::GetIncomingDamageAttribute();
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(99999.f));
+		Effect->Modifiers.Add(Modifier);
+		ASC->ApplyGameplayEffectToSelf(Effect, 1.f, ASC->MakeEffectContext());
+		++Killed;
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBKillNearby: %d enemies"), Killed);
 }
 
 void UDBCheatManager::DBRide()

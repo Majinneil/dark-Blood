@@ -14,6 +14,7 @@
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SLeafWidget.h"
 #include "Widgets/Text/STextBlock.h"
+#include "World/DBDungeon.h"
 #include "World/DBRealmLayout.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodWorldMap"
@@ -25,6 +26,7 @@ namespace
 	const FLinearColor Shadow(0.f, 0.f, 0.f, 0.85f);
 	const FLinearColor AllyBlue(0.35f, 0.65f, 1.f);
 	const FLinearColor SettlementWhite(0.95f, 0.92f, 0.85f);
+	const FLinearColor DungeonRed(1.f, 0.3f, 0.25f);
 
 	/** Map image pixels covered by the realm square (the continent part of the world map). */
 	FBox2D GetRealmPixels()
@@ -92,6 +94,17 @@ namespace
 				{
 					Label(Out, Layer, Geometry, At + FVector2f(7.f, -9.f), FText::FromString(Site.Name), 10, SettlementWhite);
 				}
+			}
+
+			// Dungeon gates: red diamonds (the client does not know which ones are cleared; the gate itself tells).
+			for (const FDBDungeonSite& Site : DBDungeon::GetSites())
+			{
+				const FVector2f At = ToLocal(Site.Entrance, Size);
+				const TArray<FVector2f> Diamond = {At + FVector2f(0.f, -8.f), At + FVector2f(8.f, 0.f), At + FVector2f(0.f, 8.f), At + FVector2f(-8.f, 0.f), At + FVector2f(0.f, -8.f)};
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, Shadow, true, 5.f);
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, DungeonRed, true, 2.5f);
+				Label(Out, Layer, Geometry, At + FVector2f(9.f, -3.f), FText::Format(LOCTEXT("DungeonLabel", "{0} ({1})"), FText::FromString(Site.Name),
+					FText::AsNumber(Site.Difficulty)), 10, DungeonRed);
 			}
 
 			const APlayerController* Controller = Owner.Get();

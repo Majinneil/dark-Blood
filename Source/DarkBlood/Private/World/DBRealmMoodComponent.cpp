@@ -141,7 +141,8 @@ void UDBRealmMoodComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
 		{
 			const FVector Location = Camera->GetCameraLocation() / 100.0;
-			const int32 Region = DBRealm::FindRegionIndex(Location.X, Location.Y);
+			// Outside the landscape (dungeon interiors) the last region's mood stays.
+			const int32 Region = DBRealm::IsInside(Location.X, Location.Y) ? DBRealm::FindRegionIndex(Location.X, Location.Y) : TargetRegion;
 			const TArray<FDBRealmRegion>& Regions = DBRealm::GetRegions();
 			if (Region != TargetRegion && Regions.IsValidIndex(Region))
 			{

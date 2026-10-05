@@ -83,9 +83,9 @@ void UDBSurvivalComponent::UpdateSurvival(float Seconds)
 	// Exposure from the open world: region, height, night, wet clothes; settlements warm.
 	float Exposure = 0.f;
 	bool bWarming = false;
-	if (ADBRealmDirector::Get(GetWorld()))
+	const FVector Meters = Pawn->GetActorLocation() / 100.0;
+	if (ADBRealmDirector::Get(GetWorld()) && DBRealm::IsInside(Meters.X, Meters.Y))
 	{
-		const FVector Meters = Pawn->GetActorLocation() / 100.0;
 		const TArray<FDBRealmRegion>& Regions = DBRealm::GetRegions();
 		const int32 Region = DBRealm::FindRegionIndex(Meters.X, Meters.Y);
 		const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();

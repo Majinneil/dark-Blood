@@ -8,6 +8,7 @@
 #include "Player/DBPlayerState.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBCarriageStation.h"
+#include "World/DBDungeon.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
@@ -93,6 +94,8 @@ void ADBRealmDirector::BeginPlay()
 		}
 		// Every settlement has a carriage to every other one.
 		ADBCarriageStation::SpawnStations(GetWorld());
+		// Dungeon gates in their regions.
+		ADBDungeonPortal::SpawnEntrances(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }

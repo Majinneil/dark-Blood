@@ -139,6 +139,8 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBSettlementAttack <Siedlung>` | Dämonenangriff als Kampf in der Siedlung (Spieler muss dort sein) |
 | `DBRide`, `DBCarriage <Siedlung>` | Eigenes Pferd rufen + auf-/absteigen / Kutsche von der nächsten Station |
 | `DBSurvival <Sättigung> <Wärme>` | Survival-Werte setzen |
+| `DBDungeonEnter <Name>` / `DBDungeonRoom <Index\|Art>` / `DBDungeonDump` | Dungeon betreten / zu einem Raum springen / Zustand aller Dungeons |
+| `DBKillNearby <m>` | Gegner im Umkreis besiegen (Tests) |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
 Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),

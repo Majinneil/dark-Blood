@@ -516,6 +516,13 @@ namespace DarkBlood::Rules
 			}
 			WriteQuestLog(W, World.SharedQuests);
 			WriteSettlements(W, World.Settlements);
+			W.WriteU32(static_cast<uint32>(World.Dungeons.size()));
+			for (const FDungeonProgress& Dungeon : World.Dungeons)
+			{
+				W.WriteString(Dungeon.DungeonId);
+				W.WriteI32(Dungeon.TimesCleared);
+				W.WriteF64(Dungeon.ClearedAtHours);
+			}
 		}
 
 		bool ReadWorldPayload(FBinaryReader& R, uint32 Version, FWorldRecord& Record)
@@ -542,7 +549,27 @@ namespace DarkBlood::Rules
 			{
 				return false;
 			}
-			return Version < 2 || ReadSettlements(R, World.Settlements);
+			if (Version >= 2 && !ReadSettlements(R, World.Settlements))
+			{
+				return false;
+			}
+			if (Version >= 3)
+			{
+				uint32 DungeonCount = 0;
+				if (!R.ReadCount(DungeonCount))
+				{
+					return false;
+				}
+				World.Dungeons.assign(DungeonCount, FDungeonProgress());
+				for (FDungeonProgress& Dungeon : World.Dungeons)
+				{
+					if (!R.ReadString(Dungeon.DungeonId) || !R.ReadI32(Dungeon.TimesCleared) || !R.ReadF64(Dungeon.ClearedAtHours) || Dungeon.TimesCleared < 0)
+					{
+						return false;
+					}
+				}
+			}
+			return true;
 		}
 	}
 

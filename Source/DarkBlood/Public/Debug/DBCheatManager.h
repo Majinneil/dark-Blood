@@ -112,6 +112,11 @@ public:
 	UFUNCTION(Exec) void DBRide();
 	/** Travels by carriage from the nearest station (normal checks: range, fare). */
 	UFUNCTION(Exec) void DBCarriage(const FString& Destination);
+	/** Dungeons: enter by id / name, jump to a room (index or kind) inside, state of all dungeons; kill enemies nearby. */
+	UFUNCTION(Exec) void DBDungeonEnter(const FString& Dungeon);
+	UFUNCTION(Exec) void DBDungeonRoom(const FString& Room);
+	UFUNCTION(Exec) void DBDungeonDump();
+	UFUNCTION(Exec) void DBKillNearby(float RadiusMeters);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

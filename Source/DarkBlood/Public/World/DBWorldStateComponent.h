@@ -119,6 +119,11 @@ public:
 	FDBOnSettlementEvent OnSettlementEvent;
 
 	bool GetSettlementView(FName SettlementId, FDBSettlementView& OutView) const;
+
+	/** Server: a dungeon's guardian room was cleared (saved; demons return after three game days). */
+	void NotifyDungeonCleared(FName DungeonId);
+	/** Server: whether a dungeon is cleared right now. */
+	bool IsDungeonCleared(FName DungeonId) const;
 	const TArray<FDBSettlementView>& GetSettlementViews() const { return Settlements; }
 
 	void RestoreFromRecord(const DarkBlood::Rules::FWorldState& InState);

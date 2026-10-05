@@ -14,7 +14,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 6 | Open World | ✅ 16-km-Welt, 16 Regionen, 17 Siedlungen, Meer, Schiffe, Wälder/Gras, Weltkarte `[M]`, Schwimmen, Regionsstimmung (gerendert + Koop getestet) · 🟡 Klippen/Wasserfälle/Inselküsten → Phase 11/17 |
 | 7 | NPC- und Siedlungssimulation | ✅ Gameplay (17 Siedlungen abstrakt simuliert + gespeichert, Dorfbewohner, Angriffe als Kämpfe; Regelkern + headless getestet) · 🟡 Mass-Mengen, Tagesabläufe, Händler, Animationen |
 | 8 | Reise / Pferde / Kutschen / Survival | ✅ Gameplay (Pferd, Kutschen-Schnellreise, Sättigung/Wärme, Schwimm-Ausdauer; Regelkern, headless, Koop getestet) · 🟡 Modelle/Animationen |
-| 9 | Dungeon-System | ⬜ |
+| 9 | Dungeon-System | ✅ Gameplay (8 Dungeons, Generator aus Seeds, Kämpfe/Fallen/Schatz/Schrein/Wächter, Fortschritt gespeichert; Regelkern, headless, Koop, gerendert getestet) · 🟡 eigene Themen-Modelle, Rätsel |
 | 10 | Boss-Framework | ⬜ |
 | 11 | 14 Regionen | ⬜ |
 | 12 | 14 Vasallen | ⬜ |
