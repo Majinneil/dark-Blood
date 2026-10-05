@@ -34,6 +34,7 @@ namespace
 	const FName QuestSeal(TEXT("MQ10_TheEndSeal"));
 	const FName QuestGuardians(TEXT("MQ11_ThroneGuardians"));
 	const FName QuestThrone(TEXT("MQ12_DemonKing"));
+	const FName QuestParadise(TEXT("MQ13_Paradise"));
 
 	const FDBRealmRegion* FindTheEnd()
 	{
@@ -375,7 +376,7 @@ void ADBEndGate::AdvanceQuests()
 		return;
 	}
 	APlayerState* Anyone = GameState->PlayerArray[0];
-	const FName Chain[] = {QuestSeal, QuestGuardians, QuestThrone};
+	const FName Chain[] = {QuestSeal, QuestGuardians, QuestThrone, QuestParadise};
 	for (int32 Index = 0; Index < static_cast<int32>(UE_ARRAY_COUNT(Chain)); ++Index)
 	{
 		const EDBQuestStatus Status = Log->GetQuestStatus(Chain[Index]);

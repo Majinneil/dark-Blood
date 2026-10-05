@@ -133,6 +133,28 @@ namespace DarkBlood::Rules
 		return IsFinalRegionOpen() && Final != Regions.end() && Final->bVassalDefeated;
 	}
 
+	void FWorldState::PurifyWorld()
+	{
+		for (FRegionState& Region : Regions)
+		{
+			if (Region.Kind == ERegionKind::VassalRegion || Region.Kind == ERegionKind::FinalRegion)
+			{
+				if (Region.Control != ERegionControl::Liberated)
+				{
+					Region.LiberatedAtHours = Clock.TotalHours;
+				}
+				Region.Control = ERegionControl::Liberated;
+				Region.DemonInfluence = 0.f;
+			}
+		}
+		StoryFlags.insert("Story.WorldPurified");
+	}
+
+	bool FWorldState::IsPurified() const
+	{
+		return StoryFlags.find("Story.WorldPurified") != StoryFlags.end();
+	}
+
 	void FWorldState::Advance(double GameHours, const FRegionRecoveryRules& Rules)
 	{
 		if (GameHours <= 0.0)

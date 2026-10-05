@@ -137,6 +137,11 @@ public:
 	/** DAS ENDE (Phase 13): teleport in front of the Gate of the End / to the Last Bastion. */
 	UFUNCTION(Exec) void DBEndGate();
 	UFUNCTION(Exec) void DBBastion();
+
+	/** Phase 15: to the gate of light at the throne / onto the Paradise island; show the finale here. */
+	UFUNCTION(Exec) void DBParadiseGate();
+	UFUNCTION(Exec) void DBParadise(const FString& Where = TEXT(""));
+	UFUNCTION(Exec) void DBFinale();
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

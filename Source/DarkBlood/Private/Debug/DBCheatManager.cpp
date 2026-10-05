@@ -7,6 +7,7 @@
 #include "Boss/DBBossDefinition.h"
 #include "World/DBRegionLife.h"
 #include "World/DBTheEnd.h"
+#include "World/DBParadise.h"
 #include "DarkBloodRules/Region.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemComponent.h"
@@ -1298,6 +1299,47 @@ void UDBCheatManager::DBBastion()
 	const float Yaw = DBTheEnd::GetGateYaw();
 	TeleportNear(GetOuterAPlayerController()->GetPawn(), DBTheEnd::GetBastionLocation(), -FVector2D(FRotator(0.f, Yaw, 0.f).Vector()) * 2.0, Yaw);
 	UE_LOG(LogDarkBlood, Display, TEXT("DBBastion: (%.0f, %.0f) m"), DBTheEnd::GetBastionLocation().X / 100.0, DBTheEnd::GetBastionLocation().Y / 100.0);
+}
+
+void UDBCheatManager::DBParadiseGate()
+{
+	if (ForwardToServer(TEXT("DBParadiseGate"))) return;
+	const ADBParadiseGate* Gate = ADBParadiseGate::Find(GetWorld(), EDBParadiseGate::ToParadise);
+	if (APawn* Pawn = GetOuterAPlayerController()->GetPawn(); Pawn && Gate)
+	{
+		// 3 m in front of the gate, facing it.
+		Pawn->TeleportTo(Gate->GetActorLocation() + FVector(-300.f, 0.f, 150.f), FRotator::ZeroRotator);
+		if (AController* Controller = Pawn->GetController())
+		{
+			Controller->SetControlRotation(FRotator(-5.f, 0.f, 0.f));
+		}
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBParadiseGate: %s"), Gate ? (Gate->IsActive() ? TEXT("open") : TEXT("closed")) : TEXT("no gate"));
+}
+
+void UDBCheatManager::DBParadise(const FString& Where)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBParadise %s"), *Where))) return;
+	if (APawn* Pawn = GetOuterAPlayerController()->GetPawn())
+	{
+		// At the gate side of the island, or right before the Shrine of Peace.
+		const bool bShrine = Where.Equals(TEXT("Shrine"), ESearchCase::IgnoreCase);
+		Pawn->TeleportTo(DBParadise::GetIslandCenter() + FVector(bShrine ? 2300.f : -3950.f, 0.f, 200.f), FRotator::ZeroRotator);
+		if (AController* Controller = Pawn->GetController())
+		{
+			Controller->SetControlRotation(FRotator(-5.f, 0.f, 0.f));
+		}
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBParadise: island at (%.0f, %.0f, %.0f) m"), DBParadise::GetIslandCenter().X / 100.0, DBParadise::GetIslandCenter().Y / 100.0,
+		DBParadise::GetIslandCenter().Z / 100.0);
+}
+
+void UDBCheatManager::DBFinale()
+{
+	if (ADBPlayerController* Controller = Cast<ADBPlayerController>(GetOuterAPlayerController()))
+	{
+		Controller->ClientShowFinale();
+	}
 }
 
 void UDBCheatManager::DBRegionDump()

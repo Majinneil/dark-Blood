@@ -284,6 +284,15 @@ void ADBPlayerController::ClientShowNotification_Implementation(const FText& Tex
 	}
 }
 
+void ADBPlayerController::ClientShowFinale_Implementation()
+{
+	UE_LOG(LogDarkBlood, Display, TEXT("Finale shown"));
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->ShowFinale();
+	}
+}
+
 void ADBPlayerController::ClientOpenCrafting_Implementation(AActor* Station)
 {
 	UE_LOG(LogDarkBlood, Display, TEXT("Crafting opened: %s"), *GetNameSafe(Station));

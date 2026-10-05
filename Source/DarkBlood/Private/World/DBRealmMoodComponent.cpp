@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "World/DBParadise.h"
 #include "World/DBRealmLayout.h"
 
 namespace
@@ -141,8 +142,25 @@ void UDBRealmMoodComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
 		{
 			const FVector Location = Camera->GetCameraLocation() / 100.0;
+			// The Paradise floats above DAS ENDE: golden, clear air instead of the blood fog below (Phase 15).
+			constexpr int32 ParadiseMood = 1000;
+			if (DBParadise::IsInParadise(Camera->GetCameraLocation()))
+			{
+				if (TargetRegion != ParadiseMood)
+				{
+					TargetRegion = ParadiseMood;
+					SecondsSinceChange = 0.f;
+					Target = MakeMood(0.35f, FLinearColor(1.f, 0.93f, 0.8f), 1.25f, FLinearColor(1.f, 0.94f, 0.82f), 1.15f, FLinearColor(1.04f, 1.02f, 0.97f), 0.2f);
+					UE_LOG(LogDarkBlood, Log, TEXT("DBREALM mood: Paradies"));
+				}
+				SecondsSinceChange += DeltaTime;
+				Current = Blend(Current, Target, 1.f - FMath::Exp(-DeltaTime * 3.f / BlendSeconds));
+				Apply(Current);
+				return;
+			}
 			// Outside the landscape (dungeon interiors) the last region's mood stays.
-			const int32 Region = DBRealm::IsInside(Location.X, Location.Y) ? DBRealm::FindRegionIndex(Location.X, Location.Y) : TargetRegion;
+			const int32 Region = DBRealm::IsInside(Location.X, Location.Y) ? DBRealm::FindRegionIndex(Location.X, Location.Y)
+				: TargetRegion == ParadiseMood ? INDEX_NONE : TargetRegion;
 			const TArray<FDBRealmRegion>& Regions = DBRealm::GetRegions();
 			if (Region != TargetRegion && Regions.IsValidIndex(Region))
 			{

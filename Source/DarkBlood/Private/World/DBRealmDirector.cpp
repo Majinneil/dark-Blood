@@ -12,6 +12,7 @@
 #include "World/DBDungeon.h"
 #include "World/DBRegionLife.h"
 #include "World/DBTheEnd.h"
+#include "World/DBParadise.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
@@ -106,6 +107,8 @@ void ADBRealmDirector::BeginPlay()
 		ADBDemonCamp::SpawnCamps(GetWorld());
 		// DAS ENDE: the gate with its blood seal, the Last Bastion, the path to the throne (Phase 13).
 		DBTheEnd::SpawnLandmarks(GetWorld());
+		// The Paradise above DAS ENDE and the gate of light at the throne (Phase 15).
+		DBParadise::SpawnParadise(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }
@@ -151,6 +154,11 @@ void ADBRealmDirector::UpdatePlayerRegions()
 		const APawn* Pawn = PlayerState ? PlayerState->GetPawn() : nullptr;
 		if (!Pawn)
 		{
+			continue;
+		}
+		if (DBParadise::IsInParadise(Pawn->GetActorLocation()))
+		{
+			PlayerState->SetRealmRegion(TEXT("Paradise"));
 			continue;
 		}
 		const FVector2D Realm = ToRealm(Pawn->GetActorLocation());

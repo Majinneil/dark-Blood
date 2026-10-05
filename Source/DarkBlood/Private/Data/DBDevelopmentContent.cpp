@@ -685,6 +685,11 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	MainQuest(TEXT("MQ12_DemonKing"), TEXT("Der Daemonenkoenig"), TEXT("MQ11_ThroneGuardians"),
 		{Kill(TEXT("DemonKing"), TEXT("B_DemonKing"), NSLOCTEXT("DarkBloodQuests", "KillKing", "Stuerze den Daemonenkoenig"))},
 		20000, 3, TEXT("Story.KingSlain"));
+	MainQuest(TEXT("MQ13_Paradise"), TEXT("Das Paradies"), TEXT("MQ12_DemonKing"),
+		{Kill(TEXT("ThroughTheGate"), TEXT("ParadiseGate"), NSLOCTEXT("DarkBloodQuests", "ThroughTheGate", "Schreite durch die Pforte aus Licht am Thron"),
+			 EDBObjectiveKind::Interact),
+			Kill(TEXT("PeaceShrine"), TEXT("PeaceShrine"), NSLOCTEXT("DarkBloodQuests", "PeaceShrine", "Verweile am Schrein des Friedens"), EDBObjectiveKind::Interact)},
+		5000, 1, TEXT("Story.Finale"));
 
 	// ---- Dialogues ------------------------------------------------------------------------------
 	using ECond = EDBDialogueCondition;

@@ -20,6 +20,13 @@
 #include "UI/SDBCarriageWidget.h"
 #include "World/DBCarriageStation.h"
 #include "Widgets/SWeakWidget.h"
+#include "Styling/CoreStyle.h"
+#include "TimerManager.h"
+#include "UI/DBUIStyle.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Text/STextBlock.h"
 
 void ADBGameHUD::BeginPlay()
 {
@@ -120,6 +127,62 @@ void ADBGameHUD::ShowNotification(const FText& Text)
 	{
 		HudWidget->ShowNotification(Text);
 	}
+}
+
+void ADBGameHUD::ShowFinale()
+{
+	UGameViewportClient* Viewport = GetWorld()->GetGameViewport();
+	if (!Viewport || FinaleRoot.IsValid())
+	{
+		return;
+	}
+	auto Line = [](const FText& Text, int32 Size, const FLinearColor& Color, const char* Weight = "Regular")
+	{
+		return SNew(STextBlock).Text(Text).Font(DBUIStyle::Font(Size, Weight)).ColorAndOpacity(Color).Justification(ETextJustify::Center)
+			.ShadowOffset(FVector2D(2.f, 2.f)).AutoWrapText(true);
+	};
+	const FLinearColor Soft(0.92f, 0.9f, 0.86f);
+	FinaleRoot = SNew(SBorder)
+		.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+		.BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, 0.72f))
+		.HAlign(HAlign_Center)
+		.VAlign(VAlign_Center)
+		.Visibility(EVisibility::HitTestInvisible)
+		[
+			SNew(SBox).WidthOverride(980.f)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 6.f)[Line(FText::FromString(TEXT("DARK BLOOD")), 64, DBUIStyle::Gold, "Bold")]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 30.f)[Line(NSLOCTEXT("DarkBlood", "FinaleSub", "Das Dunkle Blut ist verstummt."), 26, Soft)]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 12.f)
+				[
+					Line(NSLOCTEXT("DarkBlood", "FinaleText",
+						"Sechzehn Vasallen sind gefallen, der Daemonenkoenig ist gestuerzt. Die vierzehn Gebiete atmen auf, die Siedlungen bauen wieder auf, "
+						"und ueber DAS ENDE leuchtet zum ersten Mal seit Generationen ein klarer Himmel. Im Paradies ruhen die Seelen derer, die nicht "
+						"zurueckkehrten."), 18, Soft)
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 36.f)
+				[
+					Line(NSLOCTEXT("DarkBlood", "FinaleOn", "Die Welt geht weiter: Durch die Pforte geht es zurueck in die Hauptstadt."), 18, DBUIStyle::Gold)
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					Line(NSLOCTEXT("DarkBlood", "FinaleCredits",
+						"Ein Spiel von neil  -  entwickelt mit Unreal Engine 5.8\n"
+						"Modelle und Texturen: Poly Haven, ambientCG, Sketchfab- und Fab-Kuenstler (siehe docs/CREDITS.md)\n"
+						"Vasallen- und Koenigsentwuerfe: DARK BLOOD Konzeptblaetter"), 14, FLinearColor(0.75f, 0.73f, 0.7f))
+				]
+			]
+		];
+	Viewport->AddViewportWidgetContent(FinaleRoot.ToSharedRef(), 60);
+	GetWorldTimerManager().SetTimer(FinaleTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+	{
+		if (UGameViewportClient* Client = GetWorld()->GetGameViewport(); Client && FinaleRoot.IsValid())
+		{
+			Client->RemoveViewportWidgetContent(FinaleRoot.ToSharedRef());
+		}
+		FinaleRoot.Reset();
+	}), 30.f, false);
 }
 
 void ADBGameHUD::ShowCharacterCreator()

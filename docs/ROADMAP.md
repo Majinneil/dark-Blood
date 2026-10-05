@@ -20,7 +20,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 12 | 16 Vasallen | ✅ Gameplay (16 eigene Signatur-Attacken, Kampfsprüche, Diener in Bossstärke; Regelkern, headless getestet) · 🟡 Heldenmodelle, Animationen, Musik je Vasall |
 | 13 | DAS ENDE | ✅ Gameplay (Tor des Endes mit Blutsiegel, Questkette MQ10–MQ12, Letzte Bastion als Ruhepunkt, Pfad der Schande; headless und gerendert getestet, 98 FPS) · 🟡 schwebende Inseln, Festungsarchitektur |
 | 14 | Dämonenkönig | ✅ Gameplay (drei Formen mit eigener Katastrophe, Sprüche je Form, Arena-Verwandlung, weltweite Meldung, Hauptquest MQ12; headless und gerendert getestet, 90–106 FPS) · 🟡 Modell mit Flügeln, Animationen, Musik, Zwischensequenzen |
-| 15 | Paradies & Finale | ⬜ |
+| 15 | Paradies & Finale | ✅ Gameplay (Welt gereinigt nach dem König, Pforte aus Licht am Thron, schwebende Paradies-Insel über DAS ENDE, Schrein des Friedens mit Finale und Abspann, Quest MQ13, Rückkehr in die Hauptstadt; Regelkern, headless, Koop, gerendert getestet, 92–100 FPS) · 🟡 Zwischensequenz, Musik, Ahnengeister |
 | 16 | Endgame | ⬜ |
 | 17 | High-End Visual Overhaul | ⬜ |
 | 18 | Audio / Voice / Cinematics | ⬜ |
@@ -332,3 +332,17 @@ lodernde Barriere), weltweite Meldung bei seinem Fall, Warnzonen eines Bosses ve
 **GETESTET**: headless: Kampf durch alle drei Formen mit ihren Katastrophen und Sprüchen, Blutgeburten, Sturz;
 Hauptquestkette MQ10 → MQ11 → MQ12 vollständig abgeschlossen; gerendert: Form 1 und Form 3 mit verwandelter Arena,
 90–106 FPS.
+
+## Abschluss Phase 15 – Paradies & Finale (Stand 2026-10-05)
+
+**ERGÄNZT**: Weltreinigung beim Fall des Königs (`FWorldState::PurifyWorld`: alle Gebiete und DAS ENDE befreit, kein
+Dämoneneinfluss, keine Rudel mehr); Pforte aus Licht am Thron (`ADBParadiseGate`); das Paradies als schwebende Insel
+1,5 km über dem Thron (`ADBParadiseIsland`: Kirschbäume, Ahorn, Pagode, Schreinhaus, Teich, Laternenpfad, eigene
+goldene Stimmung, Gebiet „Paradies“); Schrein des Friedens mit Finale-Bildschirm und Credits für alle Spieler auf der
+Insel; Rückkehr-Tor in die Hauptstadt; Quest `MQ13_Paradise`; Testbefehle `DBParadiseGate`, `DBParadise`, `DBFinale`.
+Details: [PARADISE.md](PARADISE.md).
+
+**GETESTET**: Regelkern 66/66 (neu: Weltreinigung, keine Rudel in befreitem DAS ENDE); headless: König fällt → Welt
+gereinigt (alle Gebiete befreit, 0 Rudel) → Pforte öffnet sich → MQ13 → Pforte → Gebiet Paradies → Schrein → MQ13
+abgeschlossen → Finale; Rückkehr in die Hauptstadt; Koop: Client geht durch die Pforte, Paradies-Stimmung und Finale auf
+dem Client; gerendert: Pforte am Thron, Insel mit Blick über den Kontinent, Finale-Bildschirm, Rückkehr-Tor; 92–100 FPS.

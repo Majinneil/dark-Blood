@@ -78,6 +78,10 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientShowNotification(const FText& Text);
 
+	/** Server -> client: the end of the story (Phase 15): finale text and credits. */
+	UFUNCTION(Client, Reliable)
+	void ClientShowFinale();
+
 	// ---- Development --------------------------------------------------------------------------
 
 	/** Forwards a DB* developer command to the server's cheat manager (dev builds only). */

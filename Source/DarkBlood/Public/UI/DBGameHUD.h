@@ -42,6 +42,9 @@ public:
 	void ShowCarriage(AActor* Station);
 	void HideCarriage();
 
+	/** The end of the story (Phase 15): finale text and credits over the world for half a minute. */
+	void ShowFinale();
+
 	virtual void DrawHUD() override;
 
 private:
@@ -56,6 +59,8 @@ private:
 	TSharedPtr<SWidget> InventoryRoot;
 	TSharedPtr<SWidget> SettingsRoot;
 	TSharedPtr<SWidget> MapRoot;
+	TSharedPtr<SWidget> FinaleRoot;
+	FTimerHandle FinaleTimer;
 	TSharedPtr<SDBCraftingWidget> CraftingWidget;
 	TSharedPtr<SDBCarriageWidget> CarriageWidget;
 	FDelegateHandle DialogueHandle;

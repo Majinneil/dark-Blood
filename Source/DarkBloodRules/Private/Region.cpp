@@ -13,7 +13,8 @@ namespace DarkBlood::Rules
 		case ERegionKind::Epilogue:
 			return 0;
 		case ERegionKind::FinalRegion:
-			Packs = bNight ? 3 : 2;
+			// Freed when the demon king falls (PurifyWorld).
+			Packs = Region.Control == ERegionControl::Liberated ? 0 : (bNight ? 3 : 2);
 			break;
 		case ERegionKind::VassalRegion:
 			switch (Region.Control)

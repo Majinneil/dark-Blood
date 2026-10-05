@@ -52,3 +52,26 @@ DB_TEST(Region_DemonsGrowWithTheRegion)
 	DB_CHECK(GetRegionalStatMultiplier(20) < GetRegionalStatMultiplier(40));
 	DB_CHECK(GetCommanderStrength(1) < 1.f);
 }
+
+DB_TEST(Region_KingsFallPurifiesTheWorld)
+{
+	FWorldState World;
+	World.AddRegion("Capital", ERegionKind::Capital);
+	World.AddRegion("Region01", ERegionKind::VassalRegion);
+	World.AddRegion("TheEnd", ERegionKind::FinalRegion);
+	World.AddRegion("Paradise", ERegionKind::Epilogue);
+	DB_CHECK(!World.IsPurified());
+	DB_CHECK_EQ(GetRegionalPackBudget(*World.FindRegion("TheEnd"), true), 3);
+	World.PurifyWorld();
+	DB_CHECK(World.IsPurified());
+	for (const char* Id : {"Region01", "TheEnd"})
+	{
+		const FRegionState* Region = World.FindRegion(Id);
+		DB_CHECK(Region->Control == ERegionControl::Liberated && Region->DemonInfluence == 0.f);
+		DB_CHECK_EQ(GetRegionalPackBudget(*Region, true), 0);
+	}
+	World.Advance(48.0); // stays clean
+	DB_CHECK(World.FindRegion("Region01")->DemonInfluence == 0.f);
+	World.PurifyWorld(); // idempotent
+	DB_CHECK(World.IsPurified());
+}

@@ -110,6 +110,11 @@ namespace DarkBlood::Rules
 		/** The demon king can be fought once DAS ENDE's own vassals fell. */
 		DARKBLOODRULES_API bool IsDemonKingReachable() const;
 
+		/** The demon king fell (Phase 15): every vassal region and DAS ENDE liberated, no demon influence left; sets
+		 *  Story.WorldPurified. Idempotent. */
+		DARKBLOODRULES_API void PurifyWorld();
+		DARKBLOODRULES_API bool IsPurified() const;
+
 		/** Advances time and liberated-region recovery. Called by the server tick and by offline catch-up. */
 		DARKBLOODRULES_API void Advance(double GameHours, const FRegionRecoveryRules& Rules = FRegionRecoveryRules());
 

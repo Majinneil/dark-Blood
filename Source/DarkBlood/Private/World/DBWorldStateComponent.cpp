@@ -199,6 +199,9 @@ void UDBWorldStateComponent::NotifyBossDefeated(FName BossId, EDBBossRank Rank, 
 		break;
 	case EDBBossRank::DemonKing:
 		State.StoryFlags.insert("Story.DemonKingDefeated");
+		// Phase 15: the Dark Blood falls silent - every region is free, the demons are gone.
+		State.PurifyWorld();
+		UE_LOG(LogDBWorld, Display, TEXT("The demon king fell: the world is purified"));
 		break;
 	case EDBBossRank::WorldBoss:
 		break;
