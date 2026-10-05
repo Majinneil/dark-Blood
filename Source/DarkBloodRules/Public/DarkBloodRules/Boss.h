@@ -32,4 +32,8 @@ namespace DarkBlood::Rules
 
 	/** Damage multiplier: 1 until EnrageAfterSeconds, then +25 % every 30 s, capped at 2. */
 	DARKBLOODRULES_API float GetEnrageMultiplier(double FightSeconds, double EnrageAfterSeconds);
+
+	/** Seconds between a vassal's signature attacks (Phase 12): 18 s, 3 s less per phase, never below 9 s, times the co-op
+	 *  cooldown multiplier. */
+	DARKBLOODRULES_API float GetSignatureCooldown(int32 Phase, int32 PlayerCount);
 }

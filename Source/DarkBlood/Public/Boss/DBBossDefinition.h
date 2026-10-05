@@ -22,6 +22,30 @@ namespace EDBBossMechanic
 	constexpr int32 Summon = 1 << 4;  // demons join the fight (more with more players)
 }
 
+/** A vassal's own attack beyond the shared mechanics (Phase 12, docs/BOSS_FRAMEWORK.md). */
+UENUM(BlueprintType)
+enum class EDBBossSignature : uint8
+{
+	None,
+	BloodTrail,   // Akakage: charge leaving pools of blood, heals on every hit
+	FrostRings,   // Yukimaru: three rings of frost spreading outward
+	ShadowStep,   // Kurobane: steps behind the farthest player and strikes
+	ThunderRain,  // Raikyo: lightning strikes round every player
+	FlameWall,    // Enkazan: a ring of fire round the arena's middle
+	BoneArmy,     // Shikotsu: raises a host of bone warriors
+	PlagueCloud,  // Dokuga: a lingering cloud of plague where it stands
+	Illusions,    // Mugenrei: two illusions fight beside it
+	PackCall,     // Juragan: calls fast beasts and grows savage
+	IronSkin,     // Tetsukhan: iron skin (armor) then a quake
+	TidalWave,    // Kujiraa: a wave rolling toward the target
+	StormBlades,  // Hayate: three dashes in a row
+	NightNova,    // Kokuya: blades of night in every direction
+	VoidPull,     // Reikon: pulls everyone in, then the void bursts
+	BloodMoon,    // Tsukigami: drinks the blood moon (heal) and bursts
+	KingsBanner,  // Shirogane: silver guards; armored while they stand
+	Cataclysm,    // Demon king: form-dependent (Phase 14)
+};
+
 USTRUCT(BlueprintType)
 struct FDBBossPhase
 {
@@ -107,6 +131,17 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
 	TArray<FDBBossPhase> Phases;
+
+	/** Own attack, used every GetSignatureCooldown seconds and at every phase change. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	EDBBossSignature Signature = EDBBossSignature::None;
+
+	/** Spoken when the fight starts and at the phase change (shown to the players in the fight). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	FText Taunt;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	FText PhaseTaunt;
 
 	/** Damage rises after this long (s). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")

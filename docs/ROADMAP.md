@@ -17,7 +17,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 9 | Dungeon-System | ✅ Gameplay (8 Dungeons, Generator aus Seeds, Kämpfe/Fallen/Schatz/Schrein/Wächter, Fortschritt gespeichert; Regelkern, headless, Koop, gerendert getestet) · 🟡 eigene Themen-Modelle, Rätsel |
 | 10 | Boss-Framework | ✅ Gameplay (16 Vasallen + Dämonenkönig mit 3 Formen + Dungeon-Wächter, Arenen, Spezialangriffe, Phasen, Raserei, Koop-Skalierung, Boss-Leiste, Kartenmarker; Regelkern, headless, Koop, gerendert getestet) · 🟡 Modelle, Animationen, Musik, Intros |
 | 11 | 14 Regionen | ✅ Gameplay (Dämonenrudel je Gebiet nach Zustand und Tageszeit, 14 Dämonenlager mit Hauptmann, Befreiungsquests, Kartenmarker; Regelkern, headless, Koop, gerendert getestet, 76–92 FPS) · 🟡 eigene Gegnermodelle, Landmarken, Musik |
-| 12 | 16 Vasallen | 🟡 alle 16 spielbar mit Framework-Mechaniken (Phase 10) · ⬜ eigene Abilities, Modelle, Arenen-Gestaltung je Vasall |
+| 12 | 16 Vasallen | ✅ Gameplay (16 eigene Signatur-Attacken, Kampfsprüche, Diener in Bossstärke; Regelkern, headless getestet) · 🟡 Heldenmodelle, Animationen, Musik je Vasall |
 | 13 | DAS ENDE | ⬜ |
 | 14 | Dämonenkönig | ⬜ |
 | 15 | Paradies & Finale | ⬜ |
@@ -296,3 +296,15 @@ Gebietsstufe, Fortschritt 6/1/1, Lager in drei Gebieten (Kirschblütental, Feuer
 Hauptmann fällt → umkämpft (Einfluss 0,7, 1 Rudel), Vasall → befreit (0 Rudel am Tag); Koop: Quest, Hauptmann, Beute
 und Namen auf dem Client, gemeinsames Rudelbudget; gerendert: Lager, Questtracker, Arena. FPS 76–92 (mit freiem
 Grafikspeicher; ein im Hintergrund geladenes 7,4-GB-Ollama-Modell drückte sie auf 18).
+
+## Abschluss Phase 12 – 16 Vasallen (Stand 2026-10-05)
+
+**ERGÄNZT**: Jeder der 16 Vasallen hat eine eigene Signatur-Attacke (Blutpfad, Eisringe, Schattenschritt, Blitzregen,
+Flammenwall, Knochenarmee, Seuchenwolke, Trugbilder, Rudelruf, Eisenhaut, Flutwelle, Sturmklingen, Klingen der Nacht,
+Leerensog, Blutmond, Banner des Königs) mit eigenem Rhythmus (`GetSignatureCooldown`) und Einsatz nach dem
+Phasenwechsel; Kampfsprüche zu Kampfbeginn und Phasenwechsel; beschworene Dämonen in Bossstärke, die für die
+Gebietsquest zählen; Testbefehl `DBBossSignature`. Details: [BOSS_FRAMEWORK.md](BOSS_FRAMEWORK.md).
+
+**GETESTET**: Regelkern 65/65; headless: alle 16 Signaturen nacheinander ohne Fehler; Diener-Anzahl stimmt (4/2/3/2),
+Treffer am stehenden Spieler bei Blutpfad, Blitzregen, Flutwelle, Sturmklingen, Leerensog, Blutmond, Klingen der
+Nacht; Eisringe und Flammenwall lassen Lücken zum Ausweichen.

@@ -55,6 +55,14 @@ private:
 	void ApplyLook();
 	void EnterPhase(int32 NewPhase);
 	void UseSpecialAttack();
+	/** The vassal's own attack (EDBBossSignature). */
+	void UseSignature();
+	void Telegraph(const FVector& At, float Radius, float Delay, float Duration, const FDBHitParams& Hit);
+	void Charge(const AActor* Target);
+	void Nova(int32 Count, float Damage);
+	/** A demon fighting for the boss at its own strength (summons, illusions, guards). */
+	ADBEnemyCharacter* SpawnAdd(const FText& Name, float StatMultiplier, const FVector& At, float WalkSpeed = 0.f);
+	FVector GetFeet(const AActor* Actor) const;
 	TArray<APawn*> GetPlayersInFight(float Radius) const;
 	FDBHitParams MakeHit(float Damage, float Poise, bool bKnockdown) const;
 	void NotifyPlayers(const FText& Text, float Radius) const;
@@ -81,6 +89,30 @@ private:
 	float ChargeSeconds = 0.f;
 	TArray<TWeakObjectPtr<AActor>> ChargeHits;
 	int32 SpecialAttacks = 0;
+
+	// Signature attacks (Phase 12).
+	float SignatureCooldown = 10.f;
+	int32 Signatures = 0;
+	bool bTaunted = false;
+	/** Blood trail: the charge heals the boss for every hit. */
+	bool bBloodCharge = false;
+	/** Iron skin: armor raised until this runs out, then a quake. */
+	float IronSkinSeconds = 0.f;
+	/** Pack call: attack power raised while this runs. */
+	float SavageSeconds = 0.f;
+	/** Storm blades: dashes left and time to the next. */
+	int32 DashesLeft = 0;
+	float DashTimer = 0.f;
+	/** Void pull: the burst follows the pull. */
+	float VoidBurstTimer = -1.f;
+	float BaseArmor = 0.f;
+	TArray<TWeakObjectPtr<ADBEnemyCharacter>> BannerGuards;
+	bool bBannerArmor = false;
+
+public:
+	int32 GetSignatures() const { return Signatures; }
+	/** Server (tests): use the signature attack now. */
+	void ForceSignature() { UseSignature(); }
 };
 
 /** Telegraphed attack: a growing ring (warning), then the hit; zones keep burning for a while. */

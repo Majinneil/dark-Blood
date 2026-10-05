@@ -1245,6 +1245,19 @@ namespace
 	}
 }
 
+void UDBCheatManager::DBBossSignature()
+{
+	if (ForwardToServer(TEXT("DBBossSignature"))) return;
+	ADBBossCharacter* Boss = FindNearestBoss(GetWorld(), GetOuterAPlayerController()->GetPawn());
+	if (!Boss)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBBossSignature: no boss"));
+		return;
+	}
+	Boss->ForceSignature();
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBossSignature %s: %d signatures, %d adds"), *Boss->GetBossId().ToString(), Boss->GetSignatures(), Boss->CountLivingAdds());
+}
+
 void UDBCheatManager::DBRegionDump()
 {
 	if (ForwardToServer(TEXT("DBRegionDump"))) return;

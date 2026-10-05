@@ -34,9 +34,11 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Visual/DBCharacterVisualComponent.h"
 #include "World/DBRealmVegetation.h"
+#include "World/DBRegionLife.h"
 #include "World/DBWorldStateComponent.h"
 
 #include "DarkBloodRules/Boss.h"
+#include "DarkBloodRules/Region.h"
 #include "DarkBloodRules/WorldState.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodBoss"
@@ -240,6 +242,15 @@ void ADBBossCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 	FightSeconds += DeltaSeconds;
+	if (!bTaunted)
+	{
+		bTaunted = true;
+		BaseArmor = AbilitySystem->GetNumericAttribute(UDBAttributeSet::GetArmorAttribute());
+		if (!Definition->Taunt.IsEmpty())
+		{
+			NotifyPlayers(FText::Format(LOCTEXT("Taunt", "{0}: \"{1}\""), Definition->DisplayName, Definition->Taunt), FightRadius);
+		}
+	}
 
 	// Phases at health thresholds (never back); the demon king changes form.
 	const TArray<float> Thresholds = Definition->GetPhaseThresholds();
@@ -250,8 +261,48 @@ void ADBBossCharacter::Tick(float DeltaSeconds)
 	}
 	InvulnerableSeconds = FMath::Max(0.f, InvulnerableSeconds - DeltaSeconds);
 
-	// Long fights enrage.
-	const float Enraged = BaseAttackPower * R::GetEnrageMultiplier(FightSeconds, Definition->EnrageAfterSeconds);
+	// Signature timers: iron skin, savage pack call, storm dashes, the void burst after the pull, the king's banner guards.
+	if (IronSkinSeconds > 0.f)
+	{
+		IronSkinSeconds -= DeltaSeconds;
+		if (IronSkinSeconds <= 0.f)
+		{
+			AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetArmorAttribute(), BaseArmor);
+			Telegraph(GetFeet(this), 650.f * GetActorScale3D().X, 0.6f, 0.f, MakeHit(AttackPower * 1.4f + 50.f, 70.f, true));
+		}
+	}
+	SavageSeconds = FMath::Max(0.f, SavageSeconds - DeltaSeconds);
+	if (DashesLeft > 0)
+	{
+		DashTimer -= DeltaSeconds;
+		if (DashTimer <= 0.f)
+		{
+			--DashesLeft;
+			DashTimer = 0.75f;
+			Charge(Players[FMath::RandRange(0, Players.Num() - 1)]);
+		}
+	}
+	if (VoidBurstTimer > 0.f)
+	{
+		VoidBurstTimer -= DeltaSeconds;
+		if (VoidBurstTimer <= 0.f)
+		{
+			Telegraph(GetFeet(this), 700.f, 0.5f, 0.f, MakeHit(AttackPower * 1.3f + 45.f, 60.f, true));
+		}
+	}
+	if (bBannerArmor)
+	{
+		BannerGuards.RemoveAll([](const TWeakObjectPtr<ADBEnemyCharacter>& Guard) { return !Guard.IsValid() || Guard->IsDead(); });
+		if (BannerGuards.Num() == 0)
+		{
+			bBannerArmor = false;
+			AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetArmorAttribute(), BaseArmor);
+			NotifyPlayers(FText::Format(LOCTEXT("BannerDown", "Die Silberwache ist gefallen - {0} ist verwundbar!"), Definition->DisplayName), FightRadius);
+		}
+	}
+
+	// Long fights enrage (the pack call adds 30 % while it lasts).
+	const float Enraged = BaseAttackPower * R::GetEnrageMultiplier(FightSeconds, Definition->EnrageAfterSeconds) * (SavageSeconds > 0.f ? 1.3f : 1.f);
 	if (!FMath::IsNearlyEqual(Enraged, AbilitySystem->GetNumericAttribute(UDBAttributeSet::GetAttackPowerAttribute())))
 	{
 		AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetAttackPowerAttribute(), Enraged);
@@ -272,8 +323,24 @@ void ADBBossCharacter::Tick(float DeltaSeconds)
 			{
 				ChargeHits.Add(Player);
 				DBCombat::ApplyHit(AbilitySystem, GetASC(Player), MakeHit(AttackPower * 1.1f + 35.f, 50.f, true));
+				if (bBloodCharge)
+				{
+					// Blood trail: every hit feeds the boss.
+					const float Max = AbilitySystem->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute());
+					const float Health = AbilitySystem->GetNumericAttribute(UDBAttributeSet::GetHealthAttribute());
+					AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetHealthAttribute(), FMath::Min(Max, Health + Max * 0.04f));
+				}
 			}
 		}
+		bBloodCharge = bBloodCharge && ChargeSeconds > 0.f;
+	}
+
+	SignatureCooldown -= DeltaSeconds;
+	if (Definition->Signature != EDBBossSignature::None && SignatureCooldown <= 0.f && InvulnerableSeconds <= 0.f)
+	{
+		UseSignature();
+		SignatureCooldown = R::GetSignatureCooldown(Phase, PlayerCount);
+		SpecialCooldown = FMath::Max(SpecialCooldown, 2.5f);
 	}
 
 	SpecialCooldown -= DeltaSeconds;
@@ -296,9 +363,13 @@ void ADBBossCharacter::EnterPhase(int32 NewPhase)
 		ASC->AddTimedLooseTag(DBTags::State_Invulnerable, InvulnerableSeconds);
 	}
 	SpecialCooldown = 2.5f;
+	// The signature follows right after the phase change.
+	SignatureCooldown = FMath::Min(SignatureCooldown, InvulnerableSeconds + 0.3f);
 	if (Definition && Definition->Phases.IsValidIndex(Phase))
 	{
-		NotifyPlayers(FText::Format(LOCTEXT("Phase", "{0}: {1}!"), Definition->DisplayName, Definition->Phases[Phase].Name), FightRadius);
+		NotifyPlayers(Definition->PhaseTaunt.IsEmpty()
+			? FText::Format(LOCTEXT("Phase", "{0}: {1}!"), Definition->DisplayName, Definition->Phases[Phase].Name)
+			: FText::Format(LOCTEXT("PhaseTaunt", "{0} ({1}): \"{2}\""), Definition->DisplayName, Definition->Phases[Phase].Name, Definition->PhaseTaunt), FightRadius);
 		UE_LOG(LogDBCombat, Display, TEXT("Boss %s enters phase %d (%s)"), *Definition->DisplayName.ToString(), Phase + 1, *Definition->Phases[Phase].Name.ToString());
 	}
 }
@@ -329,17 +400,9 @@ void ADBBossCharacter::UseSpecialAttack()
 	const R::FBossScaling Scaling = R::GetBossScaling(PlayerCount);
 	const int32 Mechanic = Options[FMath::RandRange(0, Options.Num() - 1)];
 	const float Scale = GetActorScale3D().X;
-	const FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
 	const TCHAR* Name = TEXT("?");
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	auto Telegraph = [&](const FVector& At, float Radius, float Delay, float Duration, const FDBHitParams& Hit)
-	{
-		if (ADBBossTelegraph* Warning = GetWorld()->SpawnActor<ADBBossTelegraph>(ADBBossTelegraph::StaticClass(), At, FRotator::ZeroRotator, Params))
-		{
-			Warning->Arm(this, Radius, Delay, Duration, Hit, Definition->Color);
-		}
-	};
 	switch (Mechanic)
 	{
 	case EDBBossMechanic::Slam:
@@ -349,10 +412,7 @@ void ADBBossCharacter::UseSpecialAttack()
 		break;
 	case EDBBossMechanic::Charge:
 		Name = TEXT("Charge");
-		SetActorRotation(ToTarget.Rotation());
-		LaunchCharacter(ToTarget * 2600.f + FVector(0.f, 0.f, 120.f), true, true);
-		ChargeSeconds = 0.6f;
-		ChargeHits.Reset();
+		Charge(Target);
 		break;
 	case EDBBossMechanic::Volley:
 	{
@@ -386,16 +446,10 @@ void ADBBossCharacter::UseSpecialAttack()
 	{
 		Name = TEXT("Summon");
 		const int32 Count = FMath::Min(MaxAdds - CountLivingAdds(), 2 + Scaling.ExtraAdds);
-		FActorSpawnParameters AddParams;
-		AddParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		for (int32 Index = 0; Index < Count; ++Index)
 		{
 			const float Angle = 2.f * UE_PI * Index / FMath::Max(1, Count);
-			const FVector At = GetActorLocation() + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * 450.f;
-			if (ADBLesserDemon* Demon = GetWorld()->SpawnActor<ADBLesserDemon>(ADBLesserDemon::StaticClass(), At, FRotator(0.f, Angle * 57.3f + 180.f, 0.f), AddParams))
-			{
-				Adds.Add(Demon);
-			}
+			SpawnAdd(FText::GetEmpty(), 0.6f, GetActorLocation() + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * 450.f);
 		}
 		NotifyPlayers(FText::Format(LOCTEXT("Summon", "{0} ruft Daemonen herbei!"), Definition->DisplayName), FightRadius);
 		break;
@@ -411,6 +465,269 @@ void ADBBossCharacter::UseSpecialAttack()
 	{
 		MeleeAI->NotifyAttackedBy(Players[FMath::RandRange(1, Players.Num() - 1)]);
 	}
+}
+
+FVector ADBBossCharacter::GetFeet(const AActor* Actor) const
+{
+	return Actor->GetActorLocation() - FVector(0.f, 0.f, Actor->GetSimpleCollisionHalfHeight() - 5.f);
+}
+
+void ADBBossCharacter::Telegraph(const FVector& At, float Radius, float Delay, float Duration, const FDBHitParams& Hit)
+{
+	const UDBBossDefinition* Definition = GetDefinition();
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ADBBossTelegraph* Warning = GetWorld()->SpawnActor<ADBBossTelegraph>(ADBBossTelegraph::StaticClass(), At, FRotator::ZeroRotator, Params))
+	{
+		Warning->Arm(this, Radius, Delay, Duration, Hit, Definition ? Definition->Color : FLinearColor::Red);
+	}
+}
+
+void ADBBossCharacter::Charge(const AActor* Target)
+{
+	if (!Target)
+	{
+		return;
+	}
+	const FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+	SetActorRotation(ToTarget.Rotation());
+	LaunchCharacter(ToTarget * 2600.f + FVector(0.f, 0.f, 120.f), true, true);
+	ChargeSeconds = 0.6f;
+	ChargeHits.Reset();
+}
+
+void ADBBossCharacter::Nova(int32 Count, float Damage)
+{
+	const UDBBossDefinition* Definition = GetDefinition();
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		const FRotator Aim(0.f, GetActorRotation().Yaw + 360.f * Index / Count, 0.f);
+		const FVector Muzzle = GetActorLocation() + Aim.Vector() * (100.f * GetActorScale3D().X);
+		if (ADBProjectile* Bolt = GetWorld()->SpawnActor<ADBProjectile>(ADBProjectile::StaticClass(), Muzzle, Aim, Params))
+		{
+			Bolt->Launch(this, MakeHit(Damage, 15.f, false), 1500.f, 0, Definition ? Definition->Color : FLinearColor::Red);
+		}
+	}
+}
+
+ADBEnemyCharacter* ADBBossCharacter::SpawnAdd(const FText& Name, float StatMultiplier, const FVector& At, float WalkSpeed)
+{
+	const UDBBossDefinition* Definition = GetDefinition();
+	FActorSpawnParameters Params;
+	Params.bDeferConstruction = true;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	const FRotator Facing((GetActorLocation() - At).GetSafeNormal2D().Rotation());
+	ADBLesserDemon* Demon = GetWorld()->SpawnActor<ADBLesserDemon>(ADBLesserDemon::StaticClass(), At, Facing, Params);
+	if (!Demon)
+	{
+		return nullptr;
+	}
+	// At the strength of the boss (a few levels below it); demons of a region count for its quest.
+	const int32 AddLevel = FMath::Max(1, (Definition ? Definition->Level : Level) - 4);
+	const FName RegionId = Definition ? Definition->RegionId : NAME_None;
+	const bool bRegional = DBRegions::GetRegionNumber(RegionId) > 0;
+	const FText AddName = !Name.IsEmpty() ? Name : bRegional ? DBRegions::GetDemonName(RegionId) : FText::GetEmpty();
+	Demon->ConfigureSpawn(AddLevel, R::GetRegionalStatMultiplier(AddLevel) * StatMultiplier, AddName, bRegional ? DBRegions::GetDemonId(RegionId) : NAME_None);
+	Demon->FinishSpawning(FTransform(Facing, At));
+	if (WalkSpeed > 0.f)
+	{
+		Demon->GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	}
+	Adds.Add(Demon);
+	return Demon;
+}
+
+void ADBBossCharacter::UseSignature()
+{
+	const UDBBossDefinition* Definition = GetDefinition();
+	TArray<APawn*> Players = GetPlayersInFight(FightRadius);
+	if (!Definition || Players.Num() == 0 || Definition->Signature == EDBBossSignature::None)
+	{
+		return;
+	}
+	Players.Sort([this](const APawn& A, const APawn& B) { return FVector::DistSquared(A.GetActorLocation(), GetActorLocation()) < FVector::DistSquared(B.GetActorLocation(), GetActorLocation()); });
+	APawn* Nearest = Players[0];
+	APawn* Farthest = Players.Last();
+	const float Scale = GetActorScale3D().X;
+	const FVector Feet = GetFeet(this);
+	FText Shout;
+	const TCHAR* Name = TEXT("?");
+	switch (Definition->Signature)
+	{
+	case EDBBossSignature::BloodTrail:
+	{
+		Name = TEXT("BloodTrail");
+		Shout = LOCTEXT("SigBloodTrail", "Blutpfad!");
+		// Pools of blood along the way, then the feeding charge.
+		const FVector To = GetFeet(Nearest);
+		for (int32 Index = 1; Index <= 4; ++Index)
+		{
+			Telegraph(FMath::Lerp(Feet, To, Index / 4.f), 260.f, 0.5f + 0.15f * Index, 4.f, MakeHit(AttackPower * 0.3f + 12.f, 0.f, false));
+		}
+		Charge(Nearest);
+		bBloodCharge = true;
+		break;
+	}
+	case EDBBossSignature::FrostRings:
+		Name = TEXT("FrostRings");
+		Shout = LOCTEXT("SigFrost", "Eisringe!");
+		for (int32 Ring = 1; Ring <= 3; ++Ring)
+		{
+			for (int32 Index = 0; Index < 8; ++Index)
+			{
+				const FVector Offset = FRotator(0.f, 45.f * Index + 22.5f * Ring, 0.f).Vector() * (380.f * Ring);
+				Telegraph(Feet + Offset, 230.f, 0.7f + 0.55f * Ring, 0.f, MakeHit(AttackPower * 0.8f + 30.f, 35.f, false));
+			}
+		}
+		break;
+	case EDBBossSignature::ShadowStep:
+	{
+		Name = TEXT("ShadowStep");
+		Shout = LOCTEXT("SigShadow", "Schattenschritt!");
+		const FVector Behind = Farthest->GetActorLocation() - Farthest->GetActorForwardVector() * 260.f + FVector(0.f, 0.f, 60.f);
+		TeleportTo(Behind, (Farthest->GetActorLocation() - Behind).Rotation());
+		Telegraph(GetFeet(this), 380.f * Scale, 0.9f, 0.f, MakeHit(AttackPower * 1.3f + 40.f, 60.f, true));
+		MeleeAI->NotifyAttackedBy(Farthest);
+		break;
+	}
+	case EDBBossSignature::ThunderRain:
+		Name = TEXT("ThunderRain");
+		Shout = LOCTEXT("SigThunder", "Blitzregen!");
+		for (const APawn* Player : Players)
+		{
+			for (int32 Index = 0; Index < 3; ++Index)
+			{
+				const FVector Offset(FMath::FRandRange(-380.f, 380.f), FMath::FRandRange(-380.f, 380.f), 0.f);
+				Telegraph(GetFeet(Player) + (Index == 0 ? FVector::ZeroVector : Offset), 240.f, 1.f + 0.3f * Index, 0.f, MakeHit(AttackPower * 0.9f + 35.f, 40.f, false));
+			}
+		}
+		break;
+	case EDBBossSignature::FlameWall:
+		Name = TEXT("FlameWall");
+		Shout = LOCTEXT("SigFlame", "Flammenwall!");
+		for (int32 Index = 0; Index < 12; ++Index)
+		{
+			Telegraph(Feet + FRotator(0.f, 30.f * Index, 0.f).Vector() * 1050.f, 330.f, 1.f, 6.f, MakeHit(AttackPower * 0.4f + 16.f, 0.f, false));
+		}
+		break;
+	case EDBBossSignature::BoneArmy:
+		Name = TEXT("BoneArmy");
+		Shout = LOCTEXT("SigBones", "Knochenarmee!");
+		for (int32 Index = 0; Index < FMath::Min(4, MaxAdds + 2 - CountLivingAdds()); ++Index)
+		{
+			SpawnAdd(LOCTEXT("BoneWarrior", "Knochenkrieger"), 0.45f, GetActorLocation() + FRotator(0.f, 90.f * Index + 45.f, 0.f).Vector() * 500.f);
+		}
+		break;
+	case EDBBossSignature::PlagueCloud:
+		Name = TEXT("PlagueCloud");
+		Shout = LOCTEXT("SigPlague", "Seuchenwolke!");
+		Telegraph(Feet, 750.f, 1.2f, 8.f, MakeHit(AttackPower * 0.35f + 15.f, 0.f, false));
+		break;
+	case EDBBossSignature::Illusions:
+		Name = TEXT("Illusions");
+		Shout = LOCTEXT("SigIllusion", "Trugbilder!");
+		for (const float Side : {-1.f, 1.f})
+		{
+			if (ADBEnemyCharacter* Clone = SpawnAdd(FText::Format(LOCTEXT("Illusion", "Trugbild von {0}"), Definition->DisplayName), 0.35f,
+					GetActorLocation() + GetActorRightVector() * Side * 450.f))
+			{
+				Clone->SetActorScale3D(GetActorScale3D());
+			}
+		}
+		break;
+	case EDBBossSignature::PackCall:
+		Name = TEXT("PackCall");
+		Shout = LOCTEXT("SigPack", "Rudelruf!");
+		for (int32 Index = 0; Index < FMath::Min(3, MaxAdds + 2 - CountLivingAdds()); ++Index)
+		{
+			SpawnAdd(LOCTEXT("Beast", "Bestie"), 0.5f, GetActorLocation() + FRotator(0.f, 120.f * Index, 0.f).Vector() * 550.f, 620.f);
+		}
+		SavageSeconds = 10.f;
+		break;
+	case EDBBossSignature::IronSkin:
+		Name = TEXT("IronSkin");
+		Shout = LOCTEXT("SigIron", "Eisenhaut!");
+		AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetArmorAttribute(), BaseArmor * 3.f + 100.f);
+		IronSkinSeconds = 6.f;
+		break;
+	case EDBBossSignature::TidalWave:
+	{
+		Name = TEXT("TidalWave");
+		Shout = LOCTEXT("SigTide", "Flutwelle!");
+		const FVector Direction = (Nearest->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+		const FVector Side(-Direction.Y, Direction.X, 0.f);
+		for (int32 Step = 1; Step <= 6; ++Step)
+		{
+			for (const float Lane : {-1.f, 0.f, 1.f})
+			{
+				Telegraph(Feet + Direction * (330.f * Step) + Side * (Lane * 300.f), 220.f, 0.5f + 0.22f * Step, 0.f, MakeHit(AttackPower * 0.9f + 30.f, 55.f, true));
+			}
+		}
+		break;
+	}
+	case EDBBossSignature::StormBlades:
+		Name = TEXT("StormBlades");
+		Shout = LOCTEXT("SigStorm", "Sturmklingen!");
+		Charge(Nearest);
+		DashesLeft = 2;
+		DashTimer = 0.75f;
+		break;
+	case EDBBossSignature::NightNova:
+		Name = TEXT("NightNova");
+		Shout = LOCTEXT("SigNight", "Klingen der Nacht!");
+		Nova(12 + 4 * Phase, AttackPower * 0.5f + 22.f);
+		break;
+	case EDBBossSignature::VoidPull:
+		Name = TEXT("VoidPull");
+		Shout = LOCTEXT("SigVoid", "Leerensog!");
+		for (APawn* Player : Players)
+		{
+			if (ACharacter* Character = Cast<ACharacter>(Player))
+			{
+				const FVector Pull = (GetActorLocation() - Character->GetActorLocation()).GetSafeNormal2D();
+				Character->LaunchCharacter(Pull * 1400.f + FVector(0.f, 0.f, 250.f), true, true);
+			}
+		}
+		VoidBurstTimer = 0.9f;
+		break;
+	case EDBBossSignature::BloodMoon:
+	{
+		Name = TEXT("BloodMoon");
+		Shout = LOCTEXT("SigMoon", "Blutmond!");
+		const float Max = AbilitySystem->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute());
+		const float Health = AbilitySystem->GetNumericAttribute(UDBAttributeSet::GetHealthAttribute());
+		AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetHealthAttribute(), FMath::Min(Max, Health + Max * 0.06f));
+		Nova(10, AttackPower * 0.55f + 24.f);
+		break;
+	}
+	case EDBBossSignature::KingsBanner:
+		Name = TEXT("KingsBanner");
+		Shout = LOCTEXT("SigBanner", "Banner des Koenigs! Silberwache, zu mir!");
+		for (const float Side : {-1.f, 1.f})
+		{
+			if (ADBEnemyCharacter* Guard = SpawnAdd(LOCTEXT("SilverGuard", "Silberwache"), 1.1f, GetActorLocation() + GetActorRightVector() * Side * 500.f))
+			{
+				BannerGuards.Add(Guard);
+			}
+		}
+		if (BannerGuards.Num() > 0)
+		{
+			bBannerArmor = true;
+			AbilitySystem->SetNumericAttributeBase(UDBAttributeSet::GetArmorAttribute(), BaseArmor * 2.5f + 80.f);
+		}
+		break;
+	case EDBBossSignature::Cataclysm:
+	case EDBBossSignature::None:
+		break;
+	}
+	++Signatures;
+	if (!Shout.IsEmpty())
+	{
+		NotifyPlayers(FText::Format(LOCTEXT("Signature", "{0}: {1}"), Definition->DisplayName, Shout), FightRadius);
+	}
+	UE_LOG(LogDBCombat, Display, TEXT("Boss %s signature %s (phase %d)"), *Definition->DisplayName.ToString(), Name, Phase + 1);
 }
 
 void ADBBossCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, float DamageMagnitude)

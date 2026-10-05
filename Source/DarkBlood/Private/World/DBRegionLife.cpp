@@ -40,14 +40,14 @@ namespace
 	constexpr float PackShareRadius = 10000.f;
 	constexpr double PackCooldownSeconds = 40.0;
 
-	UDBWorldStateComponent* GetWorldState(const UWorld* World)
+	UDBWorldStateComponent* GetRegionWorldState(const UWorld* World)
 	{
 		const ADBGameState* GameState = World ? World->GetGameState<ADBGameState>() : nullptr;
 		return GameState ? GameState->GetWorldState() : nullptr;
 	}
 
 	/** Not on water, in a settlement or in a boss arena. */
-	bool IsFreeGround(const FVector2D& Meters, FName RegionId)
+	bool IsFreeRegionGround(const FVector2D& Meters, FName RegionId)
 	{
 		if (DBRealm::SampleHeight(Meters.X, Meters.Y) < 1.5 || !DBRealm::IsInside(Meters.X, Meters.Y))
 		{
@@ -72,7 +72,7 @@ namespace
 		return Camp.IsZero() || FVector2D::Distance(Meters, FVector2D(Camp) / 100.0) > 45.0;
 	}
 
-	UStaticMesh* EngineMesh(const TCHAR* Name)
+	UStaticMesh* CampEngineMesh(const TCHAR* Name)
 	{
 		return LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Engine/BasicShapes/%s.%s"), Name, Name));
 	}
@@ -268,7 +268,7 @@ bool UDBRegionLifeComponent::SpawnPackNear(APlayerState* Player, bool bIgnoreBud
 {
 	const ADBPlayerState* DBPlayer = Cast<ADBPlayerState>(Player);
 	const APawn* Pawn = Player ? Player->GetPawn() : nullptr;
-	const UDBWorldStateComponent* WorldState = GetWorldState(GetWorld());
+	const UDBWorldStateComponent* WorldState = GetRegionWorldState(GetWorld());
 	if (!DBPlayer || !Pawn || !WorldState)
 	{
 		return false;
@@ -292,7 +292,7 @@ bool UDBRegionLifeComponent::SpawnPackNear(APlayerState* Player, bool bIgnoreBud
 		const float Angle = FMath::FRandRange(0.f, 2.f * UE_PI);
 		const float Distance = FMath::FRandRange(4500.f, 7500.f);
 		const FVector2D Meters = (FVector2D(From) + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Distance) / 100.0;
-		if (!IsFreeGround(Meters, RegionId))
+		if (!IsFreeRegionGround(Meters, RegionId))
 		{
 			continue;
 		}
@@ -406,9 +406,9 @@ void ADBDemonCamp::OnRep_Camp()
 void ADBDemonCamp::BuildCamp()
 {
 	const UDBBossDefinition* Definition = DBBosses::Find(GetCommanderId());
-	UStaticMesh* Cube = EngineMesh(TEXT("Cube"));
-	UStaticMesh* Cylinder = EngineMesh(TEXT("Cylinder"));
-	UStaticMesh* Cone = EngineMesh(TEXT("Cone"));
+	UStaticMesh* Cube = CampEngineMesh(TEXT("Cube"));
+	UStaticMesh* Cylinder = CampEngineMesh(TEXT("Cylinder"));
+	UStaticMesh* Cone = CampEngineMesh(TEXT("Cone"));
 	if (bBuilt || !Definition || !Cube || !Cylinder || !Cone)
 	{
 		return;
@@ -566,7 +566,7 @@ void ADBDemonCamp::Tick(float DeltaSeconds)
 		return;
 	}
 	UpdateTimer = 1.f;
-	const UDBWorldStateComponent* WorldState = GetWorldState(GetWorld());
+	const UDBWorldStateComponent* WorldState = GetRegionWorldState(GetWorld());
 	const bool bDefeated = WorldState && WorldState->GetRulesState().DefeatedBosses.count(DBBridge::ToStd(GetCommanderId())) > 0;
 	if (bDefeated != bBroken)
 	{

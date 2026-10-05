@@ -122,6 +122,44 @@ namespace
 			All.Add(Make(Def));
 		}
 
+		// Each vassal's own attack and words (Phase 12), in vassal order 1..16.
+		struct FPersona
+		{
+			EDBBossSignature Signature;
+			const TCHAR* Taunt;
+			const TCHAR* PhaseTaunt;
+		};
+		using S = EDBBossSignature;
+		static const FPersona Personas[] = {
+			{S::BloodTrail, TEXT("Blut ist Erinnerung. Dein Blut wird meines."), TEXT("Sieh, was das Dunkle Blut aus mir macht!")},
+			{S::FrostRings, TEXT("Still. Kalt. Ewig. So endet jeder, der hierher kommt."), TEXT("Erfriere!")},
+			{S::ShadowStep, TEXT("Du siehst mich nicht. Du hast mich nie gesehen."), TEXT("Die Schatten gehorchen mir!")},
+			{S::ThunderRain, TEXT("Der Himmel richtet dich!"), TEXT("Donner, zerreiss sie!")},
+			{S::FlameWall, TEXT("Alles wird zu Asche."), TEXT("Brenne!")},
+			{S::BoneArmy, TEXT("Deine Knochen werden meiner Armee dienen."), TEXT("Erhebt euch, Tote!")},
+			{S::PlagueCloud, TEXT("Atme tief ein ..."), TEXT("Die Seuche kennt keine Gnade.")},
+			{S::Illusions, TEXT("Bin ich hier? Oder dort?"), TEXT("Welcher von uns ist echt?")},
+			{S::PackCall, TEXT("Das Rudel jagt!"), TEXT("Zerreisst sie!")},
+			{S::IronSkin, TEXT("Eisen vergisst nicht. Eisen verzeiht nicht."), TEXT("Eisen bleibt!")},
+			{S::TidalWave, TEXT("Die Tiefe nimmt alles zurueck."), TEXT("Die Flut kommt!")},
+			{S::StormBlades, TEXT("Zu langsam."), TEXT("Der Sturm kennt keine Gnade!")},
+			{S::NightNova, TEXT("Die Nacht ist ewig."), TEXT("Verschwinde in der Finsternis!")},
+			{S::VoidPull, TEXT("Nichts bleibt. Nicht einmal du."), TEXT("Die Leere ruft dich!")},
+			{S::BloodMoon, TEXT("Unter dem Blutmond falle ich nicht."), TEXT("Blutmond, erhebe dich!")},
+			{S::KingsBanner, TEXT("Kein Sterblicher erreicht den Thron."), TEXT("Fuer den Koenig!")},
+		};
+		static_assert(UE_ARRAY_COUNT(Personas) == DarkBlood::Rules::NumVassals, "one persona per vassal");
+		for (UDBBossDefinition* Boss : All)
+		{
+			if (Boss->Order >= 1 && Boss->Order <= static_cast<int32>(UE_ARRAY_COUNT(Personas)))
+			{
+				const FPersona& Persona = Personas[Boss->Order - 1];
+				Boss->Signature = Persona.Signature;
+				Boss->Taunt = FText::FromString(Persona.Taunt);
+				Boss->PhaseTaunt = FText::FromString(Persona.PhaseTaunt);
+			}
+		}
+
 		// Region commanders (mid-bosses, Phase 11, docs/REGIONS.md): each vassal region's demon camp is led by one. Beating
 		// it makes the region contested; it fights with its vassal's first-phase mechanics and calls its guards later.
 		static const TCHAR* CommanderNames[] = {TEXT("Blutklinge"), TEXT("Frostwaechter"), TEXT("Schattenpfeil"), TEXT("Donnerrufer"), TEXT("Glutfaust"),

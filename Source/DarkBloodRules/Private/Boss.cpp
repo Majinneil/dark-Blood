@@ -41,4 +41,10 @@ namespace DarkBlood::Rules
 		const double Steps = std::floor((FightSeconds - EnrageAfterSeconds) / 30.0) + 1.0;
 		return static_cast<float>(std::min(2.0, 1.0 + 0.25 * Steps));
 	}
+
+	float GetSignatureCooldown(int32 Phase, int32 PlayerCount)
+	{
+		const float Base = std::max(9.f, 18.f - 3.f * static_cast<float>(std::max(0, Phase)));
+		return Base * GetBossScaling(PlayerCount).CooldownMultiplier;
+	}
 }

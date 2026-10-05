@@ -126,6 +126,8 @@ public:
 	UFUNCTION(Exec) void DBBossDump();
 	UFUNCTION(Exec) void DBBossHurt(float HealthFraction);
 	UFUNCTION(Exec) void DBBossDefeat(const FString& Boss);
+	/** The nearest boss uses its signature attack now (Phase 12). */
+	UFUNCTION(Exec) void DBBossSignature();
 
 	/** Regions (Phase 11): packs, camps and region states; teleport to a region's demon camp; spawn a pack now. */
 	UFUNCTION(Exec) void DBRegionDump();

@@ -36,3 +36,12 @@ DB_TEST(Boss_EnrageAfterTime)
 	DB_CHECK(GetEnrageMultiplier(3000.0, 300.0) == 2.f);
 	DB_CHECK(GetEnrageMultiplier(3000.0, 0.0) == 1.f);
 }
+
+DB_TEST(Boss_SignatureComesFasterInLaterPhases)
+{
+	DB_CHECK(GetSignatureCooldown(0, 1) == 18.f);
+	DB_CHECK(GetSignatureCooldown(1, 1) == 15.f);
+	DB_CHECK(GetSignatureCooldown(5, 1) == 9.f); // floor
+	DB_CHECK(GetSignatureCooldown(0, 4) < GetSignatureCooldown(0, 1)); // co-op cooldowns
+	DB_CHECK(GetSignatureCooldown(-3, 1) == 18.f);
+}

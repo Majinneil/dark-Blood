@@ -36,6 +36,34 @@ befreien will, besiegt dessen Vasallen. Nach den 14 Vasallen draußen öffnet si
 Dazu der **Dungeon-Wächter** (`B_DungeonGuardian`, Rang WorldBoss) im Bossraum jedes Dungeons. Seine Werte wachsen mit
 der Dungeon-Stufe (×0,5 + 0,25 je Stufe).
 
+## Signatur-Attacken und Kampfsprüche (Phase 12)
+
+Jeder Vasall hat zusätzlich zu den gemeinsamen Mechaniken eine eigene Attacke (`EDBBossSignature`). Er setzt sie alle
+`GetSignatureCooldown` Sekunden ein (18 s, je Phase 3 s weniger, mindestens 9 s, im Koop kürzer) und sofort nach dem
+Phasenwechsel. Zu Kampfbeginn und beim Phasenwechsel spricht er (Meldung an alle im Kampf).
+
+| Vasall | Signatur | Wirkung |
+|---|---|---|
+| Akakage | Blutpfad | Blutlachen entlang des Wegs, dann ein Sturmangriff, der ihn bei jedem Treffer um 4 % heilt |
+| Yukimaru | Eisringe | drei Ringe aus Frostzonen, die sich nacheinander nach außen ausbreiten |
+| Kurobane | Schattenschritt | springt hinter den entferntesten Spieler und schlägt zu |
+| Raikyo | Blitzregen | je Spieler drei Blitzeinschläge, der erste genau auf ihm |
+| Enkazan | Flammenwall | ein Feuerring um ihn (6 s), der zum Nahkampf zwingt |
+| Shikotsu | Knochenarmee | vier Knochenkrieger |
+| Dokuga | Seuchenwolke | große Giftzone, die 8 s brennt |
+| Mugenrei | Trugbilder | zwei Trugbilder in seiner Größe kämpfen mit |
+| Juragan | Rudelruf | drei schnelle Bestien, er selbst +30 % Angriff für 10 s |
+| Tetsukhan | Eisenhaut | 6 s dreifache Rüstung, danach ein Beben |
+| Kujiraa | Flutwelle | eine dreispurige Welle rollt auf das Ziel zu |
+| Hayate | Sturmklingen | drei Sturmangriffe hintereinander auf zufällige Spieler |
+| Kokuya | Klingen der Nacht | Geschosse in alle Richtungen (mehr je Phase) |
+| Reikon | Leerensog | zieht alle Spieler zu sich, dann bricht die Leere aus |
+| Tsukigami | Blutmond | heilt 6 % und feuert einen Geschossring |
+| Shirogane | Banner des Königs | zwei Silberwachen; solange sie stehen, hat er stark erhöhte Rüstung |
+
+Beschworene Dämonen haben jetzt die Stärke des Bosses (wenige Stufen darunter) statt der eines Grunddämons, und
+Dämonen eines Gebiets zählen für dessen Befreiungsquest. Testbefehl: `DBBossSignature` (nächster Boss).
+
 ## Umsetzung
 
 | Baustein | Datei | Beschreibung |
