@@ -220,6 +220,11 @@ namespace
 		DemonForm.Scale = 2.6f;
 		DemonForm.Name = NSLOCTEXT("DarkBloodBoss", "KingForm3", "Form 3: Vollstaendige Daemonenform");
 		King->Phases = {Emperor, Corruption, DemonForm};
+		// Phase 14: his own attack changes with every form; he speaks at every form.
+		King->Signature = EDBBossSignature::Cataclysm;
+		King->Taunt = FText::FromString(TEXT("Ihr seid weit gekommen, Sterbliche. Hier, vor meinem Thron, endet euer Weg."));
+		King->PhaseTaunts = {FText::GetEmpty(), FText::FromString(TEXT("Spuert das Dunkle Blut, das diese Welt naehrt!")),
+			FText::FromString(TEXT("Genug! Seht meine wahre Gestalt - und vergeht!"))};
 		All.Add(King);
 
 		// The guardian of the dungeons (scaled by the dungeon's stage when spawned).

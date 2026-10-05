@@ -19,7 +19,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 11 | 14 Regionen | ✅ Gameplay (Dämonenrudel je Gebiet nach Zustand und Tageszeit, 14 Dämonenlager mit Hauptmann, Befreiungsquests, Kartenmarker; Regelkern, headless, Koop, gerendert getestet, 76–92 FPS) · 🟡 eigene Gegnermodelle, Landmarken, Musik |
 | 12 | 16 Vasallen | ✅ Gameplay (16 eigene Signatur-Attacken, Kampfsprüche, Diener in Bossstärke; Regelkern, headless getestet) · 🟡 Heldenmodelle, Animationen, Musik je Vasall |
 | 13 | DAS ENDE | ✅ Gameplay (Tor des Endes mit Blutsiegel, Questkette MQ10–MQ12, Letzte Bastion als Ruhepunkt, Pfad der Schande; headless und gerendert getestet, 98 FPS) · 🟡 schwebende Inseln, Festungsarchitektur |
-| 14 | Dämonenkönig | ⬜ |
+| 14 | Dämonenkönig | ✅ Gameplay (drei Formen mit eigener Katastrophe, Sprüche je Form, Arena-Verwandlung, weltweite Meldung, Hauptquest MQ12; headless und gerendert getestet, 90–106 FPS) · 🟡 Modell mit Flügeln, Animationen, Musik, Zwischensequenzen |
 | 15 | Paradies & Finale | ⬜ |
 | 16 | Endgame | ⬜ |
 | 17 | High-End Visual Overhaul | ⬜ |
@@ -321,3 +321,14 @@ ging vor). Details: [THE_END.md](THE_END.md).
 DAS ENDE betreten → MQ10 fertig → MQ11 startet, nachträglich angerechnetes Tsukigami + Shirogane → MQ11 fertig →
 MQ12 startet; Tod im Kirschblütental → Wiederbelebung in der Bastion; gerendert: Tor mit und ohne Siegel, Bastion,
 Questtracker, 97–98 FPS.
+
+## Abschluss Phase 14 – Dämonenkönig (Stand 2026-10-05)
+
+**ERGÄNZT**: Katastrophen je Form (Kaiserliches Urteil, Blutflut, Weltenbrand mit dauerhaftem Feuerring und
+Sternenfall), Sprüche zu Kampfbeginn und je Form, Verwandlung der Thron-Arena in Form 3 (Boden aus glühendem Blut,
+lodernde Barriere), weltweite Meldung bei seinem Fall, Warnzonen eines Bosses verschwinden mit ihm; der Testbefehl
+`DBBossDefeat` zählt auch für Quests. Details: [BOSS_FRAMEWORK.md](BOSS_FRAMEWORK.md).
+
+**GETESTET**: headless: Kampf durch alle drei Formen mit ihren Katastrophen und Sprüchen, Blutgeburten, Sturz;
+Hauptquestkette MQ10 → MQ11 → MQ12 vollständig abgeschlossen; gerendert: Form 1 und Form 3 mit verwandelter Arena,
+90–106 FPS.

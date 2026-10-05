@@ -143,6 +143,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
 	FText PhaseTaunt;
 
+	/** Per phase (index = phase) instead of PhaseTaunt (the demon king speaks at every form). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	TArray<FText> PhaseTaunts;
+
 	/** Damage rises after this long (s). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
 	float EnrageAfterSeconds = 300.f;

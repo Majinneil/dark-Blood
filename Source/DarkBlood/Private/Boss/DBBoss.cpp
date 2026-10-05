@@ -365,7 +365,16 @@ void ADBBossCharacter::EnterPhase(int32 NewPhase)
 	SpecialCooldown = 2.5f;
 	// The signature follows right after the phase change.
 	SignatureCooldown = FMath::Min(SignatureCooldown, InvulnerableSeconds + 0.3f);
-	if (Definition && Definition->Phases.IsValidIndex(Phase))
+	if (Arena.IsValid())
+	{
+		Arena->SetBossPhase(Phase);
+	}
+	if (Definition && Definition->PhaseTaunts.IsValidIndex(Phase) && !Definition->PhaseTaunts[Phase].IsEmpty())
+	{
+		NotifyPlayers(FText::Format(LOCTEXT("FormTaunt", "{0} ({1}): \"{2}\""), Definition->DisplayName, Definition->Phases[Phase].Name, Definition->PhaseTaunts[Phase]), FightRadius);
+		UE_LOG(LogDBCombat, Display, TEXT("Boss %s enters phase %d (%s)"), *Definition->DisplayName.ToString(), Phase + 1, *Definition->Phases[Phase].Name.ToString());
+	}
+	else if (Definition && Definition->Phases.IsValidIndex(Phase))
 	{
 		NotifyPlayers(Definition->PhaseTaunt.IsEmpty()
 			? FText::Format(LOCTEXT("Phase", "{0}: {1}!"), Definition->DisplayName, Definition->Phases[Phase].Name)
@@ -719,6 +728,60 @@ void ADBBossCharacter::UseSignature()
 		}
 		break;
 	case EDBBossSignature::Cataclysm:
+		// The demon king (Phase 14): one catastrophe per form.
+		if (Phase == 0)
+		{
+			Name = TEXT("ImperialJudgement");
+			Shout = LOCTEXT("SigJudgement", "Kaiserliches Urteil!");
+			for (int32 Arm = 0; Arm < 4; ++Arm)
+			{
+				const FVector Direction = FRotator(0.f, GetActorRotation().Yaw + 45.f + 90.f * Arm, 0.f).Vector();
+				for (int32 Step = 1; Step <= 7; ++Step)
+				{
+					Telegraph(Feet + Direction * (360.f * Step), 240.f, 0.6f + 0.12f * Step, 0.f, MakeHit(AttackPower * 1.1f + 40.f, 60.f, true));
+				}
+			}
+		}
+		else if (Phase == 1)
+		{
+			Name = TEXT("BloodFlood");
+			Shout = LOCTEXT("SigFlood", "Blutflut!");
+			const float Reach = Definition->ArenaRadius * 0.75f;
+			for (int32 Index = 0; Index < 7; ++Index)
+			{
+				const FVector Spot = Feet + FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f).Vector() * FMath::FRandRange(300.f, Reach);
+				Telegraph(Spot, 450.f, 1.1f, 6.f, MakeHit(AttackPower * 0.35f + 16.f, 0.f, false));
+			}
+			for (const float Side : {-1.f, 1.f})
+			{
+				SpawnAdd(LOCTEXT("BloodSpawn", "Blutgeburt"), 0.55f, GetActorLocation() + GetActorRightVector() * Side * 600.f);
+			}
+		}
+		else
+		{
+			Name = TEXT("Worldfire");
+			Shout = LOCTEXT("SigWorldfire", "Weltenbrand!");
+			// Once: the edge of the throne burns for the rest of the fight and drives everyone toward him.
+			if (!bWorldfire)
+			{
+				bWorldfire = true;
+				const float Ring = Definition->ArenaRadius * 0.82f;
+				for (int32 Index = 0; Index < 18; ++Index)
+				{
+					Telegraph(Feet + FRotator(0.f, 20.f * Index, 0.f).Vector() * Ring, 520.f, 1.5f, 900.f, MakeHit(AttackPower * 0.3f + 18.f, 0.f, false));
+				}
+			}
+			// Falling stars on every player.
+			for (const APawn* Player : Players)
+			{
+				for (int32 Index = 0; Index < 2; ++Index)
+				{
+					const FVector Offset = Index == 0 ? FVector::ZeroVector : FVector(FMath::FRandRange(-300.f, 300.f), FMath::FRandRange(-300.f, 300.f), 0.f);
+					Telegraph(GetFeet(Player) + Offset, 320.f, 1.4f + 0.4f * Index, 0.f, MakeHit(AttackPower * 1.2f + 45.f, 70.f, true));
+				}
+			}
+		}
+		break;
 	case EDBBossSignature::None:
 		break;
 	}
@@ -746,9 +809,28 @@ void ADBBossCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* Damag
 			Add->Destroy();
 		}
 	}
+	// Its warnings and burning zones die with it.
+	for (TActorIterator<ADBBossTelegraph> It(GetWorld()); It; ++It)
+	{
+		if (It->GetBoss() == this)
+		{
+			It->Destroy();
+		}
+	}
 	if (!Definition)
 	{
 		return;
+	}
+	if (Definition->Rank == EDBBossRank::DemonKing)
+	{
+		// The whole world hears it, not only those at the throne.
+		for (TActorIterator<ADBPlayerController> It(GetWorld()); It; ++It)
+		{
+			if (!Fighters.Contains(It->GetPawn()))
+			{
+				It->ClientShowNotification(LOCTEXT("KingFallsWorld", "Ein Beben geht durch das Land: Der Daemonenkoenig ist gefallen!"));
+			}
+		}
 	}
 	UDBWorldStateComponent* WorldState = GetWorldState(GetWorld());
 	if (WorldState)
@@ -951,6 +1033,7 @@ void ADBBossArena::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADBBossArena, BossId);
 	DOREPLIFETIME(ADBBossArena, ArenaState);
+	DOREPLIFETIME(ADBBossArena, BossPhase);
 }
 
 void ADBBossArena::SetBoss(FName InBossId)
@@ -978,7 +1061,7 @@ void ADBBossArena::BuildRing()
 	// A stone floor (the ground under the ring is never quite flat); its sides reach down into the slope.
 	if (UStaticMesh* Cylinder = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")))
 	{
-		UStaticMeshComponent* Floor = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+		Floor = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
 		Floor->SetMobility(EComponentMobility::Static);
 		Floor->SetupAttachment(Root);
 		Floor->SetStaticMesh(Cylinder);
@@ -1080,6 +1163,7 @@ void ADBBossArena::BuildRing()
 	if (BarrierMaterial)
 	{
 		UMaterialInstanceDynamic* Tinted = UMaterialInstanceDynamic::Create(BarrierMaterial, this);
+		BarrierTint = Tinted;
 		Tinted->SetVectorParameterValue(TEXT("BarrierColor"), Definition->Color);
 		WallMaterial = Tinted;
 	}
@@ -1110,6 +1194,20 @@ void ADBBossArena::OnRep_State()
 	{
 		UE_LOG(LogDBCombat, Log, TEXT("Arena %s replicated: state %d, barrier %d"), *BossId.ToString(), static_cast<int32>(ArenaState), Barrier.Num());
 	}
+	// The demon king's last form sets his throne ablaze: floor of glowing blood, the barrier burns brighter.
+	if (const UDBBossDefinition* KingDef = DBBosses::Find(BossId); KingDef && KingDef->Rank == EDBBossRank::DemonKing)
+	{
+		const bool bInferno = ArenaState == EDBArenaState::Fighting && BossPhase >= 2;
+		if (Floor)
+		{
+			Floor->SetMaterial(0, UDBArtMaterialSubsystem::Get(bInferno ? EDBArtMaterial::BloodRiver : EDBArtMaterial::DarkBloodStone));
+		}
+		if (BarrierTint)
+		{
+			BarrierTint->SetVectorParameterValue(TEXT("BarrierColor"), bInferno ? FLinearColor(1.f, 0.25f, 0.02f) : KingDef->Color);
+			BarrierTint->SetScalarParameterValue(TEXT("Intensity"), bInferno ? 6.f : 3.f);
+		}
+	}
 	const bool bClosed = ArenaState == EDBArenaState::Fighting;
 	for (UStaticMeshComponent* Wall : Barrier)
 	{
@@ -1120,6 +1218,15 @@ void ADBBossArena::OnRep_State()
 	{
 		Label->SetText(ArenaState == EDBArenaState::Defeated ? FText::Format(LOCTEXT("ArenaDone", "{0} (besiegt)"), Definition->DisplayName) : MakeBossName(*Definition));
 		Label->SetTextRenderColor((ArenaState == EDBArenaState::Defeated ? FLinearColor(0.5f, 0.5f, 0.5f) : Definition->Color).ToFColor(true));
+	}
+}
+
+void ADBBossArena::SetBossPhase(int32 InPhase)
+{
+	if (HasAuthority() && InPhase != BossPhase)
+	{
+		BossPhase = InPhase;
+		OnRep_State();
 	}
 }
 
@@ -1332,6 +1439,7 @@ void ADBBossArena::EndFight(bool bVictory)
 	}
 	Boss.Reset();
 	ArenaState = bVictory ? EDBArenaState::Defeated : EDBArenaState::Idle;
+	BossPhase = 0;
 	OnRep_State();
 	UE_LOG(LogDBCombat, Display, TEXT("Arena %s: %s"), *BossId.ToString(), bVictory ? TEXT("boss defeated") : TEXT("fight reset"));
 }

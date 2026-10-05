@@ -1219,6 +1219,11 @@ void UDBCheatManager::DBBossDefeat(const FString& Boss)
 		if ((bOuter && Definition->Rank == EDBBossRank::Vassal && Definition->Order <= DarkBlood::Rules::NumVassalRegions) || Definition == Named)
 		{
 			GameState->GetWorldState()->NotifyBossDefeated(Definition->BossId, Definition->Rank, Definition->RegionId);
+			// Count it like a kill for the quests (as a real fight would).
+			if (UDBQuestSubsystem* Quests = UDBQuestSubsystem::Get(this))
+			{
+				Quests->ReportEvent(EDBObjectiveKind::Kill, Definition->BossId, 1, GetDBPlayerState());
+			}
 			++Count;
 		}
 	}

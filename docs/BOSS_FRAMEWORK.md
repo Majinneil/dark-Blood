@@ -64,6 +64,22 @@ Phasenwechsel. Zu Kampfbeginn und beim Phasenwechsel spricht er (Meldung an alle
 Beschworene Dämonen haben jetzt die Stärke des Bosses (wenige Stufen darunter) statt der eines Grunddämons, und
 Dämonen eines Gebiets zählen für dessen Befreiungsquest. Testbefehl: `DBBossSignature` (nächster Boss).
 
+## Der Dämonenkönig (Phase 14)
+
+Er spricht zu Kampfbeginn und bei jeder Form (`PhaseTaunts`) und hat je Form eine eigene Katastrophe
+(`EDBBossSignature::Cataclysm`):
+
+| Form | Katastrophe | Wirkung |
+|---|---|---|
+| 1 Dämonischer Kaiser | Kaiserliches Urteil | vier Klingenlinien schräg aus ihm heraus (je 7 Einschläge, Niederschlag) |
+| 2 Dark-Blood-Korruption | Blutflut | 7 Blutlachen verteilt über den Thronsaal (6 s) und zwei Blutgeburten |
+| 3 Vollständige Dämonenform | Weltenbrand | einmalig ein Feuerring am Rand des Throns bis zum Kampfende (treibt alle zu ihm), dazu Sternenfall auf jeden Spieler |
+
+**Verwandlung der Arena:** In Form 3 wird der Boden zu glühendem Blut und die Barriere lodert orange
+(`ADBBossArena::SetBossPhase`, repliziert). Nach Kampfende kehrt alles zurück. Seine Warnzonen verschwinden mit
+seinem Tod. Fällt er, hören das alle Spieler in der Welt. Die Hauptquest `MQ12_DemonKing` endet, und
+`Story.DemonKingDefeated` ist gesetzt (Phase 15 setzt daran an).
+
 ## Umsetzung
 
 | Baustein | Datei | Beschreibung |

@@ -108,6 +108,8 @@ private:
 	float BaseArmor = 0.f;
 	TArray<TWeakObjectPtr<ADBEnemyCharacter>> BannerGuards;
 	bool bBannerArmor = false;
+	/** Demon king, third form: the arena edge burns until the fight ends. */
+	bool bWorldfire = false;
 
 public:
 	int32 GetSignatures() const { return Signatures; }
@@ -129,6 +131,7 @@ public:
 
 	/** Server: Duration 0 = a single hit when the warning ends; otherwise a hit every second for Duration. */
 	void Arm(ADBBossCharacter* InBoss, float InRadius, float InDelay, float InDuration, const FDBHitParams& InHit, const FLinearColor& InColor);
+	ADBBossCharacter* GetBoss() const { return Boss.Get(); }
 
 private:
 	UFUNCTION()
@@ -182,6 +185,9 @@ public:
 	EDBArenaState GetArenaState() const { return ArenaState; }
 	ADBBossCharacter* GetBoss() const { return Boss.Get(); }
 
+	/** Server: the boss reached a new phase; the demon king's arena transforms in his last form. */
+	void SetBossPhase(int32 InPhase);
+
 	/** Server: one arena per vassal and the demon king (idempotent). */
 	static void SpawnArenas(UWorld* World);
 	static ADBBossArena* Find(const UWorld* World, FName BossId);
@@ -204,6 +210,15 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_State)
 	EDBArenaState ArenaState = EDBArenaState::Idle;
+
+	UPROPERTY(ReplicatedUsing = OnRep_State)
+	int32 BossPhase = 0;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMeshComponent> Floor;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UMaterialInstanceDynamic> BarrierTint;
 
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Boss")
 	TObjectPtr<USceneComponent> Root;
