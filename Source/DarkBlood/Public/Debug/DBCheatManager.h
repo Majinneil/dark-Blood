@@ -117,6 +117,15 @@ public:
 	UFUNCTION(Exec) void DBDungeonRoom(const FString& Room);
 	UFUNCTION(Exec) void DBDungeonDump();
 	UFUNCTION(Exec) void DBKillNearby(float RadiusMeters);
+
+	/** Bosses (Phase 10): list with arena states; teleport into an arena (starts the fight if open); spawn one in front;
+	 * state of the bosses nearby; set the nearest boss to a health fraction (phases); defeat bosses ("Outer" = the 14 outside). */
+	UFUNCTION(Exec) void DBBossList();
+	UFUNCTION(Exec) void DBBossArena(const FString& Boss);
+	UFUNCTION(Exec) void DBBossSpawn(const FString& Boss, float Distance = 1500.f);
+	UFUNCTION(Exec) void DBBossDump();
+	UFUNCTION(Exec) void DBBossHurt(float HealthFraction);
+	UFUNCTION(Exec) void DBBossDefeat(const FString& Boss);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

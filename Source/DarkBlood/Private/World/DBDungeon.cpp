@@ -6,6 +6,8 @@
 #include "AbilitySystemInterface.h"
 #include "Art/DBArtBatcher.h"
 #include "Art/DBArtMaterials.h"
+#include "Boss/DBBoss.h"
+#include "Boss/DBBossDefinition.h"
 #include "Character/DBHorse.h"
 #include "Character/DBLesserDemon.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -545,6 +547,13 @@ void ADBDungeonInstance::ActivateRoom(int32 Room)
 	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s: room %d (%hs) wakes with %d demons"), *Site.Name, Room, R::ToString(Data.Kind), Count);
 	if (Data.Kind == R::EDungeonRoomKind::Boss)
 	{
+		// The guardian: a boss (phases, telegraphed attacks) that grows with the dungeon stage and the party size.
+		const FVector Center = GetRoomCenter(Room) + FVector(0.f, 0.f, 150.f);
+		if (ADBBossCharacter* Guardian = ADBBossCharacter::SpawnBoss(GetWorld(), DBBosses::Find(TEXT("B_DungeonGuardian")), Center, FRotator::ZeroRotator,
+				FMath::Max(1, GetPlayersInside().Num()), 0.5f + 0.25f * Site.Difficulty))
+		{
+			RoomEnemies[Room].Add(Guardian);
+		}
 		NotifyPlayersInside(LOCTEXT("Guardian", "Der Waechter des Dungeons erwacht!"));
 	}
 }

@@ -3,6 +3,9 @@
 #include "Abilities/DBAttributeSet.h"
 #include "Art/DBArtBuilder.h"
 #include "Art/DBModelLibrary.h"
+#include "Boss/DBBoss.h"
+#include "Boss/DBBossDefinition.h"
+#include "GameFramework/PlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "Character/DBHorse.h"
 #include "Character/DBLesserDemon.h"
@@ -313,8 +316,9 @@ void UDBCheatManager::DBDumpWorld()
 		return;
 	}
 	const UDBWorldStateComponent* World = GameState->GetWorldState();
-	UE_LOG(LogDBWorld, Display, TEXT("=== World: day %d, %.2f h, night=%d, vassals %d/14, final region open=%d ==="), World->GetDay(),
-		World->GetTimeOfDay(), World->IsNight() ? 1 : 0, World->GetDefeatedVassalCount(), World->IsFinalRegionOpen() ? 1 : 0);
+	UE_LOG(LogDBWorld, Display, TEXT("=== World: day %d, %.2f h, night=%d, vassals %d/%d, final region open=%d, demon king reachable=%d ==="), World->GetDay(),
+		World->GetTimeOfDay(), World->IsNight() ? 1 : 0, World->GetDefeatedVassalCount(), DarkBlood::Rules::NumVassals, World->IsFinalRegionOpen() ? 1 : 0,
+		World->GetRulesState().IsDemonKingReachable() ? 1 : 0);
 	for (const DarkBlood::Rules::FRegionState& Region : World->GetRulesState().GetRegions())
 	{
 		UE_LOG(LogDBWorld, Display, TEXT("  %hs control=%d influence=%.2f vassal=%d"), Region.RegionId.c_str(), static_cast<int32>(Region.Control),
@@ -1042,6 +1046,177 @@ void UDBCheatManager::DBKillNearby(float RadiusMeters)
 		++Killed;
 	}
 	UE_LOG(LogDarkBlood, Display, TEXT("DBKillNearby: %d enemies"), Killed);
+}
+
+namespace
+{
+	const TCHAR* ArenaStateName(const ADBBossArena* Arena)
+	{
+		if (!Arena)
+		{
+			return TEXT("no arena");
+		}
+		switch (Arena->GetArenaState())
+		{
+		case EDBArenaState::Idle: return TEXT("waiting");
+		case EDBArenaState::Fighting: return TEXT("fighting");
+		case EDBArenaState::Defeated: return TEXT("defeated");
+		}
+		return TEXT("?");
+	}
+
+	ADBBossCharacter* FindNearestBoss(const UWorld* World, const APawn* Pawn)
+	{
+		ADBBossCharacter* Nearest = nullptr;
+		for (TActorIterator<ADBBossCharacter> It(const_cast<UWorld*>(World)); It && Pawn; ++It)
+		{
+			if (!It->IsDead() && (!Nearest || FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation()) < FVector::Dist(Nearest->GetActorLocation(), Pawn->GetActorLocation())))
+			{
+				Nearest = *It;
+			}
+		}
+		return Nearest;
+	}
+}
+
+void UDBCheatManager::DBBossList()
+{
+	if (ForwardToServer(TEXT("DBBossList"))) return;
+	for (const UDBBossDefinition* Boss : DBBosses::GetAll())
+	{
+		const FVector Arena = DBBosses::GetArenaLocation(*Boss);
+		UE_LOG(LogDarkBlood, Display, TEXT("DBBOSS %-18s %2d %-12s %-10s %-34s hp %5.0f phases %d arena (%.0f, %.0f, %.0f) m: %s"), *Boss->BossId.ToString(), Boss->Order,
+			*Boss->DisplayName.ToString(), *Boss->RegionId.ToString(), *Boss->Title.ToString(), Boss->MaxHealth, Boss->Phases.Num(), Arena.X / 100.0, Arena.Y / 100.0,
+			Arena.Z / 100.0, ArenaStateName(ADBBossArena::Find(GetWorld(), Boss->BossId)));
+	}
+	if (const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>())
+	{
+		const DarkBlood::Rules::FWorldState& State = GameState->GetWorldState()->GetRulesState();
+		UE_LOG(LogDarkBlood, Display, TEXT("DBBOSS vassals %d/%d, Das Ende %s, demon king %s"), State.CountDefeatedVassals(), DarkBlood::Rules::NumVassals,
+			State.IsFinalRegionOpen() ? TEXT("open") : TEXT("sealed"), State.IsDemonKingReachable() ? TEXT("reachable") : TEXT("sealed"));
+	}
+}
+
+void UDBCheatManager::DBBossArena(const FString& Boss)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBBossArena %s"), *Boss))) return;
+	const UDBBossDefinition* Definition = DBBosses::FindByName(Boss);
+	APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	const FVector Arena = Definition ? DBBosses::GetArenaLocation(*Definition) : FVector::ZeroVector;
+	if (!Pawn || Arena.IsZero())
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBBossArena: no arena for '%s'"), *Boss);
+		return;
+	}
+	// Inside the ring, west of its center, facing east (toward the boss).
+	const double X = Arena.X - Definition->ArenaRadius * 0.5;
+	const double Ground = DBRealm::SampleHeight(X / 100.0, Arena.Y / 100.0) * 100.0;
+	const FVector Destination(X, Arena.Y, FMath::Max(Ground, 0.0) + 250.0);
+	Pawn->TeleportTo(Destination, FRotator::ZeroRotator);
+	if (AController* Controller = Pawn->GetController())
+	{
+		Controller->SetControlRotation(FRotator(-10.f, 0.f, 0.f));
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBossArena %s at (%.0f, %.0f) m"), *Definition->BossId.ToString(), Destination.X / 100.0, Destination.Y / 100.0);
+}
+
+void UDBCheatManager::DBBossSpawn(const FString& Boss, float Distance)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBBossSpawn %s %f"), *Boss, Distance))) return;
+	const UDBBossDefinition* Definition = DBBosses::FindByName(Boss);
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Definition || !Pawn)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBBossSpawn: unknown boss '%s'"), *Boss);
+		return;
+	}
+	const FVector Location = Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * Distance + FVector(0.f, 0.f, 150.f);
+	const int32 Players = GetWorld()->GetGameState() ? GetWorld()->GetGameState()->PlayerArray.Num() : 1;
+	const ADBBossCharacter* Spawned = ADBBossCharacter::SpawnBoss(GetWorld(), Definition, Location, (-Pawn->GetActorForwardVector()).Rotation(), Players);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBossSpawn %s: %s"), *Definition->BossId.ToString(), Spawned ? TEXT("ok") : TEXT("failed"));
+}
+
+void UDBCheatManager::DBBossDump()
+{
+	if (ForwardToServer(TEXT("DBBossDump"))) return;
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	int32 Count = 0;
+	for (TActorIterator<ADBBossCharacter> It(GetWorld()); It; ++It)
+	{
+		const UDBBossDefinition* Definition = It->GetDefinition();
+		const UAbilitySystemComponent* ASC = It->GetAbilitySystemComponent();
+		UE_LOG(LogDarkBlood, Display, TEXT("DBBOSSDUMP %s %s phase %d/%d health %.0f/%.0f (%.0f%%) attack %.1f fight %.0f s specials %d adds %d scale %.2f dist %.0f m"),
+			*It->GetBossId().ToString(), It->IsDead() ? TEXT("dead") : TEXT("alive"), It->GetPhase() + 1, Definition ? Definition->Phases.Num() : 0,
+			ASC->GetNumericAttribute(UDBAttributeSet::GetHealthAttribute()), ASC->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute()), It->GetHealthFraction() * 100.f,
+			ASC->GetNumericAttribute(UDBAttributeSet::GetAttackPowerAttribute()), It->GetFightSeconds(), It->GetSpecialAttacks(), It->CountLivingAdds(), It->GetActorScale3D().X,
+			Pawn ? FVector::Dist(Pawn->GetActorLocation(), It->GetActorLocation()) / 100.0 : 0.0);
+		++Count;
+	}
+	for (TActorIterator<ADBBossArena> It(GetWorld()); It; ++It)
+	{
+		if (It->GetArenaState() != EDBArenaState::Idle || (Pawn && FVector::Dist(Pawn->GetActorLocation(), It->GetActorLocation()) < 10000.f))
+		{
+			UE_LOG(LogDarkBlood, Display, TEXT("DBBOSSDUMP arena %s: %s"), *It->GetBossId().ToString(), ArenaStateName(*It));
+		}
+	}
+	for (const APlayerState* Entry : GetWorld()->GetGameState()->PlayerArray)
+	{
+		const APawn* Player = Entry ? Entry->GetPawn() : nullptr;
+		const FVector At = Player ? Player->GetActorLocation() : FVector::ZeroVector;
+		UE_LOG(LogDarkBlood, Display, TEXT("DBBOSSDUMP player %s at (%.0f, %.0f, %.0f) m %s"), *Entry->GetPlayerName(), At.X / 100.0, At.Y / 100.0, At.Z / 100.0,
+			Player ? *Player->GetName() : TEXT("no pawn"));
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBOSSDUMP %d bosses"), Count);
+}
+
+void UDBCheatManager::DBBossHurt(float HealthFraction)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBBossHurt %f"), HealthFraction))) return;
+	ADBBossCharacter* Boss = FindNearestBoss(GetWorld(), GetOuterAPlayerController()->GetPawn());
+	UAbilitySystemComponent* ASC = Boss ? Boss->GetAbilitySystemComponent() : nullptr;
+	if (!ASC)
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBBossHurt: no boss"));
+		return;
+	}
+	// Through the damage pipeline (death, phases): a raw IncomingDamage effect.
+	const float Damage = ASC->GetNumericAttribute(UDBAttributeSet::GetHealthAttribute()) - HealthFraction * ASC->GetNumericAttribute(UDBAttributeSet::GetMaxHealthAttribute());
+	if (Damage > 0.f)
+	{
+		UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
+		Effect->DurationPolicy = EGameplayEffectDurationType::Instant;
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = UDBAttributeSet::GetIncomingDamageAttribute();
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Damage));
+		Effect->Modifiers.Add(Modifier);
+		ASC->ApplyGameplayEffectToSelf(Effect, 1.f, ASC->MakeEffectContext());
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBossHurt %s -> %.0f%%"), *Boss->GetBossId().ToString(), Boss->GetHealthFraction() * 100.f);
+}
+
+void UDBCheatManager::DBBossDefeat(const FString& Boss)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBBossDefeat %s"), *Boss))) return;
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	if (!GameState)
+	{
+		return;
+	}
+	const bool bOuter = Boss.Equals(TEXT("Outer"), ESearchCase::IgnoreCase);
+	const UDBBossDefinition* Named = bOuter ? nullptr : DBBosses::FindByName(Boss);
+	int32 Count = 0;
+	for (const UDBBossDefinition* Definition : DBBosses::GetAll())
+	{
+		if ((bOuter && Definition->Rank == EDBBossRank::Vassal && Definition->Order <= DarkBlood::Rules::NumVassalRegions) || Definition == Named)
+		{
+			GameState->GetWorldState()->NotifyBossDefeated(Definition->BossId, Definition->Rank, Definition->RegionId);
+			++Count;
+		}
+	}
+	const DarkBlood::Rules::FWorldState& State = GameState->GetWorldState()->GetRulesState();
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBossDefeat %s: %d bosses; vassals %d/%d, Das Ende %s, demon king %s"), *Boss, Count, State.CountDefeatedVassals(),
+		DarkBlood::Rules::NumVassals, State.IsFinalRegionOpen() ? TEXT("open") : TEXT("sealed"), State.IsDemonKingReachable() ? TEXT("reachable") : TEXT("sealed"));
 }
 
 void UDBCheatManager::DBRide()

@@ -1,5 +1,7 @@
 #include "UI/SDBWorldMapWidget.h"
 
+#include "Boss/DBBoss.h"
+#include "Boss/DBBossDefinition.h"
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
@@ -105,6 +107,26 @@ namespace
 				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, DungeonRed, true, 2.5f);
 				Label(Out, Layer, Geometry, At + FVector2f(9.f, -3.f), FText::Format(LOCTEXT("DungeonLabel", "{0} ({1})"), FText::FromString(Site.Name),
 					FText::AsNumber(Site.Difficulty)), 10, DungeonRed);
+			}
+
+			// Vassal and demon king arenas: a square in the boss color, grey once the boss fell.
+			const UWorld* MapWorld = Owner.IsValid() ? Owner->GetWorld() : nullptr;
+			for (const UDBBossDefinition* Boss : DBBosses::GetAll())
+			{
+				const FVector Arena = DBBosses::GetArenaLocation(*Boss);
+				if (Arena.IsZero())
+				{
+					continue;
+				}
+				const ADBBossArena* Actor = MapWorld ? ADBBossArena::Find(MapWorld, Boss->BossId) : nullptr;
+				const bool bDefeated = Actor && Actor->GetArenaState() == EDBArenaState::Defeated;
+				const FLinearColor Color = bDefeated ? FLinearColor(0.45f, 0.45f, 0.45f) : Boss->Color;
+				const FVector2f At = ToLocal(FVector2D(Arena) / 100.0, Size);
+				const float Half = Boss->Rank == EDBBossRank::DemonKing ? 10.f : 7.f;
+				const TArray<FVector2f> Square = {At + FVector2f(-Half, -Half), At + FVector2f(Half, -Half), At + FVector2f(Half, Half), At + FVector2f(-Half, Half), At + FVector2f(-Half, -Half)};
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Square, ESlateDrawEffect::None, Shadow, true, 5.f);
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Square, ESlateDrawEffect::None, Color, true, 2.5f);
+				Label(Out, Layer, Geometry, At + FVector2f(Half + 3.f, -3.f), Boss->DisplayName, 10, Color);
 			}
 
 			const APlayerController* Controller = Owner.Get();

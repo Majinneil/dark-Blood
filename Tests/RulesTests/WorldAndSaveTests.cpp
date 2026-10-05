@@ -99,6 +99,37 @@ DB_TEST(World_VassalsLiberationAndFinalRegion)
 	DB_CHECK(World.IsFinalRegionOpen());
 }
 
+DB_TEST(World_SixteenVassalsGuardTheDemonKing)
+{
+	FWorldState World;
+	for (int Index = 1; Index <= NumVassalRegions; ++Index)
+	{
+		World.AddRegion("Region" + std::to_string(Index), ERegionKind::VassalRegion);
+	}
+	World.AddRegion("TheEnd", ERegionKind::FinalRegion).VassalCount = NumFinalRegionVassals;
+	for (int Index = 1; Index <= NumVassalRegions; ++Index)
+	{
+		DB_CHECK(World.MarkVassalDefeated("Region" + std::to_string(Index), "V" + std::to_string(Index)));
+	}
+	DB_CHECK(World.IsFinalRegionOpen());
+	DB_CHECK(!World.IsDemonKingReachable());
+	DB_CHECK(World.MarkVassalDefeated("TheEnd", "V_Tsukigami"));
+	DB_CHECK(!World.MarkVassalDefeated("TheEnd", "V_Tsukigami")); // the same vassal twice (co-op) counts once
+	DB_CHECK(!World.IsDemonKingReachable());
+	DB_CHECK(World.MarkVassalDefeated("TheEnd", "V_Shirogane"));
+	DB_CHECK_EQ(World.CountDefeatedVassals(), NumVassals);
+	DB_CHECK(World.IsDemonKingReachable());
+	DB_CHECK(World.FindRegion("TheEnd")->Control != ERegionControl::Liberated); // the king still rules there
+
+	FWorldRecord Record;
+	Record.World = World;
+	const std::vector<uint8> Bytes = SerializeWorld(Record);
+	FWorldRecord Loaded;
+	DB_CHECK(DeserializeWorld(Bytes.data(), Bytes.size(), Loaded) == ELoadResult::Ok);
+	DB_CHECK(Loaded.World.IsDemonKingReachable());
+	DB_CHECK_EQ(Loaded.World.CountDefeatedVassals(), NumVassals);
+}
+
 DB_TEST(World_RecoveryIsTimeStepIndependent)
 {
 	FWorldState A;

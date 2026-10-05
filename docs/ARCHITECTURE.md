@@ -141,6 +141,8 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBSurvival <Sättigung> <Wärme>` | Survival-Werte setzen |
 | `DBDungeonEnter <Name>` / `DBDungeonRoom <Index\|Art>` / `DBDungeonDump` | Dungeon betreten / zu einem Raum springen / Zustand aller Dungeons |
 | `DBKillNearby <m>` | Gegner im Umkreis besiegen (Tests) |
+| `DBBossList` / `DBBossArena <Name\|Nr.\|King>` / `DBBossSpawn <Name> [Abstand]` | Bosse und Arenen auflisten / in eine Arena springen / Boss vor dem Spieler erzeugen |
+| `DBBossDump` / `DBBossHurt <Anteil>` / `DBBossDefeat <Name\|Outer>` | Boss-Zustand / Lebensanteil setzen (Phasen) / als besiegt eintragen (`Outer` = 14 Vasallen draußen) |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
 Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),

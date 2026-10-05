@@ -31,6 +31,9 @@ private:
 	FText GetLockTargetName() const;
 	EVisibility GetLockTargetVisibility() const;
 	EVisibility GetNotificationVisibility() const;
+	/** Nearest living boss within 60 m of the local player (the boss bar). */
+	const class ADBBossCharacter* FindBoss() const;
+	FText GetBossTitle() const;
 
 	TWeakObjectPtr<APlayerController> Owner;
 	FText Notification;

@@ -19,8 +19,9 @@ namespace DarkBlood::Rules
 {
 	constexpr uint32 CharacterRecordVersion = 1;
 	/** 2: settlement simulation (version 1 worlds load without settlements; the game creates them).
-	 *  3: dungeon progress (older worlds start with no dungeon cleared). */
-	constexpr uint32 WorldRecordVersion = 3;
+	 *  3: dungeon progress (older worlds start with no dungeon cleared).
+	 *  4: vassals per region (16 vassals; older worlds: one per region, defeated if the region was liberated). */
+	constexpr uint32 WorldRecordVersion = 4;
 
 	enum class EBodyType : uint8
 	{

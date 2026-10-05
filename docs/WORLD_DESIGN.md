@@ -107,7 +107,7 @@ Siedlungen und aktuellem Gebiet. Positionen nutzen dieselbe Projektion, aus der 
 - Region: besetzt → umkämpft (Zwischenboss) → befreit (Vasall), Dämoneneinfluss 0..1.
 - Nach der Befreiung sinkt der Einfluss exponentiell (25 %/Spieltag bis 5 %). Das Ergebnis ist unabhängig
   von der Schrittweite und damit auch für die Offline-Simulation korrekt.
-- DAS ENDE öffnet sich nach 14 besiegten Vasallen (Story-Tor, keine künstliche Regionssperre).
+- DAS ENDE öffnet sich nach den 14 Vasallen draußen (Story-Tor, keine künstliche Regionssperre); dort bewachen Tsukigami und Shirogane den Thron – 16 Vasallen insgesamt, danach der Dämonenkönig.
 - Story-Flags, besiegte Bosse (inkl. Weltbosse).
 
 ## Tag/Nacht

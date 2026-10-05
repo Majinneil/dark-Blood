@@ -1,5 +1,6 @@
 #include "World/DBRealmDirector.h"
 
+#include "Boss/DBBoss.h"
 #include "DarkBlood.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -96,6 +97,8 @@ void ADBRealmDirector::BeginPlay()
 		ADBCarriageStation::SpawnStations(GetWorld());
 		// Dungeon gates in their regions.
 		ADBDungeonPortal::SpawnEntrances(GetWorld());
+		// Arenas of the 16 vassals and the demon king.
+		ADBBossArena::SpawnArenas(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }

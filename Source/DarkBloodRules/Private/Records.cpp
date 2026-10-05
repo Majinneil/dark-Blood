@@ -513,6 +513,8 @@ namespace DarkBlood::Rules
 				W.WriteBool(Region.bMidBossDefeated);
 				W.WriteBool(Region.bVassalDefeated);
 				W.WriteF64(Region.LiberatedAtHours);
+				W.WriteI32(Region.VassalCount);
+				W.WriteI32(Region.VassalsDefeated);
 			}
 			WriteQuestLog(W, World.SharedQuests);
 			WriteSettlements(W, World.Settlements);
@@ -543,6 +545,19 @@ namespace DarkBlood::Rules
 					!R.ReadBool(Region.bMidBossDefeated) || !R.ReadBool(Region.bVassalDefeated) || !R.ReadF64(Region.LiberatedAtHours))
 				{
 					return false;
+				}
+				if (Version >= 4)
+				{
+					if (!R.ReadI32(Region.VassalCount) || !R.ReadI32(Region.VassalsDefeated) || Region.VassalCount < 0 ||
+						Region.VassalsDefeated < 0 || Region.VassalsDefeated > Region.VassalCount)
+					{
+						return false;
+					}
+				}
+				else
+				{
+					Region.VassalCount = 1;
+					Region.VassalsDefeated = Region.bVassalDefeated ? 1 : 0;
 				}
 			}
 			if (!ReadQuestLog(R, World.SharedQuests))

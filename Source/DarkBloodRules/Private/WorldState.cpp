@@ -81,28 +81,56 @@ namespace DarkBlood::Rules
 		return true;
 	}
 
-	bool FWorldState::MarkVassalDefeated(std::string_view RegionId)
+	bool FWorldState::MarkVassalDefeated(std::string_view RegionId, std::string_view VassalId)
 	{
 		FRegionState* Region = FindRegion(RegionId);
-		if (!Region || Region->Kind != ERegionKind::VassalRegion || Region->bVassalDefeated)
+		const bool bHasVassals = Region && (Region->Kind == ERegionKind::VassalRegion || Region->Kind == ERegionKind::FinalRegion);
+		if (!bHasVassals || Region->bVassalDefeated)
 		{
 			return false;
 		}
-		Region->bVassalDefeated = true;
-		Region->Control = ERegionControl::Liberated;
-		Region->LiberatedAtHours = Clock.TotalHours;
+		if (!VassalId.empty())
+		{
+			if (DefeatedBosses.find(VassalId) != DefeatedBosses.end())
+			{
+				return false;
+			}
+			DefeatedBosses.emplace(VassalId);
+		}
+		Region->VassalsDefeated = VassalId.empty() ? std::max(1, Region->VassalCount) : std::min(Region->VassalsDefeated + 1, std::max(1, Region->VassalCount));
+		if (Region->VassalsDefeated >= Region->VassalCount)
+		{
+			Region->bVassalDefeated = true;
+			if (Region->Kind == ERegionKind::VassalRegion)
+			{
+				Region->Control = ERegionControl::Liberated;
+				Region->LiberatedAtHours = Clock.TotalHours;
+			}
+		}
 		return true;
 	}
 
 	int32 FWorldState::CountDefeatedVassals() const
 	{
-		return static_cast<int32>(std::count_if(Regions.begin(), Regions.end(), [](const FRegionState& Region)
-			{ return Region.Kind == ERegionKind::VassalRegion && Region.bVassalDefeated; }));
+		int32 Count = 0;
+		for (const FRegionState& Region : Regions)
+		{
+			Count += Region.Kind == ERegionKind::VassalRegion || Region.Kind == ERegionKind::FinalRegion ? Region.VassalsDefeated : 0;
+		}
+		return Count;
 	}
 
 	bool FWorldState::IsFinalRegionOpen() const
 	{
-		return CountDefeatedVassals() >= NumVassalRegions;
+		const auto Liberated = std::count_if(Regions.begin(), Regions.end(), [](const FRegionState& Region)
+			{ return Region.Kind == ERegionKind::VassalRegion && Region.bVassalDefeated; });
+		return Liberated >= NumVassalRegions;
+	}
+
+	bool FWorldState::IsDemonKingReachable() const
+	{
+		const auto Final = std::find_if(Regions.begin(), Regions.end(), [](const FRegionState& Region) { return Region.Kind == ERegionKind::FinalRegion; });
+		return IsFinalRegionOpen() && Final != Regions.end() && Final->bVassalDefeated;
 	}
 
 	void FWorldState::Advance(double GameHours, const FRegionRecoveryRules& Rules)

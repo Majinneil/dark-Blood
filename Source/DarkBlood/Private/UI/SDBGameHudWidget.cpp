@@ -3,6 +3,9 @@
 #include "UI/DBUIStyle.h"
 
 #include "AbilitySystemComponent.h"
+#include "Boss/DBBoss.h"
+#include "Boss/DBBossDefinition.h"
+#include "EngineUtils.h"
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBGameplayAbility.h"
 #include "Core/DBGameplayTags.h"
@@ -118,6 +121,40 @@ void SDBGameHudWidget::Construct(const FArguments& InArgs)
 					.Font(DBHudStyle::Font(13))
 					.AutoWrapText(true)
 					.Text_Lambda([this]() { return GetQuestTrackerText(); })
+				]
+			]
+		]
+
+		// Boss bar (top center): the nearest boss in a fight, with its title and phase
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 28.f, 0.f, 0.f)
+		[
+			SNew(SVerticalBox)
+			.Visibility_Lambda([this]() { return FindBoss() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+			[
+				SNew(STextBlock)
+				.Font(DBHudStyle::Font(20, "Bold"))
+				.ShadowOffset(FVector2D(2.f, 2.f))
+				.ColorAndOpacity_Lambda([this]() -> FSlateColor
+				{
+					const ADBBossCharacter* Boss = FindBoss();
+					const UDBBossDefinition* Definition = Boss ? Boss->GetDefinition() : nullptr;
+					return Definition ? FLinearColor::LerpUsingHSV(Definition->Color, FLinearColor::White, 0.35f) : FLinearColor::White;
+				})
+				.Text_Lambda([this]() { return GetBossTitle(); })
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				SNew(SBox).WidthOverride(640.f).HeightOverride(16.f)
+				[
+					SNew(SProgressBar)
+					.Style(DBUIStyle::FlatBar())
+					.FillColorAndOpacity(FLinearColor(0.75f, 0.05f, 0.06f))
+					.Percent_Lambda([this]() -> TOptional<float>
+					{
+						const ADBBossCharacter* Boss = FindBoss();
+						return Boss ? Boss->GetHealthFraction() : 0.f;
+					})
 				]
 			]
 		]
@@ -254,7 +291,44 @@ UAbilitySystemComponent* SDBGameHudWidget::GetLockTargetAbilitySystem() const
 
 EVisibility SDBGameHudWidget::GetLockTargetVisibility() const
 {
-	return GetLockTargetAbilitySystem() ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+	// The boss bar already shows a locked boss.
+	const UAbilitySystemComponent* Target = GetLockTargetAbilitySystem();
+	const ADBBossCharacter* Boss = FindBoss();
+	return Target && !(Boss && Boss->GetAbilitySystemComponent() == Target) ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+}
+
+const ADBBossCharacter* SDBGameHudWidget::FindBoss() const
+{
+	const APlayerController* PC = Owner.Get();
+	const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+	if (!Pawn)
+	{
+		return nullptr;
+	}
+	const ADBBossCharacter* Nearest = nullptr;
+	double NearestDistance = 6000.0;
+	for (TActorIterator<ADBBossCharacter> It(Pawn->GetWorld()); It; ++It)
+	{
+		const double Distance = FVector::Dist(It->GetActorLocation(), Pawn->GetActorLocation());
+		if (!It->IsDead() && Distance < NearestDistance)
+		{
+			Nearest = *It;
+			NearestDistance = Distance;
+		}
+	}
+	return Nearest;
+}
+
+FText SDBGameHudWidget::GetBossTitle() const
+{
+	const ADBBossCharacter* Boss = FindBoss();
+	const UDBBossDefinition* Definition = Boss ? Boss->GetDefinition() : nullptr;
+	if (!Definition)
+	{
+		return FText::GetEmpty();
+	}
+	const FText Phase = Definition->Phases.IsValidIndex(Boss->GetPhase()) ? Definition->Phases[Boss->GetPhase()].Name : FText::GetEmpty();
+	return FText::Format(LOCTEXT("BossTitle", "{0} - {1}   [{2}]"), Definition->DisplayName, Definition->Title, Phase);
 }
 
 FText SDBGameHudWidget::GetLockTargetName() const

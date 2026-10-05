@@ -12,7 +12,11 @@
 
 namespace DarkBlood::Rules
 {
+	/** 16 vassals: one in each of the 14 vassal regions (DAS ENDE opens once they are free) and two guarding DAS ENDE
+	 *  itself before the demon king (docs/BOSS_FRAMEWORK.md). */
 	constexpr int32 NumVassalRegions = 14;
+	constexpr int32 NumFinalRegionVassals = 2;
+	constexpr int32 NumVassals = NumVassalRegions + NumFinalRegionVassals;
 
 	enum class ERegionControl : uint8
 	{
@@ -37,7 +41,11 @@ namespace DarkBlood::Rules
 		/** 0 = no demons, 1 = full demonic control. Drives spawn density and settlement pressure. */
 		float DemonInfluence = 1.f;
 		bool bMidBossDefeated = false;
+		/** All vassals of the region defeated. */
 		bool bVassalDefeated = false;
+		/** Vassals ruling the region (1; DAS ENDE: 2) and how many of them fell. */
+		int32 VassalCount = 1;
+		int32 VassalsDefeated = 0;
 		/** World time (in game hours) at liberation; -1 while not liberated. */
 		double LiberatedAtHours = -1.0;
 	};
@@ -90,11 +98,17 @@ namespace DarkBlood::Rules
 
 		DARKBLOODRULES_API void RecordBossDefeat(std::string_view BossId);
 		DARKBLOODRULES_API bool MarkMidBossDefeated(std::string_view RegionId, const FRegionRecoveryRules& Rules = FRegionRecoveryRules());
-		/** Liberates the region. Returns false if unknown or already liberated (idempotent for co-op double kills). */
-		DARKBLOODRULES_API bool MarkVassalDefeated(std::string_view RegionId);
+		/**
+		 * A vassal of the region fell; the region is liberated once all its vassals fell (DAS ENDE stays the demon king's).
+		 * Returns false if the region is unknown, has no vassals, or this vassal / the region was already counted
+		 * (idempotent for co-op double kills). Without a VassalId the region counts as one vassal.
+		 */
+		DARKBLOODRULES_API bool MarkVassalDefeated(std::string_view RegionId, std::string_view VassalId = {});
 		DARKBLOODRULES_API int32 CountDefeatedVassals() const;
 		/** DAS ENDE opens once every vassal region is liberated. */
 		DARKBLOODRULES_API bool IsFinalRegionOpen() const;
+		/** The demon king can be fought once DAS ENDE's own vassals fell. */
+		DARKBLOODRULES_API bool IsDemonKingReachable() const;
 
 		/** Advances time and liberated-region recovery. Called by the server tick and by offline catch-up. */
 		DARKBLOODRULES_API void Advance(double GameHours, const FRegionRecoveryRules& Rules = FRegionRecoveryRules());

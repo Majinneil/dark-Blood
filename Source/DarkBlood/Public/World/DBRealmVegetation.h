@@ -24,6 +24,9 @@ public:
 
 	int32 GetInstanceCount() const;
 
+	/** Runtime: removes the trees and rocks standing inside a circle (boss arenas clear their floor). Returns how many. */
+	int32 RemoveInstancesInCircle(const FVector& Center, float Radius);
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Realm")
 	TObjectPtr<USceneComponent> Root;

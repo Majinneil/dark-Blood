@@ -66,7 +66,7 @@ void ADBGameMode::InitGameState()
 		DBGameState->GetWorldState()->RestoreFromRecord(Record.World);
 		DBGameState->GetSharedQuests()->RestoreFromRecord(Record.World.SharedQuests);
 		UE_LOG(LogDBSave, Log, TEXT("World '%s' loaded (%d/%d vassals defeated)"), *WorldSlot, Record.World.CountDefeatedVassals(),
-			R::NumVassalRegions);
+			R::NumVassals);
 		return;
 	}
 

@@ -59,3 +59,31 @@ int32 ADBRealmVegetation::GetInstanceCount() const
 	}
 	return Count;
 }
+
+int32 ADBRealmVegetation::RemoveInstancesInCircle(const FVector& Center, float Radius)
+{
+	int32 Removed = 0;
+	for (UInstancedStaticMeshComponent* Batch : Batches)
+	{
+		const FBox Bounds = Batch ? Batch->Bounds.GetBox() : FBox(ForceInit);
+		if (!Batch || !Bounds.IsValid || Bounds.ComputeSquaredDistanceToPoint(FVector(Center.X, Center.Y, Bounds.GetCenter().Z)) > FMath::Square(Radius))
+		{
+			continue;
+		}
+		TArray<int32> Doomed;
+		for (int32 Index = 0; Index < Batch->GetInstanceCount(); ++Index)
+		{
+			FTransform Instance;
+			if (Batch->GetInstanceTransform(Index, Instance, true) && FVector::Dist2D(Instance.GetLocation(), Center) < Radius)
+			{
+				Doomed.Add(Index);
+			}
+		}
+		if (Doomed.Num() > 0)
+		{
+			Batch->RemoveInstances(Doomed);
+			Removed += Doomed.Num();
+		}
+	}
+	return Removed;
+}

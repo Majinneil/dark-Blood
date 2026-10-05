@@ -142,6 +142,13 @@ void UDBWorldStateComponent::EnsureRegionsRegistered()
 		{
 			State.AddRegion(Id, DBBridge::CastEnum<R::ERegionKind>(Region->Kind));
 		}
+		// DAS ENDE is guarded by two vassals (also in worlds saved before there were 16).
+		R::FRegionState* RegionState = State.FindRegion(Id);
+		if (RegionState && RegionState->Kind == R::ERegionKind::FinalRegion && RegionState->VassalCount < R::NumFinalRegionVassals)
+		{
+			RegionState->VassalCount = R::NumFinalRegionVassals;
+			RegionState->bVassalDefeated = RegionState->VassalsDefeated >= RegionState->VassalCount;
+		}
 	}
 }
 
@@ -175,8 +182,6 @@ void UDBWorldStateComponent::NotifyBossDefeated(FName BossId, EDBBossRank Rank, 
 	{
 		return;
 	}
-	State.RecordBossDefeat(DBBridge::ToStd(BossId));
-
 	const std::string Region = DBBridge::ToStd(RegionId);
 	switch (Rank)
 	{
@@ -184,10 +189,12 @@ void UDBWorldStateComponent::NotifyBossDefeated(FName BossId, EDBBossRank Rank, 
 		State.MarkMidBossDefeated(Region);
 		break;
 	case EDBBossRank::Vassal:
-		if (State.MarkVassalDefeated(Region))
+		// Counts each vassal once (records its id); the region is free once all its vassals fell.
+		if (State.MarkVassalDefeated(Region, DBBridge::ToStd(BossId)))
 		{
-			UE_LOG(LogDBWorld, Log, TEXT("Region %s liberated (%d/%d vassals)"), *RegionId.ToString(), State.CountDefeatedVassals(),
-				R::NumVassalRegions);
+			const R::FRegionState* RegionState = State.FindRegion(Region);
+			UE_LOG(LogDBWorld, Display, TEXT("Vassal %s defeated in %s (%d/%d vassals)%s"), *BossId.ToString(), *RegionId.ToString(),
+				State.CountDefeatedVassals(), R::NumVassals, RegionState && RegionState->bVassalDefeated ? TEXT(" - region free") : TEXT(""));
 		}
 		break;
 	case EDBBossRank::DemonKing:
@@ -196,6 +203,7 @@ void UDBWorldStateComponent::NotifyBossDefeated(FName BossId, EDBBossRank Rank, 
 	case EDBBossRank::WorldBoss:
 		break;
 	}
+	State.RecordBossDefeat(DBBridge::ToStd(BossId));
 
 	SyncReplicatedView();
 	MulticastBossDefeated(BossId, Rank);

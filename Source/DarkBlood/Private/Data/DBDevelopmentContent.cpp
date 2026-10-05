@@ -505,6 +505,11 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	Loot(TEXT("LT_DungeonChest"), {Grant(TEXT("HealingDraught"), 2)},
 		{LootEntry(TEXT("Tamahagane"), 3, 2, 4), LootEntry(TEXT("DemonOre"), 2, 1, 2), LootEntry(TEXT("SpiritPaper"), 2, 1, 2), LootEntry(TEXT("RiceBall"), 2, 2, 3)},
 		2, 1, 60, 120);
+	// Bosses (Phase 10): every player in the fight gets the guaranteed drops and rolls on its own.
+	Loot(TEXT("LT_Vassal"), {Grant(TEXT("DemonOre"), 4), Grant(TEXT("SpiritPaper"), 3), Grant(TEXT("HealingDraught"), 3)},
+		{LootEntry(TEXT("Tamahagane"), 2, 4, 8), LootEntry(TEXT("DemonHorn"), 2, 3, 5)}, 2, 1, 300, 500);
+	Loot(TEXT("LT_DemonKing"), {Grant(TEXT("DemonOre"), 10), Grant(TEXT("SpiritPaper"), 10), Grant(TEXT("HealingDraught"), 5)},
+		{LootEntry(TEXT("Tamahagane"), 1, 10, 15)}, 2, 1, 3000, 5000);
 	Loot(TEXT("LT_DungeonGuardian"), {Grant(TEXT("DemonOre"), 2), Grant(TEXT("SpiritPaper"), 2)},
 		{LootEntry(TEXT("Tamahagane"), 2, 3, 5), LootEntry(TEXT("HealingDraught"), 2, 1, 2), LootEntry(TEXT("DemonHorn"), 1, 2, 3)}, 2, 1, 120, 220);
 

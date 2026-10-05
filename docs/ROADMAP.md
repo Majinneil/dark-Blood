@@ -15,9 +15,9 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 7 | NPC- und Siedlungssimulation | ✅ Gameplay (17 Siedlungen abstrakt simuliert + gespeichert, Dorfbewohner, Angriffe als Kämpfe; Regelkern + headless getestet) · 🟡 Mass-Mengen, Tagesabläufe, Händler, Animationen |
 | 8 | Reise / Pferde / Kutschen / Survival | ✅ Gameplay (Pferd, Kutschen-Schnellreise, Sättigung/Wärme, Schwimm-Ausdauer; Regelkern, headless, Koop getestet) · 🟡 Modelle/Animationen |
 | 9 | Dungeon-System | ✅ Gameplay (8 Dungeons, Generator aus Seeds, Kämpfe/Fallen/Schatz/Schrein/Wächter, Fortschritt gespeichert; Regelkern, headless, Koop, gerendert getestet) · 🟡 eigene Themen-Modelle, Rätsel |
-| 10 | Boss-Framework | ⬜ |
+| 10 | Boss-Framework | ✅ Gameplay (16 Vasallen + Dämonenkönig mit 3 Formen + Dungeon-Wächter, Arenen, Spezialangriffe, Phasen, Raserei, Koop-Skalierung, Boss-Leiste, Kartenmarker; Regelkern, headless, Koop, gerendert getestet) · 🟡 Modelle, Animationen, Musik, Intros |
 | 11 | 14 Regionen | ⬜ |
-| 12 | 14 Vasallen | ⬜ |
+| 12 | 16 Vasallen | 🟡 alle 16 spielbar mit Framework-Mechaniken (Phase 10) · ⬜ eigene Abilities, Modelle, Arenen-Gestaltung je Vasall |
 | 13 | DAS ENDE | ⬜ |
 | 14 | Dämonenkönig | ⬜ |
 | 15 | Paradies & Finale | ⬜ |
@@ -93,7 +93,7 @@ Engine-Standard.
 - Tod: Inventar unverändert, 5 % Mon-Verlust (max. 500), Haltbarkeit −5 %
 - Skilltree: Kosten, Ränge, Level, Voraussetzungen
 - Quests: sequenziell/parallel, optionale Ziele, Story-Flags, Abgabe, Hauptquest nicht abbrechbar
-- Welt: Zwischenboss → umkämpft, Vasall → befreit (idempotent), DAS ENDE nach 14 Vasallen,
+- Welt: Zwischenboss → umkämpft, Vasall → befreit (idempotent), DAS ENDE nach den 14 Vasallen draußen (16 insgesamt, 2 bewachen DAS ENDE),
   zeitschrittunabhängige Erholung, Tag/Nacht
 - Speichern: Round-Trip byte-identisch, Prüfsumme, Versionsprüfung, Kürzungs-/Fuzz-Robustheit,
   Ablehnung manipulierter Uploads (duplizierte Instanzen, negative Währung, falsches Level, ungültiger Name,
@@ -262,3 +262,22 @@ Eisöde gerendert, 80–85 FPS; Kampf-Regression unverändert.
 **VERSCHOBEN** (braucht Neuaufbau des Geländes bzw. Assets): Klippen, Wasserfälle, zerklüftete Inselküsten und
 schwebende Inseln (Himmelstempel, Das Ende) der Kartenvorlage → Phase 11 (Regionsinhalte) / 17 (Visual Overhaul);
 Gras auf gepflasterten Siedlungsplätzen; Schwimmanimation; Tauchen.
+
+## Abschluss Phase 10 – Boss-Framework (Stand 2026-10-05)
+
+**ERGÄNZT**: 16 Vasallen statt 14 (13 Gebiete + Vasallenfestung; Tsukigami und Shirogane bewachen DAS ENDE), Weltstand
+v4 mit Zählung je Vasall und Migration alter Stände; Dämonenkönig mit drei Formen; Boss-Regeln im Regelkern
+(Koop-Skalierung, Phasen, Raserei); `UDBBossDefinition`, `ADBBossCharacter` (Stampfer, Sturmangriff, Salve,
+Gefahrenzone, Beschwörung), `ADBBossTelegraph`, `ADBBossArena` (Steinboden, Blutbarriere, Versiegelung, Zurücksetzen,
+flache Platzierung, räumt Bäume weg); Dungeon-Wächter als Boss; Boss-Leiste im HUD; Bossmarker auf der Weltkarte;
+Testbefehle `DBBossList`, `DBBossArena`, `DBBossSpawn`, `DBBossDump`, `DBBossHurt`, `DBBossDefeat`.
+Details: [BOSS_FRAMEWORK.md](BOSS_FRAMEWORK.md).
+
+**GETESTET**: Build ohne Warnungen; Regelkern 61/61 (inkl. 16 Vasallen, Boss-Regeln); headless: Arena öffnet,
+Phasenwechsel, Spezialangriffe treffen, Sieg befreit das Gebiet, DAS ENDE versiegelt bis 14/16, Thron versiegelt bis
+16/16, König mit drei Formen, Weltstand gespeichert und wieder geladen; Dungeon-Wächter im Bossraum; Koop
+(Listen-Server + Client): Kampf mit 2 Spielern, Leben ×1,45, 3 Dämonen statt 2, geteilte Aufmerksamkeit, Arenen,
+Boss und Phasen auf dem Client repliziert; gerendert: Arena, Boss-Leiste, Gefahrenzone, Thron-Arena, Kartenmarker.
+
+**OFFEN**: Heldenmodelle und Animationen nach den Entwürfen, Telegraph-VFX, Musik, Intros/Finisher, eigene
+Abilities/StateTree je Boss (Phase 12/14), Arena-Transformation des Königs.
