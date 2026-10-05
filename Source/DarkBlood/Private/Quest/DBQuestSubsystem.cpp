@@ -73,6 +73,16 @@ bool UDBQuestSubsystem::StartQuest(FName QuestId, APlayerState* ForPlayer)
 	{
 		Notify(FText::Format(NSLOCTEXT("DarkBlood", "QuestStarted", "Neue Quest: {0}"), GetQuestTitle(QuestId)),
 			Definition->Scope == EDBQuestScope::Shared ? nullptr : Cast<ADBPlayerState>(ForPlayer));
+		// Bosses beaten before the quest began still count (a vassal felled on the way, a guardian before the gate quest).
+		const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+		const UDBWorldStateComponent* World = GameState ? GameState->GetWorldState() : nullptr;
+		for (const FDBQuestObjective& Objective : Definition->Objectives)
+		{
+			if (World && Objective.Kind == EDBObjectiveKind::Kill && World->GetRulesState().DefeatedBosses.count(DBBridge::ToStd(Objective.Target)) > 0)
+			{
+				ReportEvent(EDBObjectiveKind::Kill, Objective.Target, Objective.Required, ForPlayer);
+			}
+		}
 	}
 	return Result == R::EQuestResult::Ok;
 }

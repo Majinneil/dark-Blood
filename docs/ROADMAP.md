@@ -18,7 +18,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 10 | Boss-Framework | ✅ Gameplay (16 Vasallen + Dämonenkönig mit 3 Formen + Dungeon-Wächter, Arenen, Spezialangriffe, Phasen, Raserei, Koop-Skalierung, Boss-Leiste, Kartenmarker; Regelkern, headless, Koop, gerendert getestet) · 🟡 Modelle, Animationen, Musik, Intros |
 | 11 | 14 Regionen | ✅ Gameplay (Dämonenrudel je Gebiet nach Zustand und Tageszeit, 14 Dämonenlager mit Hauptmann, Befreiungsquests, Kartenmarker; Regelkern, headless, Koop, gerendert getestet, 76–92 FPS) · 🟡 eigene Gegnermodelle, Landmarken, Musik |
 | 12 | 16 Vasallen | ✅ Gameplay (16 eigene Signatur-Attacken, Kampfsprüche, Diener in Bossstärke; Regelkern, headless getestet) · 🟡 Heldenmodelle, Animationen, Musik je Vasall |
-| 13 | DAS ENDE | ⬜ |
+| 13 | DAS ENDE | ✅ Gameplay (Tor des Endes mit Blutsiegel, Questkette MQ10–MQ12, Letzte Bastion als Ruhepunkt, Pfad der Schande; headless und gerendert getestet, 98 FPS) · 🟡 schwebende Inseln, Festungsarchitektur |
 | 14 | Dämonenkönig | ⬜ |
 | 15 | Paradies & Finale | ⬜ |
 | 16 | Endgame | ⬜ |
@@ -308,3 +308,16 @@ Gebietsquest zählen; Testbefehl `DBBossSignature`. Details: [BOSS_FRAMEWORK.md]
 **GETESTET**: Regelkern 65/65; headless: alle 16 Signaturen nacheinander ohne Fehler; Diener-Anzahl stimmt (4/2/3/2),
 Treffer am stehenden Spieler bei Blutpfad, Blitzregen, Flutwelle, Sturmklingen, Leerensog, Blutmond, Klingen der
 Nacht; Eisringe und Flammenwall lassen Lücken zum Ausweichen.
+
+## Abschluss Phase 13 – DAS ENDE (Stand 2026-10-05)
+
+**ERGÄNZT**: Tor des Endes (`ADBEndGate`) mit Blutsiegel bis 14/14, Meldung beim Brechen; Hauptquestkette
+`MQ10_TheEndSeal` → `MQ11_ThroneGuardians` → `MQ12_DemonKing`, vom Tor nacheinander gestartet; Letzte Bastion
+(`ADBBastionShrine`) heilt und wird Ruhepunkt; Pfad der Schande; Kartenmarker; „Erreichen“-Ziele für Gebiete; Quests
+rechnen beim Start bereits besiegte Bosse an. Behoben: Wiederbelebung am Ruhepunkt (zwischengespeicherter Startpunkt
+ging vor). Details: [THE_END.md](THE_END.md).
+
+**GETESTET**: headless: Tor versiegelt → 14 Vasallen → Siegel bricht → MQ10 startet → Bastion (Ruhepunkt) und
+DAS ENDE betreten → MQ10 fertig → MQ11 startet, nachträglich angerechnetes Tsukigami + Shirogane → MQ11 fertig →
+MQ12 startet; Tod im Kirschblütental → Wiederbelebung in der Bastion; gerendert: Tor mit und ohne Siegel, Bastion,
+Questtracker, 97–98 FPS.

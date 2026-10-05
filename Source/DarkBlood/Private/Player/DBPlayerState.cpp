@@ -221,6 +221,11 @@ void ADBPlayerState::UpdateCurrentRegion()
 		{
 			Quests->StartQuest(FName(*(TEXT("RQ_") + NewRegion.ToString())), this);
 		}
+		// "Reach" objectives name a region (e.g. entering DAS ENDE, Phase 13).
+		if (HasAuthority() && Quests && !NewRegion.IsNone())
+		{
+			Quests->ReportEvent(EDBObjectiveKind::Reach, NewRegion, 1, this);
+		}
 		OnRegionChanged.Broadcast(this, CurrentRegionId);
 	}
 }

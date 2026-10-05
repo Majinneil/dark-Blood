@@ -11,6 +11,7 @@
 #include "World/DBCarriageStation.h"
 #include "World/DBDungeon.h"
 #include "World/DBRegionLife.h"
+#include "World/DBTheEnd.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
@@ -103,6 +104,8 @@ void ADBRealmDirector::BeginPlay()
 		ADBBossArena::SpawnArenas(GetWorld());
 		// A demon camp in every vassal region (Phase 11).
 		ADBDemonCamp::SpawnCamps(GetWorld());
+		// DAS ENDE: the gate with its blood seal, the Last Bastion, the path to the throne (Phase 13).
+		DBTheEnd::SpawnLandmarks(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }

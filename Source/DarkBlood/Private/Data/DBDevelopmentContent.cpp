@@ -635,6 +635,57 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		bAddedAny = true;
 	}
 
+	// ---- DAS ENDE (Phase 13/14, docs/THE_END.md): started in turn by the Gate of the End once its seal breaks ----
+	auto Kill = [](const TCHAR* Id, const TCHAR* Target, const FText& Description, EDBObjectiveKind Kind = EDBObjectiveKind::Kill)
+	{
+		FDBQuestObjective Result;
+		Result.ObjectiveId = Id;
+		Result.Kind = Kind;
+		Result.Target = Target;
+		Result.Required = 1;
+		Result.Description = Description;
+		return Result;
+	};
+	auto MainQuest = [&](const TCHAR* Id, const TCHAR* Title, const TCHAR* Previous, TArray<FDBQuestObjective> Objectives, int64 Xp, int32 SkillPoints,
+		const TCHAR* Flag)
+	{
+		if (Data.FindQuest(Id))
+		{
+			return;
+		}
+		UDBQuestDefinition* Quest = NewObject<UDBQuestDefinition>(&Data, NAME_None, RF_Transient);
+		Quest->QuestId = Id;
+		Quest->Title = FText::FromString(Title);
+		Quest->Category = EDBQuestCategory::Main;
+		Quest->Scope = EDBQuestScope::Shared;
+		Quest->RegionId = TEXT("TheEnd");
+		if (Previous)
+		{
+			Quest->PrerequisiteQuests = {Previous};
+		}
+		Quest->bSequential = false;
+		Quest->bAutoComplete = true;
+		Quest->bCanAbandon = false;
+		Quest->Objectives = MoveTemp(Objectives);
+		Quest->Reward.Xp = Xp;
+		Quest->Reward.Currency = Xp / 10;
+		Quest->Reward.SkillPoints = SkillPoints;
+		Quest->Reward.StoryFlags = {FName(Flag)};
+		Data.RegisterQuest(Quest);
+		bAddedAny = true;
+	};
+	MainQuest(TEXT("MQ10_TheEndSeal"), TEXT("Das Siegel des Endes"), nullptr,
+		{Kill(TEXT("RestAtBastion"), TEXT("Bastion_TheEnd"), NSLOCTEXT("DarkBloodQuests", "RestAtBastion", "Raste in der Letzten Bastion"), EDBObjectiveKind::Interact),
+			Kill(TEXT("EnterTheEnd"), TEXT("TheEnd"), NSLOCTEXT("DarkBloodQuests", "EnterTheEnd", "Schreite durch das Tor des Endes"), EDBObjectiveKind::Reach)},
+		4000, 1, TEXT("Story.TheEndEntered"));
+	MainQuest(TEXT("MQ11_ThroneGuardians"), TEXT("Die Waechter des Throns"), TEXT("MQ10_TheEndSeal"),
+		{Kill(TEXT("Tsukigami"), TEXT("V_Tsukigami"), NSLOCTEXT("DarkBloodQuests", "KillTsukigami", "Besiege Tsukigami, Vasall des Blutmondes")),
+			Kill(TEXT("Shirogane"), TEXT("V_Shirogane"), NSLOCTEXT("DarkBloodQuests", "KillShirogane", "Besiege Shirogane, Rechte Hand des Daemonenkoenigs"))},
+		8000, 2, TEXT("Story.ThroneOpen"));
+	MainQuest(TEXT("MQ12_DemonKing"), TEXT("Der Daemonenkoenig"), TEXT("MQ11_ThroneGuardians"),
+		{Kill(TEXT("DemonKing"), TEXT("B_DemonKing"), NSLOCTEXT("DarkBloodQuests", "KillKing", "Stuerze den Daemonenkoenig"))},
+		20000, 3, TEXT("Story.KingSlain"));
+
 	// ---- Dialogues ------------------------------------------------------------------------------
 	using ECond = EDBDialogueCondition;
 	using EEff = EDBDialogueEffect;

@@ -6,6 +6,7 @@
 #include "Boss/DBBoss.h"
 #include "Boss/DBBossDefinition.h"
 #include "World/DBRegionLife.h"
+#include "World/DBTheEnd.h"
 #include "DarkBloodRules/Region.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemComponent.h"
@@ -1256,6 +1257,42 @@ void UDBCheatManager::DBBossSignature()
 	}
 	Boss->ForceSignature();
 	UE_LOG(LogDarkBlood, Display, TEXT("DBBossSignature %s: %d signatures, %d adds"), *Boss->GetBossId().ToString(), Boss->GetSignatures(), Boss->CountLivingAdds());
+}
+
+namespace
+{
+	void TeleportNear(APawn* Pawn, const FVector& Target, const FVector2D& OffsetMeters, float Yaw)
+	{
+		if (!Pawn || Target.IsZero())
+		{
+			return;
+		}
+		const FVector2D Here = FVector2D(Target) / 100.0 + OffsetMeters;
+		Pawn->TeleportTo(FVector(Here.X * 100.0, Here.Y * 100.0, FMath::Max(DBRealm::SampleHeight(Here.X, Here.Y), 0.0) * 100.0 + 250.0), FRotator(0.f, Yaw, 0.f));
+		if (AController* Controller = Pawn->GetController())
+		{
+			Controller->SetControlRotation(FRotator(-6.f, Yaw, 0.f));
+		}
+	}
+}
+
+void UDBCheatManager::DBEndGate()
+{
+	if (ForwardToServer(TEXT("DBEndGate"))) return;
+	// 25 m in front of the gate (the realm side), looking into DAS ENDE.
+	const float Yaw = DBTheEnd::GetGateYaw();
+	TeleportNear(GetOuterAPlayerController()->GetPawn(), DBTheEnd::GetGateLocation(), -FVector2D(FRotator(0.f, Yaw, 0.f).Vector()) * 25.0, Yaw);
+	const ADBEndGate* Gate = ADBEndGate::Find(GetWorld());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBEndGate: (%.0f, %.0f) m, %s"), DBTheEnd::GetGateLocation().X / 100.0, DBTheEnd::GetGateLocation().Y / 100.0,
+		Gate ? (Gate->IsOpen() ? TEXT("open") : TEXT("sealed")) : TEXT("no gate"));
+}
+
+void UDBCheatManager::DBBastion()
+{
+	if (ForwardToServer(TEXT("DBBastion"))) return;
+	const float Yaw = DBTheEnd::GetGateYaw();
+	TeleportNear(GetOuterAPlayerController()->GetPawn(), DBTheEnd::GetBastionLocation(), -FVector2D(FRotator(0.f, Yaw, 0.f).Vector()) * 2.0, Yaw);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBastion: (%.0f, %.0f) m"), DBTheEnd::GetBastionLocation().X / 100.0, DBTheEnd::GetBastionLocation().Y / 100.0);
 }
 
 void UDBCheatManager::DBRegionDump()

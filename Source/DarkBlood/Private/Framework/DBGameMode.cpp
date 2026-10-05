@@ -387,6 +387,8 @@ void ADBGameMode::RespawnPlayer(AController* Controller)
 		Controller->UnPossess();
 		OldPawn->Destroy();
 	}
+	// The cached first start spot would win over the rest point (ChoosePlayerStart): forget it.
+	Controller->StartSpot = nullptr;
 	RestartPlayer(Controller);
 	if (const ADBPlayerState* PlayerState = Controller->GetPlayerState<ADBPlayerState>())
 	{

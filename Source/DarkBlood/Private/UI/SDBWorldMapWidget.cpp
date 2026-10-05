@@ -18,6 +18,7 @@
 #include "Widgets/Text/STextBlock.h"
 #include "World/DBDungeon.h"
 #include "World/DBRegionLife.h"
+#include "World/DBTheEnd.h"
 #include "World/DBRealmLayout.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodWorldMap"
@@ -111,6 +112,21 @@ namespace
 			}
 
 			const UWorld* MapWorld = Owner.IsValid() ? Owner->GetWorld() : nullptr;
+			// DAS ENDE: the gate (red while sealed) and the Last Bastion (blue).
+			{
+				const ADBEndGate* Gate = MapWorld ? ADBEndGate::Find(MapWorld) : nullptr;
+				const FVector2f GateAt = ToLocal(FVector2D(DBTheEnd::GetGateLocation()) / 100.0, Size);
+				const FLinearColor GateColor = Gate && Gate->IsOpen() ? FLinearColor(0.95f, 0.75f, 0.75f) : FLinearColor(1.f, 0.1f, 0.1f);
+				const TArray<FVector2f> GateMark = {GateAt + FVector2f(-9.f, 9.f), GateAt + FVector2f(-9.f, -7.f), GateAt + FVector2f(9.f, -7.f), GateAt + FVector2f(9.f, 9.f)};
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), GateMark, ESlateDrawEffect::None, Shadow, true, 5.f);
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), GateMark, ESlateDrawEffect::None, GateColor, true, 3.f);
+				Label(Out, Layer, Geometry, GateAt + FVector2f(11.f, -10.f), LOCTEXT("GateLabel", "Tor des Endes"), 10, GateColor);
+				const FVector2f BastionAt = ToLocal(FVector2D(DBTheEnd::GetBastionLocation()) / 100.0, Size);
+				Dot(Out, Layer, Geometry, BastionAt, 12.f, Shadow);
+				Dot(Out, Layer, Geometry, BastionAt, 8.f, AllyBlue);
+				Label(Out, Layer, Geometry, BastionAt + FVector2f(-60.f, 6.f), LOCTEXT("BastionLabel", "Letzte Bastion"), 10, AllyBlue);
+			}
+
 			// Demon camps: a triangle, grey once broken.
 			for (const FDBRealmRegion& Region : DBRealm::GetRegions())
 			{

@@ -144,6 +144,7 @@ z. B. im PIE; in Shipping-Builds deaktiviert).
 | `DBBossList` / `DBBossArena <Name\|Nr.\|King>` / `DBBossSpawn <Name> [Abstand]` | Bosse und Arenen auflisten / in eine Arena springen / Boss vor dem Spieler erzeugen |
 | `DBBossDump` / `DBBossHurt <Anteil>` / `DBBossDefeat <Name\|Outer>` | Boss-Zustand / Lebensanteil setzen (Phasen) / als besiegt eintragen (`Outer` = 14 Vasallen draußen) |
 | `DBRegionDump` / `DBCamp <Nr.\|Name>` / `DBRegionPack` | Gebietszustand, Rudel und Lager / zum Dämonenlager springen / Rudel sofort erzeugen |
+| `DBBossSignature` / `DBEndGate` / `DBBastion` | Signatur-Attacke des nächsten Bosses / vor das Tor des Endes / zur Letzten Bastion |
 
 Kommandozeile: `-DBPersistence=Local|Server`, `-DBCharacterSlot=<Slot>`, `-DBCharacterName="Jin Akagi"` (überspringt die
 Charaktererstellung), `-DBCharacterClass=<Klasse>`, `-DBSkipCreator`, `-DBDevSlice`, `-DBCheats` (Dev-Kommandos auf Listen-/Dedicated-Servern),
