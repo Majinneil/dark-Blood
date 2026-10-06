@@ -3,6 +3,7 @@
 #include "Abilities/DBAttributeSet.h"
 #include "Art/DBArtBuilder.h"
 #include "Art/DBModelLibrary.h"
+#include "AI/DBMeleeAIComponent.h"
 #include "Boss/DBBoss.h"
 #include "Boss/DBBossDefinition.h"
 #include "World/DBRegionLife.h"
@@ -1143,6 +1144,53 @@ void UDBCheatManager::DBBossSpawn(const FString& Boss, float Distance)
 	const int32 Players = GetWorld()->GetGameState() ? GetWorld()->GetGameState()->PlayerArray.Num() : 1;
 	const ADBBossCharacter* Spawned = ADBBossCharacter::SpawnBoss(GetWorld(), Definition, Location, (-Pawn->GetActorForwardVector()).Rotation(), Players);
 	UE_LOG(LogDarkBlood, Display, TEXT("DBBossSpawn %s: %s"), *Definition->BossId.ToString(), Spawned ? TEXT("ok") : TEXT("failed"));
+}
+
+void UDBCheatManager::DBBossPortrait(const FString& Boss, float Distance)
+{
+	const UDBBossDefinition* Definition = DBBosses::FindByName(Boss);
+	APlayerController* Controller = GetOuterAPlayerController();
+	ADBPlayerCharacter* Character = Controller ? Cast<ADBPlayerCharacter>(Controller->GetPawn()) : nullptr;
+	if (!Definition || !Character || !Character->HasAuthority())
+	{
+		UE_LOG(LogDarkBlood, Warning, TEXT("DBBossPortrait: unknown boss '%s' or not standalone"), *Boss);
+		return;
+	}
+	for (TActorIterator<ADBBossCharacter> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
+	}
+	const FVector Forward = Character->GetActorForwardVector();
+	const FVector Location = Character->GetActorLocation() + Forward * Distance + FVector(0.f, 0.f, 150.f);
+	ADBBossCharacter* Spawned = ADBBossCharacter::SpawnBoss(GetWorld(), Definition, Location, (-Forward).Rotation(), 1);
+	if (!Spawned)
+	{
+		return;
+	}
+	// Frozen: no fight logic, no AI; gravity still settles it, the body keeps idling.
+	Spawned->SetActorTickEnabled(false);
+	if (UDBMeleeAIComponent* AI = Spawned->FindComponentByClass<UDBMeleeAIComponent>())
+	{
+		AI->SetComponentTickEnabled(false);
+	}
+	Character->SetActorHiddenInGame(true);
+	Character->GetCameraBoom()->TargetArmLength = 260.f;
+	Character->GetCameraBoom()->bDoCollisionTest = false;
+	Controller->SetControlRotation(FRotator(-4.f, Forward.Rotation().Yaw, 0.f));
+	UE_LOG(LogDarkBlood, Display, TEXT("DBBossPortrait %s"), *Definition->BossId.ToString());
+}
+
+void UDBCheatManager::DBBossMeshInfo()
+{
+	for (TActorIterator<ADBBossCharacter> It(GetWorld()); It; ++It)
+	{
+		const USkeletalMeshComponent* Mesh = It->GetMesh();
+		const FBoxSphereBounds Bounds = Mesh->Bounds;
+		UE_LOG(LogDarkBlood, Display, TEXT("DBBossMeshInfo %s: mesh %s, visible %d, hidden %d, bounds offset %s extent %s, scale %s, anim %s, overlay %s"),
+			*It->GetName(), *GetNameSafe(Mesh->GetSkeletalMeshAsset()), Mesh->IsVisible(), Mesh->bHiddenInGame,
+			*(Bounds.Origin - It->GetActorLocation()).ToCompactString(), *Bounds.BoxExtent.ToCompactString(),
+			*Mesh->GetComponentScale().ToCompactString(), *GetNameSafe(Mesh->GetAnimInstance()), *GetNameSafe(Mesh->GetOverlayMaterial()));
+	}
 }
 
 void UDBCheatManager::DBBossDump()

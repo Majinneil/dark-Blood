@@ -177,3 +177,19 @@ darüber die Montagen (Angriffe, Signatur, Treffer, Niederschlag, Tod), die das 
 `UDBBossDefinition::VisualProfiles` nennt die Wunschkörper in Reihenfolge; der erste vorhandene gilt
 (`UDBGameDataSubsystem::PickCharacterVisual`). Weitere kostenlose Paragon-Helden (Aurora, Feng Mao, Revenant, Gideon,
 Terra, Steel) sind bereits eingetragen und ersetzen die Doppelungen, sobald sie hinzugefügt sind.
+
+### Dämonen-Zeichnung (Farbe der Vorlage)
+
+Die geliehenen Körper tragen die Farbe ihres Vasallen (`Definition->Color`, wie in den Konzeptblättern):
+`UDBCharacterVisualComponent::SetDemonAccent` legt das Overlay-Material `M_DB_DemonOverlay` über den Körper (dunkler
+Farbstich plus dünner, pulsierender Rand in der Boss-Farbe; erzeugt von `Tools/UE58/db_create_demon_overlay_material.py`)
+und färbt die Leucht-Parameter der Paragon-Materialien um (`EyeGlowColor`, `TeamColor`, `EmissiveColor`,
+`BodyGlowColor*`, `HairEmissiveColor`, …). Die Stärke steigt mit jeder Phase; Gebietsdämonen tragen ein blutrotes,
+schwächeres Zeichen. Kosten: ein unbeleuchteter, transluzenter Durchgang je Figur, ab 90 m (Bosse) bzw. 40 m
+(Dämonen) abgeschaltet – gemessen 70–82 FPS mit 13–19 Figuren (wie ohne Zeichen).
+
+Additive Paragon-Clips (Khaimeras `Idle` gehört zu `Idle_Zero_Pose`) falten das Skelett zu einem Punkt zusammen und
+werden weder vom Setup-Skript noch vom Laufzeit-Animationsinstanz als Grundpose genutzt.
+
+Prüfen: `DBBossPortrait <Boss>` stellt einen eingefrorenen Boss vor die Kamera (eigene Figur ausgeblendet),
+`DBBossMeshInfo` gibt Körper, Begrenzung und Overlay aller Bosse aus.

@@ -46,6 +46,8 @@ void ADBLesserDemon::BeginPlay()
 		if (!Body.IsNone())
 		{
 			Visuals->SetProfileId(Body);
+			// Blood-red demon mark (elites a little stronger); faded out beyond camp distance.
+			Visuals->SetDemonAccent(FLinearColor(1.f, 0.07f, 0.04f), bElite ? 0.8f : 0.55f, 4000.f);
 		}
 	}
 	Super::BeginPlay();

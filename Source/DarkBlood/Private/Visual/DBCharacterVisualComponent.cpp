@@ -237,6 +237,7 @@ void UDBCharacterVisualComponent::ApplyProfile(const UDBCharacterVisualDefinitio
 	Character->SetPlaceholderVisible(false);
 	ApplyAppearanceParameters();
 	ApplyWeapon();
+	ApplyDemonAccent();
 	if (Character->IsDead())
 	{
 		PlayDeathPresentation();
@@ -408,6 +409,7 @@ void UDBCharacterVisualComponent::ClearVisuals()
 		if (ADBCharacterBase* Character = GetCharacter())
 		{
 			Character->GetMesh()->SetAnimInstanceClass(nullptr);
+			Character->GetMesh()->SetOverlayMaterial(nullptr);
 			Character->GetMesh()->SetSkeletalMesh(nullptr);
 			Character->SetPlaceholderVisible(!Character->IsDead());
 		}
@@ -462,4 +464,66 @@ FName UDBCharacterVisualComponent::GetEmotion() const
 		return CurrentEmotion;
 	}
 	return ActiveProfile ? ActiveProfile->DefaultEmotion : FName(TEXT("Neutral"));
+}
+
+void UDBCharacterVisualComponent::SetDemonAccent(const FLinearColor& Color, float Strength, float DrawDistance)
+{
+	AccentColor = Color;
+	AccentStrength = FMath::Max(0.f, Strength);
+	AccentDrawDistance = DrawDistance;
+	ApplyDemonAccent();
+}
+
+void UDBCharacterVisualComponent::ApplyDemonAccent()
+{
+	ADBCharacterBase* Character = GetCharacter();
+	if (!Character || !bHasVisualBody)
+	{
+		return;
+	}
+	USkeletalMeshComponent* Mesh = Character->GetMesh();
+	if (AccentStrength <= 0.f)
+	{
+		Mesh->SetOverlayMaterial(nullptr);
+		return;
+	}
+	// Glow parameters the Paragon masters share (absent ones are simply ignored by the material).
+	struct FDBAccentParameter
+	{
+		const TCHAR* Name;
+		float Scale;
+	};
+	static const FDBAccentParameter AccentParameters[] = {
+		{TEXT("EyeGlowColor"), 4.f}, {TEXT("TeamColor"), 3.f}, {TEXT("EmissiveColor"), 3.f},
+		{TEXT("BodyGlowColorLow"), 1.f}, {TEXT("BodyGlowColorHigh"), 3.f}, {TEXT("HairEmissiveColor"), 2.f},
+		{TEXT("FlameTint"), 1.f}, {TEXT("EmissiveColor_SwordTip"), 4.f}, {TEXT("EmissiveColor_SwordBase"), 4.f}};
+	for (UMaterialInstanceDynamic* Material : TintableMaterials)
+	{
+		for (const FDBAccentParameter& Parameter : AccentParameters)
+		{
+			FLinearColor Current;
+			if (Material && Material->GetVectorParameterValue(FHashedMaterialParameterInfo(Parameter.Name), Current))
+			{
+				Material->SetVectorParameterValue(Parameter.Name, AccentColor * (Parameter.Scale * AccentStrength));
+			}
+		}
+	}
+
+	static TSoftObjectPtr<UMaterialInterface> OverlayAsset(FSoftObjectPath(TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_DemonOverlay.M_DB_DemonOverlay")));
+	UMaterialInterface* OverlayMaterial = OverlayAsset.LoadSynchronous();
+	if (!OverlayMaterial)
+	{
+		return;
+	}
+	if (!AccentOverlay || AccentOverlay->Parent != OverlayMaterial)
+	{
+		AccentOverlay = UMaterialInstanceDynamic::Create(OverlayMaterial, this);
+	}
+	AccentOverlay->SetVectorParameterValue(TEXT("AccentColor"), AccentColor);
+	// A dark cast in the accent colour and a thin glowing edge - the body keeps its own shading underneath.
+	AccentOverlay->SetScalarParameterValue(TEXT("RimIntensity"), 2.5f * AccentStrength);
+	AccentOverlay->SetScalarParameterValue(TEXT("BodyGlow"), 0.06f);
+	AccentOverlay->SetScalarParameterValue(TEXT("BodyOpacity"), FMath::Min(0.3f * AccentStrength, 0.45f));
+	Mesh->SetOverlayMaterial(AccentOverlay);
+	Mesh->SetOverlayMaterialMaxDrawDistance(AccentDrawDistance);
 }

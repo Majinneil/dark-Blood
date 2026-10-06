@@ -128,6 +128,10 @@ public:
 	UFUNCTION(Exec) void DBBossDefeat(const FString& Boss);
 	/** The nearest boss uses its signature attack now (Phase 12). */
 	UFUNCTION(Exec) void DBBossSignature();
+	/** Standalone look check: removes other bosses, places a frozen boss facing the camera (own character hidden). */
+	UFUNCTION(Exec) void DBBossPortrait(const FString& Boss, float Distance = 520.f);
+	/** Body of every boss: mesh, visibility, bounds relative to the actor, scale (look debugging). */
+	UFUNCTION(Exec) void DBBossMeshInfo();
 
 	/** Regions (Phase 11): packs, camps and region states; teleport to a region's demon camp; spawn a pack now. */
 	UFUNCTION(Exec) void DBRegionDump();

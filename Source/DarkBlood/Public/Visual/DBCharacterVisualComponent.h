@@ -60,6 +60,13 @@ public:
 	void SetEmotion(FName Emotion) { CurrentEmotion = Emotion; }
 	FName GetEmotion() const;
 
+	/**
+	 * Demonic mark for borrowed bodies (bosses, demons): glow parameters of the body's materials (eyes, team
+	 * colour, emissive accents) take Color, and M_DB_DemonOverlay lays a colour cast with a pulsing rim over the
+	 * body. Strength 0 removes it. Survives profile changes; local presentation like everything here.
+	 */
+	void SetDemonAccent(const FLinearColor& Color, float Strength, float DrawDistance = 6000.f);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -80,6 +87,14 @@ private:
 	USkeletalMeshComponent* AddPart(const struct FDBVisualPart& Part, USkeletalMeshComponent& Leader);
 	void ClearVisuals();
 	void ApplyWeapon();
+	void ApplyDemonAccent();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> AccentOverlay = nullptr;
+
+	FLinearColor AccentColor = FLinearColor::Red;
+	float AccentStrength = 0.f;
+	float AccentDrawDistance = 6000.f;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMeshComponent> WeaponComponent = nullptr;

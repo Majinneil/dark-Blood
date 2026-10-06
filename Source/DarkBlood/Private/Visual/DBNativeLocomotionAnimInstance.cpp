@@ -51,8 +51,12 @@ void UDBNativeLocomotionAnimInstance::ResolveAnimations()
 	{
 		return;
 	}
-	IdleSequence = Set->IdleAnimation.LoadSynchronous();
-	RunSequence = Set->RunAnimation.LoadSynchronous();
+	// An additive clip (Paragon Khaimera's "Idle", made for Idle_Zero_Pose) played as the base pose collapses the
+	// whole skeleton into one point - such clips are never used here.
+	auto BasePose = [](UAnimSequenceBase* Sequence) { return Sequence && !Sequence->IsValidAdditive() ? Sequence : nullptr; };
+	RunSequence = BasePose(Set->RunAnimation.LoadSynchronous());
+	IdleSequence = BasePose(Set->IdleAnimation.LoadSynchronous());
+	IdleSequence = IdleSequence ? IdleSequence.Get() : RunSequence.Get();
 	RunSpeed = FMath::Max(50.f, Set->RunSpeed);
 }
 

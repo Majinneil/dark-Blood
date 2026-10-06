@@ -172,6 +172,8 @@ void ADBBossCharacter::ApplyLook()
 			Visuals->SetProfileId(Wanted);
 		}
 	}
+	// The borrowed body takes the vassal's colour; the mark burns brighter with every phase.
+	Visuals->SetDemonAccent(Definition->Color, 0.8f + Phase * 0.35f, 9000.f);
 	Aura->SetLightColor(Definition->Color);
 	Aura->SetIntensity(5000.f + Phase * 4000.f);
 	Nameplate->SetTextRenderColor(Definition->Color.ToFColor(true));

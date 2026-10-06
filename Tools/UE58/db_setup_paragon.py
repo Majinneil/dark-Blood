@@ -27,7 +27,7 @@ MONTAGES = [
     ("Death", ["Death", "Death_A", "Death_Fwd", "Death_01"]),
     ("Spawn", ["LevelStart", "Spawn", "Emote_Taunt"]),
 ]
-IDLE = ["Idle_Relaxed", "Idle", "Idle_Straight", "Idle_Pose", "Idle_Combat"]
+IDLE = ["Idle_Relaxed", "Idle", "Idle_NonAdditive", "Idle_Straight", "Idle_Pose", "Idle_Combat"]
 RUN = ["Jog_Fwd", "Jog_Fwd_Combat", "Run_Fwd", "Walk_Fwd"]
 
 
@@ -42,9 +42,17 @@ def asset_names(folder):
     return names
 
 
+def is_base_pose(path):
+    # Additive clips (Khaimera's "Idle" belongs to Idle_Zero_Pose) collapse the skeleton when played on their own.
+    sequence = unreal.load_asset(path)
+    if not isinstance(sequence, unreal.AnimSequence):
+        return True
+    return sequence.get_editor_property("additive_anim_type") == unreal.AdditiveAnimationType.AAT_NONE
+
+
 def pick(names, candidates, suffix_ok=True):
     for candidate in candidates:
-        if candidate in names:
+        if candidate in names and is_base_pose(names[candidate]):
             return names[candidate]
     return None
 
@@ -75,7 +83,7 @@ def pick_any(names, montage, candidates):
     stems = [c.lower() for c in candidates[:1]]
     for name, path in sorted(names.items()):
         lower = name.lower()
-        if any(stem in lower for stem in stems) and not lower.endswith("_msa") and "montage" not in lower:
+        if any(stem in lower for stem in stems) and not lower.endswith("_msa") and "montage" not in lower and is_base_pose(path):
             return path
     return None
 
