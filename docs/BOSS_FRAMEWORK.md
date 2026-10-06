@@ -152,3 +152,28 @@ Referenzen und werden ausgetauscht, ohne Gameplay zu ändern.
 Eigene Modelle, Animationen und Telegraph-VFX je Boss; Musik; Intros und Finisher (Level Sequences, Motion Warping);
 StateTree-KI pro Boss mit eigenen GAS-Abilities statt der gemeinsamen Mechanik-Bausteine; Arena-Transformation des
 Königs; Checkpoints.
+
+## Körper aus den Paragon-Figuren
+
+Bosse und Dämonen nutzen die kostenlosen Paragon-Figuren von Epic, wenn sie lokal eingerichtet sind (siehe
+`docs/CREDITS.md`, `Tools/UE58/db_setup_paragon.py`). Jede Figur behält ihr eigenes Skelett und ihre eigenen
+Animationen: `UDBNativeLocomotionAnimInstance` (ohne Animation Blueprint) blendet Stand und Lauf nach Tempo und spielt
+darüber die Montagen (Angriffe, Signatur, Treffer, Niederschlag, Tod), die das Skript nach Namenskonvention
+(`AM_Attack_01` …) anlegt und `UDBAnimationSetDefinition::MontageFolder` findet.
+
+| Figur | Boss / Gegner |
+|---|---|
+| Kwang (vier Varianten) | Akakage; Ersatz für Yukimaru (Albino), Enkazan (Sunrise), Kujiraa (Rosewood) |
+| Kallari | Kurobane, Ersatz für Reikon |
+| Greystone | Shirogane, Ersatz für Raikyo |
+| Khaimera | Kokuya, Ersatz für Shikotsu |
+| Morigesh | Dokuga, Ersatz für Mugenrei |
+| Grux / Rampage | Juragan / Tetsukhan, Dungeon-Wächter |
+| Sun Wukong | Hayate |
+| Countess | Tsukigami |
+| Sevarog | Dämonenkönig |
+| Minions (Nahkampf, Super) | Gebietsdämonen, Beschwörungen; Elite und Lager-Hauptleute als Super-Minion |
+
+`UDBBossDefinition::VisualProfiles` nennt die Wunschkörper in Reihenfolge; der erste vorhandene gilt
+(`UDBGameDataSubsystem::PickCharacterVisual`). Weitere kostenlose Paragon-Helden (Aurora, Feng Mao, Revenant, Gideon,
+Terra, Steel) sind bereits eingetragen und ersetzen die Doppelungen, sobald sie hinzugefügt sind.

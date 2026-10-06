@@ -162,6 +162,16 @@ void ADBBossCharacter::ApplyLook()
 		return;
 	}
 	SetActorScale3D(FVector(Definition->Phases[Phase].Scale));
+	// Body: the first locally available authored character (Paragon), else the placeholder demon.
+	if (const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this))
+	{
+		const FName Body = Data->PickCharacterVisual(Definition->VisualProfiles);
+		const FName Wanted = Body.IsNone() ? Definition->VisualProfileId : Body;
+		if (Visuals->GetProfileId() != Wanted)
+		{
+			Visuals->SetProfileId(Wanted);
+		}
+	}
 	Aura->SetLightColor(Definition->Color);
 	Aura->SetIntensity(5000.f + Phase * 4000.f);
 	Nameplate->SetTextRenderColor(Definition->Color.ToFColor(true));

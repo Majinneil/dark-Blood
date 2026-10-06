@@ -62,6 +62,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBCharacterVisualDefinition* FindCharacterVisual(FName ProfileId) const;
+	/** First profile matching one of the patterns in order (exact id or wildcard, e.g. "CV_ParagonMinions*Melee*"); None if none. */
+	FName PickCharacterVisual(const TArray<FString>& Patterns) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Dark Blood|Data")
 	UDBAnimationSetDefinition* FindAnimationSet(FName AnimationSetId) const;

@@ -149,6 +149,34 @@ namespace
 			{S::KingsBanner, TEXT("Kein Sterblicher erreicht den Thron."), TEXT("Fuer den Koenig!")},
 		};
 		static_assert(UE_ARRAY_COUNT(Personas) == DarkBlood::Rules::NumVassals, "one persona per vassal");
+		// Bodies from the free Epic Paragon characters (Fab, set up locally by Tools/UE58/db_setup_paragon.py), in
+		// vassal order; a missing pack keeps the placeholder demon. Several fallbacks so every vassal gets a body.
+		static const TArray<FString> Bodies[] = {
+			{TEXT("CV_ParagonKwang_Kwang_GDC"), TEXT("CV_ParagonKwang*")},         // Akakage: blood samurai
+			{TEXT("CV_ParagonAurora"), TEXT("CV_ParagonKwang_KwangAlbino")},     // Yukimaru: frost
+			{TEXT("CV_ParagonKallari")},                                         // Kurobane: shadow
+			{TEXT("CV_ParagonSteel"), TEXT("CV_ParagonGreystone")},              // Raikyo: thunder
+			{TEXT("CV_ParagonFengMao"), TEXT("CV_ParagonKwang_KwangSunrise")},   // Enkazan: fire and ash
+			{TEXT("CV_ParagonRevenant"), TEXT("CV_ParagonKhaimera")},            // Shikotsu: bone and death
+			{TEXT("CV_ParagonMorigesh")},                                        // Dokuga: poison and plague
+			{TEXT("CV_ParagonGideon"), TEXT("CV_ParagonMorigesh")},              // Mugenrei: illusion
+			{TEXT("CV_ParagonGrux")},                                            // Juragan: beasts
+			{TEXT("CV_ParagonRampage")},                                         // Tetsukhan: iron
+			{TEXT("CV_ParagonTerra"), TEXT("CV_ParagonKwang_KwangRosewood")},    // Kujiraa: the depths
+			{TEXT("CV_ParagonSunWukong"), TEXT("CV_ParagonWukong")},              // Hayate: wind
+			{TEXT("CV_ParagonKhaimera")},                                        // Kokuya: darkness
+			{TEXT("CV_ParagonGideon"), TEXT("CV_ParagonKallari")},               // Reikon: the void
+			{TEXT("CV_ParagonCountess")},                                        // Tsukigami: blood moon
+			{TEXT("CV_ParagonGreystone")},                                       // Shirogane: the king's right hand
+		};
+		static_assert(UE_ARRAY_COUNT(Bodies) == DarkBlood::Rules::NumVassals, "one body per vassal");
+		for (UDBBossDefinition* Boss : All)
+		{
+			if (Boss->Order >= 1 && Boss->Order <= static_cast<int32>(UE_ARRAY_COUNT(Bodies)))
+			{
+				Boss->VisualProfiles = Bodies[Boss->Order - 1];
+			}
+		}
 		for (UDBBossDefinition* Boss : All)
 		{
 			if (Boss->Order >= 1 && Boss->Order <= static_cast<int32>(UE_ARRAY_COUNT(Personas)))
@@ -192,6 +220,8 @@ namespace
 			Boss->LootTableId = TEXT("LT_Commander");
 			Boss->Portrait.Reset();
 			Boss->ArenaRadius = 1800.f;
+			// Camp commanders: the armoured super minion.
+			Boss->VisualProfiles = {TEXT("CV_ParagonMinions_Minion_Lane_Super_Dusk"), TEXT("CV_ParagonMinions_Minion_Lane_Super_Dawn"), TEXT("CV_ParagonKhaimera")};
 			All.Add(Boss);
 		}
 
@@ -225,6 +255,7 @@ namespace
 		King->Taunt = FText::FromString(TEXT("Ihr seid weit gekommen, Sterbliche. Hier, vor meinem Thron, endet euer Weg."));
 		King->PhaseTaunts = {FText::GetEmpty(), FText::FromString(TEXT("Spuert das Dunkle Blut, das diese Welt naehrt!")),
 			FText::FromString(TEXT("Genug! Seht meine wahre Gestalt - und vergeht!"))};
+		King->VisualProfiles = {TEXT("CV_ParagonSevarog")};
 		All.Add(King);
 
 		// The guardian of the dungeons (scaled by the dungeon's stage when spawned).
@@ -235,6 +266,7 @@ namespace
 		Guardian->SkillPoints = 0;
 		Guardian->Portrait.Reset();
 		Guardian->LootTableId = NAME_None; // the dungeon's hoard is the reward
+		Guardian->VisualProfiles = {TEXT("CV_ParagonRampage"), TEXT("CV_ParagonGrux"), TEXT("CV_ParagonMinions_Minion_Lane_Super_Dusk")};
 		All.Add(Guardian);
 		return All;
 	}

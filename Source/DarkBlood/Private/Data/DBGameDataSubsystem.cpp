@@ -164,6 +164,28 @@ UDBCharacterVisualDefinition* UDBGameDataSubsystem::FindCharacterVisual(FName Pr
 	return Found ? Found->Get() : nullptr;
 }
 
+FName UDBGameDataSubsystem::PickCharacterVisual(const TArray<FString>& Patterns) const
+{
+	for (const FString& Pattern : Patterns)
+	{
+		TArray<FName> Matches;
+		for (const TPair<FName, TObjectPtr<UDBCharacterVisualDefinition>>& Pair : CharacterVisuals)
+		{
+			if (Pair.Key.ToString().MatchesWildcard(Pattern))
+			{
+				Matches.Add(Pair.Key);
+			}
+		}
+		if (Matches.Num() > 0)
+		{
+			// Deterministic on every machine.
+			Matches.Sort(FNameLexicalLess());
+			return Matches[0];
+		}
+	}
+	return NAME_None;
+}
+
 UDBAnimationSetDefinition* UDBGameDataSubsystem::FindAnimationSet(FName AnimationSetId) const
 {
 	const TObjectPtr<UDBAnimationSetDefinition>* Found = AnimationSets.Find(AnimationSetId);

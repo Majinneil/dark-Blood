@@ -53,4 +53,24 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation", meta = (TitleProperty = "Key"))
 	TArray<FDBAnimationEntry> Entries;
+
+	/** Native locomotion (UDBNativeLocomotionAnimInstance, no Animation Blueprint): idle and run loops blended by speed.
+	 *  Used by authored characters that bring their own skeleton and animations (Paragon). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Native")
+	TSoftObjectPtr<class UAnimSequenceBase> IdleAnimation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Native")
+	TSoftObjectPtr<class UAnimSequenceBase> RunAnimation;
+
+	/** Speed (cm/s) at which the run loop plays at its authored rate. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Native")
+	float RunSpeed = 400.f;
+
+	/** Folder of montages named after the keys (AM_Attack_01..03, AM_Attack_Heavy, AM_Signature, AM_HitReact,
+	 *  AM_Knockdown, AM_Death), used when no entry matches: generated sets need no gameplay tags. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+	FString MontageFolder;
+
+private:
+	UAnimMontage* FindConventionMontage(const FGameplayTag& Key, int32 Index, bool* bOutFitToDuration) const;
 };

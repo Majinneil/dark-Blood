@@ -186,6 +186,8 @@ void UDBCharacterVisualComponent::ApplyProfile(const UDBCharacterVisualDefinitio
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Mesh->SetGenerateOverlapEvents(false);
 	Mesh->SetRelativeTransform(Profile.MeshTransform);
+	// A previous profile's material overrides (the placeholder demon's veins) must not stick to the new body.
+	Mesh->EmptyOverrideMaterials();
 	Mesh->SetSkeletalMesh(Body);
 	for (int32 Index = 0; Index < Profile.BodyMaterials.Num(); ++Index)
 	{

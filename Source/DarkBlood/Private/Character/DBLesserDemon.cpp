@@ -4,6 +4,7 @@
 #include "Abilities/DBMeleeAttackAbility.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Data/DBGameDataSubsystem.h"
 #include "Visual/DBCharacterVisualComponent.h"
 
 ADBLesserDemon::ADBLesserDemon(const FObjectInitializer& ObjectInitializer)
@@ -31,4 +32,21 @@ ADBLesserDemon::ADBLesserDemon(const FObjectInitializer& ObjectInitializer)
 
 	MeleeAI = CreateDefaultSubobject<UDBMeleeAIComponent>(TEXT("MeleeAI"));
 	Visuals->SetProfileId(TEXT("CV_Enemy_LesserDemon"));
+}
+
+void ADBLesserDemon::BeginPlay()
+{
+	// Body: the Paragon minions when available (elites the big "super" minion), else the placeholder demon.
+	// Same choice on every machine (the name replicates with the spawn).
+	if (const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this))
+	{
+		const bool bElite = DisplayName.ToString().StartsWith(TEXT("Elite"));
+		const FName Body = bElite ? Data->PickCharacterVisual({TEXT("CV_ParagonMinions_Minion_Lane_Super_Dusk"), TEXT("CV_ParagonMinions_Minion_Lane_Super_Dawn")})
+								  : Data->PickCharacterVisual({TEXT("CV_ParagonMinions_Minion_Lane_Melee_Dusk"), TEXT("CV_ParagonMinions_Minion_Lane_Melee_Dawn")});
+		if (!Body.IsNone())
+		{
+			Visuals->SetProfileId(Body);
+		}
+	}
+	Super::BeginPlay();
 }

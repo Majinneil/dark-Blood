@@ -88,6 +88,12 @@ Fab verbietet die Weitergabe als eigenständige Dateien; jede Person lädt sie a
   → `/Game/DarkBlood/Dev/FabWeapons/` (ein Klingenmodell, zehn Oberflächen für die Katana-Sammlung)
 - In der Bibliothek, Installation über den Epic Launcher: „Kostenloses Animationspaket“ (Gamma Studio),
   „Mage Collection Samples“ (Rapa Motion), „Europäische Waldumwelt“ (Blackridge, CC BY 4.0)
+- **Paragon-Figuren von Epic Games** (kostenlos, Standard-Lizenz): Minions, Countess, Greystone, Grux, Kallari,
+  Khaimera, Kwang, Morigesh, Rampage, Sevarog, Wukong; dazu „Game Animation Sample“ (Epic Games). Über den Epic Launcher
+  mit „Dem Projekt hinzufügen“ nach `Content/Paragon*` (ignoriert); danach `Tools/UE58/db_setup_paragon.py` ausführen:
+  Montagen, Animationssets und Aussehensprofile entstehen lokal (`/Game/DarkBlood/Characters/Paragon`,
+  `.../Profiles/Paragon`, `/Game/DarkBlood/Animation/Sets/Paragon`, alle ignoriert). Ohne die Pakete behalten Bosse und
+  Dämonen ihren Platzhalterkörper.
 
 ## Unreal Engine
 

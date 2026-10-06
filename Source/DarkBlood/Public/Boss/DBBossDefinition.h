@@ -161,6 +161,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Visuals")
 	FName VisualProfileId = TEXT("CV_Enemy_LesserDemon");
 
+	/** Preferred body profiles in order (ids or wildcards, e.g. "CV_ParagonKwang"); the first one present wins,
+	 *  otherwise VisualProfileId (the placeholder demon). Lets each developer's local Fab characters drive the look. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Visuals")
+	TArray<FString> VisualProfiles;
+
 	/** Health thresholds of the phases after the first (for DarkBlood::Rules::EvaluateBossPhase). */
 	TArray<float> GetPhaseThresholds() const;
 	/** Mechanics available in a phase (cumulative). */

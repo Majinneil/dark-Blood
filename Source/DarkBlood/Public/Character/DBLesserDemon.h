@@ -15,6 +15,8 @@ class DARKBLOOD_API ADBLesserDemon : public ADBEnemyCharacter
 public:
 	ADBLesserDemon(const FObjectInitializer& ObjectInitializer);
 
+	virtual void BeginPlay() override;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dark Blood|AI")
 	TObjectPtr<UDBMeleeAIComponent> MeleeAI;

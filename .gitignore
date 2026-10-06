@@ -35,3 +35,9 @@ SourceArt/
 # Fab Standard-license animations: imported locally from each developer's own Fab library (Tools/UE58/db_import_fab.py)
 Content/DarkBlood/Dev/FabAnims/
 Content/DarkBlood/Dev/FabWeapons/
+# Epic Paragon characters (Fab Standard license): added from each developer's own Fab library through the Epic Games
+# Launcher, set up locally by Tools/UE58/db_setup_paragon.py (montages, animation sets, visual profiles)
+Content/Paragon*/
+Content/DarkBlood/Characters/Paragon/
+Content/DarkBlood/Characters/Profiles/Paragon/
+Content/DarkBlood/Animation/Sets/Paragon/
