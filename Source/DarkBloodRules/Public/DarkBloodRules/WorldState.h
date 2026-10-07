@@ -6,6 +6,8 @@
 #include "DarkBloodRules/Dungeon.h"
 #include "DarkBloodRules/Settlement.h"
 
+#include <map>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -89,6 +91,14 @@ namespace DarkBlood::Rules
 		std::vector<FSettlementState> Settlements;
 		/** Clears of each dungeon (cleared dungeons stay empty for a while). */
 		std::vector<FDungeonProgress> Dungeons;
+		/** Phase 16: New Game+ cycle of this world (0 = first playthrough). */
+		int32 Cycle = 0;
+		/** Bosses defeated in any cycle - the Hall of Echoes offers them again. Survives new cycles. */
+		std::set<std::string, std::less<>> RememberedBosses;
+		/** Echo rematches won per boss (the next echo is one rank stronger). */
+		std::map<std::string, int32, std::less<>> EchoRanks;
+		/** Deepest floor of the Abyss reached in this world. */
+		int32 AbyssDeepest = 0;
 
 		DARKBLOODRULES_API FRegionState& AddRegion(std::string RegionId, ERegionKind Kind);
 		DARKBLOODRULES_API FRegionState* FindRegion(std::string_view RegionId);
@@ -114,6 +124,18 @@ namespace DarkBlood::Rules
 		 *  Story.WorldPurified. Idempotent. */
 		DARKBLOODRULES_API void PurifyWorld();
 		DARKBLOODRULES_API bool IsPurified() const;
+
+		/** New Game+: possible once the world is purified (the demon king fell). */
+		DARKBLOODRULES_API bool CanBeginNewCycle() const;
+		/**
+		 * Starts the next cycle: every region falls back to the demons, bosses and dungeons return, story flags and the
+		 * shared quests restart. The clock, settlements, remembered bosses, echo ranks and the Abyss record stay;
+		 * characters are not part of the world and keep everything. Returns false if not purified.
+		 */
+		DARKBLOODRULES_API bool BeginNewCycle();
+		/** Records an echo victory; returns the new rank. */
+		DARKBLOODRULES_API int32 RecordEchoVictory(std::string_view BossId);
+		DARKBLOODRULES_API int32 GetEchoRank(std::string_view BossId) const;
 
 		/** Advances time and liberated-region recovery. Called by the server tick and by offline catch-up. */
 		DARKBLOODRULES_API void Advance(double GameHours, const FRegionRecoveryRules& Rules = FRegionRecoveryRules());

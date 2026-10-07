@@ -397,6 +397,25 @@ void ADBGameMode::RespawnPlayer(AController* Controller)
 	}
 }
 
+bool ADBGameMode::BeginNewCycle()
+{
+	ADBGameState* DBGameState = GetGameState<ADBGameState>();
+	UDBWorldStateComponent* WorldState = DBGameState ? DBGameState->GetWorldState() : nullptr;
+	if (!WorldState || !WorldState->BeginNewCycle())
+	{
+		return false;
+	}
+	DBGameState->GetSharedQuests()->RestoreFromRecord(R::FQuestLog());
+	for (const FName& QuestId : UDBGameSettings::Get().InitialSharedQuests)
+	{
+		DBGameState->GetSharedQuests()->StartQuest(QuestId, WorldState->GetRulesState().StoryFlags);
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("New Game+ %d: the shared story starts again (%d quests)"), WorldState->GetCycle(),
+		UDBGameSettings::Get().InitialSharedQuests.Num());
+	SaveAll();
+	return true;
+}
+
 AActor* ADBGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
 	// Respawn at the last rest point (tavern, camp ...) if a matching PlayerStart exists.

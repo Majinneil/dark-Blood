@@ -42,8 +42,12 @@ public:
 	int32 CountLivingAdds() const;
 	int32 GetSpecialAttacks() const { return SpecialAttacks; }
 
+	/** Endgame: an explicit scale (echo, Abyss guardian) instead of the world's New Game+ cycle; bEcho = an echo in the
+	 *  Hall of Echoes (its death raises the echo rank instead of changing the world). */
 	static ADBBossCharacter* SpawnBoss(UWorld* World, const UDBBossDefinition* Definition, const FVector& Location, const FRotator& Rotation, int32 PlayerCount,
-		float StatMultiplier = 1.f, ADBBossArena* Arena = nullptr);
+		float StatMultiplier = 1.f, ADBBossArena* Arena = nullptr, const FDBEndgameScale* Endgame = nullptr, bool bEcho = false);
+
+	bool IsEcho() const { return bEcho; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -72,6 +76,10 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Boss)
 	int32 Phase = 0;
+
+	/** A remembered boss fought again in the Hall of Echoes (pale, ghostly look). */
+	UPROPERTY(ReplicatedUsing = OnRep_Boss)
+	bool bEcho = false;
 
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Boss")
 	TObjectPtr<UDBMeleeAIComponent> MeleeAI;

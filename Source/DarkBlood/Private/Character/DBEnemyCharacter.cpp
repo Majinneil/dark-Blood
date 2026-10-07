@@ -6,6 +6,8 @@
 #include "Abilities/DBRegenerationEffect.h"
 #include "AI/DBMeleeAIComponent.h"
 #include "Combat/DBCombatStatics.h"
+#include "DarkBloodRules/Endgame.h"
+#include "Framework/DBGameState.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Core/DBGameplayTags.h"
@@ -19,6 +21,7 @@
 #include "Inventory/DBInventoryComponent.h"
 #include "Quest/DBQuestSubsystem.h"
 #include "TimerManager.h"
+#include "World/DBWorldStateComponent.h"
 
 ADBEnemyCharacter::ADBEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -57,9 +60,45 @@ void ADBEnemyCharacter::BeginPlay()
 
 	if (HasAuthority())
 	{
+		ApplyEndgameScale();
 		InitializeCombatState();
 	}
 	RefreshNameplate();
+}
+
+void ADBEnemyCharacter::SetEndgameScale(const FDBEndgameScale& Scale)
+{
+	bEndgameScaleSet = true;
+	Endgame = Scale;
+}
+
+void ADBEnemyCharacter::ApplyEndgameScale()
+{
+	// Only demons grow with the cycle; training dummies stay what they are.
+	if (Team != EDBTeam::Demons || bRespawnInPlace)
+	{
+		return;
+	}
+	if (!bEndgameScaleSet)
+	{
+		const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+		const UDBWorldStateComponent* WorldState = GameState ? GameState->GetWorldState() : nullptr;
+		const int32 Cycle = WorldState ? WorldState->GetCycle() : 0;
+		if (Cycle <= 0)
+		{
+			return;
+		}
+		const DarkBlood::Rules::FEndgameScale Scale = DarkBlood::Rules::GetCycleScale(Cycle);
+		SetEndgameScale({Scale.EnemyHealth, Scale.EnemyDamage, Scale.Experience, Scale.RarityBonus, Scale.EnemyLevelBonus});
+	}
+	MaxHealth *= Endgame.Health;
+	MaxPoise *= FMath::Sqrt(Endgame.Health);
+	AttackPower *= Endgame.Damage;
+	XpReward = FMath::RoundToInt(XpReward * Endgame.Experience);
+	Level += Endgame.LevelBonus;
+	LootRarityBonus = Endgame.RarityBonus;
+	UE_LOG(LogDBCombat, Log, TEXT("%s endgame scale: level %d, health %.0f, attack %.0f, xp %d, loot +%.2f"), *GetCombatDisplayName(), Level, MaxHealth, AttackPower,
+		XpReward, LootRarityBonus);
 }
 
 void ADBEnemyCharacter::InitializeCombatState()
@@ -195,7 +234,7 @@ void ADBEnemyCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* Dama
 			ADBPlayerState* Looter = It->GetTeam() == EDBTeam::Players ? It->GetPlayerState<ADBPlayerState>() : nullptr;
 			if (Looter && FVector::Dist(It->GetActorLocation(), GetActorLocation()) < 6000.f)
 			{
-				Looter->GetInventory()->GrantLootTable(LootTableId, GetCombatDisplayName());
+				Looter->GetInventory()->GrantLootTable(LootTableId, GetCombatDisplayName(), LootRarityBonus);
 			}
 		}
 	}

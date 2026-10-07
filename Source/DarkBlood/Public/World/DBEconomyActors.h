@@ -61,7 +61,8 @@ public:
 	virtual bool CanInteract(const APawn* User) const override;
 	virtual void Interact(APlayerController* User) override;
 
-	void Setup(FName InLootTableId);
+	/** RarityBonus: endgame loot (Abyss); without it the chest follows the world's New Game+ cycle. */
+	void Setup(FName InLootTableId, float InRarityBonus = 0.f);
 
 protected:
 	virtual void BeginPlay() override;
@@ -73,6 +74,8 @@ protected:
 	TObjectPtr<UStaticMeshComponent> Body;
 
 private:
+	float RarityBonus = 0.f;
+
 	/** Character ids that already opened this chest (server). */
 	TSet<FGuid> OpenedBy;
 };

@@ -155,6 +155,55 @@ namespace DarkBlood::Rules
 		return StoryFlags.find("Story.WorldPurified") != StoryFlags.end();
 	}
 
+	bool FWorldState::CanBeginNewCycle() const
+	{
+		return IsPurified();
+	}
+
+	bool FWorldState::BeginNewCycle()
+	{
+		if (!CanBeginNewCycle())
+		{
+			return false;
+		}
+		RememberedBosses.insert(DefeatedBosses.begin(), DefeatedBosses.end());
+		for (FRegionState& Region : Regions)
+		{
+			if (Region.Kind == ERegionKind::VassalRegion || Region.Kind == ERegionKind::FinalRegion)
+			{
+				Region.Control = ERegionControl::Occupied;
+				Region.DemonInfluence = 1.f;
+				Region.bMidBossDefeated = false;
+				Region.bVassalDefeated = false;
+				Region.VassalsDefeated = 0;
+				Region.LiberatedAtHours = -1.0;
+			}
+		}
+		DefeatedBosses.clear();
+		StoryFlags.clear();
+		SharedQuests = FQuestLog();
+		Dungeons.clear();
+		++Cycle;
+		return true;
+	}
+
+	int32 FWorldState::RecordEchoVictory(std::string_view BossId)
+	{
+		const auto Found = EchoRanks.find(BossId);
+		if (Found == EchoRanks.end())
+		{
+			EchoRanks.emplace(std::string(BossId), 1);
+			return 1;
+		}
+		return ++Found->second;
+	}
+
+	int32 FWorldState::GetEchoRank(std::string_view BossId) const
+	{
+		const auto Found = EchoRanks.find(BossId);
+		return Found == EchoRanks.end() ? 0 : Found->second;
+	}
+
 	void FWorldState::Advance(double GameHours, const FRegionRecoveryRules& Rules)
 	{
 		if (GameHours <= 0.0)

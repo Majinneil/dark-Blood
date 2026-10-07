@@ -12,6 +12,7 @@
 #include "World/DBDungeon.h"
 #include "World/DBRegionLife.h"
 #include "World/DBTheEnd.h"
+#include "World/DBEchoHall.h"
 #include "World/DBParadise.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBRealmSkyComponent.h"
@@ -111,6 +112,8 @@ void ADBRealmDirector::BeginPlay()
 		DBTheEnd::SpawnLandmarks(GetWorld());
 		// The Paradise above DAS ENDE and the gate of light at the throne (Phase 15).
 		DBParadise::SpawnParadise(GetWorld());
+		// The Hall of Echoes over the western sea (Phase 16).
+		DBEchoHall::SpawnHall(GetWorld());
 	}
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }

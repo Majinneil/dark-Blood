@@ -150,6 +150,15 @@ public:
 	UFUNCTION(Exec) void DBParadiseGate();
 	UFUNCTION(Exec) void DBParadise(const FString& Where = TEXT(""));
 	UFUNCTION(Exec) void DBFinale();
+
+	/** Endgame (Phase 16): state dump; begin New Game+ ("force" first purifies the world); enter an Abyss floor, go
+	 *  down from a cleared one; enter the Hall of Echoes, call a boss's echo there. */
+	UFUNCTION(Exec) void DBEndgame();
+	UFUNCTION(Exec) void DBNewCycle(const FString& Mode = TEXT(""));
+	UFUNCTION(Exec) void DBAbyss(int32 Depth = 1);
+	UFUNCTION(Exec) void DBDescend();
+	UFUNCTION(Exec) void DBEchoHall();
+	UFUNCTION(Exec) void DBEcho(const FString& Boss);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

@@ -137,8 +137,9 @@ public:
 	/** Applies the moderate death penalty. Inventory items are never lost. Returns the currency lost. */
 	int64 ApplyDeathPenalty();
 
-	/** Server: rolls a loot table for this player and delivers it (full bags -> pending deliveries). */
-	void GrantLootTable(FName LootTableId, const FString& SourceName);
+	/** Server: rolls a loot table for this player and delivers it (full bags -> pending deliveries). RarityBonus > 0 (endgame)
+	 *  favours rare items and adds currency (DarkBlood::Rules::ApplyEndgameLoot). */
+	void GrantLootTable(FName LootTableId, const FString& SourceName, float RarityBonus = 0.f);
 
 	/** Server: delivers already rolled loot and tells the player what they got. */
 	void GrantLoot(const DarkBlood::Rules::FLootResult& Loot, const FString& SourceName);

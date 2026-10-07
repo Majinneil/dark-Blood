@@ -53,6 +53,10 @@ public:
 
 	void RespawnPlayer(AController* Controller);
 
+	/** New Game+ (docs/ENDGAME.md): the purified world begins its next cycle - regions occupied again, vassals back on
+	 *  their thrones, the shared story restarts; characters, items and settlements stay. Saves at once. */
+	bool BeginNewCycle();
+
 private:
 	UFUNCTION()
 	void HandleCharacterDied(ADBCharacterBase* Character);

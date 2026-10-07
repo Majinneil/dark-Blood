@@ -3,6 +3,7 @@
 #include "Core/DBGameSettings.h"
 #include "Core/DBRulesBridge.h"
 #include "DarkBlood.h"
+#include "DarkBloodRules/Endgame.h"
 #include "Data/DBGameDataSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/DBPlayerState.h"
@@ -575,7 +576,7 @@ void UDBInventoryComponent::ServerRepairAll_Implementation(AActor* Station)
 	FinishRequest(TEXT("Repair"), R::EInventoryResult::Ok, true);
 }
 
-void UDBInventoryComponent::GrantLootTable(FName LootTableId, const FString& SourceName)
+void UDBInventoryComponent::GrantLootTable(FName LootTableId, const FString& SourceName, float RarityBonus)
 {
 	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
 	const UDBLootTableDefinition* Table = Data ? Data->FindLootTable(LootTableId) : nullptr;
@@ -584,7 +585,8 @@ void UDBInventoryComponent::GrantLootTable(FName LootTableId, const FString& Sou
 		return;
 	}
 	R::FLootRandom Random((static_cast<uint64>(FMath::Rand()) << 32) ^ static_cast<uint64>(FPlatformTime::Cycles64()));
-	GrantLoot(R::RollLoot(Table->ToRules(), Random), SourceName);
+	const R::FLootTable Rules = RarityBonus > 0.f ? R::ApplyEndgameLoot(Table->ToRules(), RarityBonus, Data->GetItemCatalog()) : Table->ToRules();
+	GrantLoot(R::RollLoot(Rules, Random), SourceName);
 }
 
 void UDBInventoryComponent::GrantLoot(const R::FLootResult& Loot, const FString& SourceName)

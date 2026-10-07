@@ -525,6 +525,16 @@ namespace DarkBlood::Rules
 				W.WriteI32(Dungeon.TimesCleared);
 				W.WriteF64(Dungeon.ClearedAtHours);
 			}
+			// Version 5 (Phase 16): New Game+ cycle, Hall of Echoes, Abyss.
+			W.WriteI32(World.Cycle);
+			WriteStringSet(W, World.RememberedBosses);
+			W.WriteU32(static_cast<uint32>(World.EchoRanks.size()));
+			for (const auto& [BossId, Rank] : World.EchoRanks)
+			{
+				W.WriteString(BossId);
+				W.WriteI32(Rank);
+			}
+			W.WriteI32(World.AbyssDeepest);
 		}
 
 		bool ReadWorldPayload(FBinaryReader& R, uint32 Version, FWorldRecord& Record)
@@ -582,6 +592,28 @@ namespace DarkBlood::Rules
 					{
 						return false;
 					}
+				}
+			}
+			if (Version >= 5)
+			{
+				uint32 EchoCount = 0;
+				if (!R.ReadI32(World.Cycle) || World.Cycle < 0 || !ReadStringSet(R, World.RememberedBosses) || !R.ReadCount(EchoCount))
+				{
+					return false;
+				}
+				for (uint32 Index = 0; Index < EchoCount; ++Index)
+				{
+					std::string BossId;
+					int32 Rank = 0;
+					if (!R.ReadString(BossId) || !R.ReadI32(Rank) || Rank < 0)
+					{
+						return false;
+					}
+					World.EchoRanks[BossId] = Rank;
+				}
+				if (!R.ReadI32(World.AbyssDeepest) || World.AbyssDeepest < 0)
+				{
+					return false;
 				}
 			}
 			return true;

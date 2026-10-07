@@ -11,6 +11,16 @@ class UDBGameplayAbility;
 class UTextRenderComponent;
 struct FOnAttributeChangeData;
 
+/** Endgame multipliers of one enemy (New Game+ cycle, echo rank or Abyss floor; DarkBloodRules/Endgame.h). */
+struct FDBEndgameScale
+{
+	float Health = 1.f;
+	float Damage = 1.f;
+	float Experience = 1.f;
+	float RarityBonus = 0.f;
+	int32 LevelBonus = 0;
+};
+
 UCLASS()
 class DARKBLOOD_API ADBEnemyCharacter : public ADBCharacterBase
 {
@@ -43,6 +53,13 @@ public:
 	 *  XP), shown name and quest id (regional demons, camp guards). Name and level replicate for the nameplate. */
 	void ConfigureSpawn(int32 InLevel, float StatMultiplier, const FText& InDisplayName, FName InEnemyId, FName InLootTableId = NAME_None);
 
+	/** Server, between a deferred spawn and FinishSpawning: endgame multipliers of an echo or Abyss enemy (docs/ENDGAME.md).
+	 *  Without it every demon takes the scale of the world's New Game+ cycle when it begins play. */
+	void SetEndgameScale(const FDBEndgameScale& Scale);
+
+	/** Added to the rarity of its loot (New Game+, echoes, the Abyss). */
+	float GetLootRarityBonus() const { return LootRarityBonus; }
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
@@ -52,6 +69,8 @@ protected:
 	virtual void PlayRevivePresentation() override;
 
 	void InitializeCombatState();
+	/** Server, at BeginPlay: the endgame multipliers (set by SetEndgameScale or the world's cycle) on stats, level and rewards. */
+	void ApplyEndgameScale();
 	void OnHealthChanged(const FOnAttributeChangeData& Change);
 	void RefreshNameplate();
 	void RespawnInPlace();
@@ -114,5 +133,8 @@ protected:
 
 private:
 	FTransform SpawnTransform;
+	bool bEndgameScaleSet = false;
+	FDBEndgameScale Endgame;
+	float LootRarityBonus = 0.f;
 	FTimerHandle RespawnTimer;
 };

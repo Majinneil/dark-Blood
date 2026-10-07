@@ -21,7 +21,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 13 | DAS ENDE | ✅ Gameplay (Tor des Endes mit Blutsiegel, Questkette MQ10–MQ12, Letzte Bastion als Ruhepunkt, Pfad der Schande; headless und gerendert getestet, 98 FPS) · 🟡 schwebende Inseln, Festungsarchitektur |
 | 14 | Dämonenkönig | ✅ Gameplay (drei Formen mit eigener Katastrophe, Sprüche je Form, Arena-Verwandlung, weltweite Meldung, Hauptquest MQ12; headless und gerendert getestet, 90–106 FPS) · 🟡 Modell mit Flügeln, Animationen, Musik, Zwischensequenzen |
 | 15 | Paradies & Finale | ✅ Gameplay (Welt gereinigt nach dem König, Pforte aus Licht am Thron, schwebende Paradies-Insel über DAS ENDE, Schrein des Friedens mit Finale und Abspann, Quest MQ13, Rückkehr in die Hauptstadt; Regelkern, headless, Koop, gerendert getestet, 92–100 FPS) · 🟡 Zwischensequenz, Musik, Ahnengeister |
-| 16 | Endgame | ⬜ |
+| 16 | Endgame | ✅ Gameplay (New Game+ mit 7 skalierten Zyklen, Halle der Echos mit 17 Revanchen und Echo-Rängen, endloser Abgrund mit Wächtern alle 5 Ebenen, Beute-Bonus; Regelkern, headless, Koop, gerendert getestet, 93 FPS) · 🟡 eigene Modelle, Musik, Ranglisten |
 | 17 | High-End Visual Overhaul | ⬜ |
 | 18 | Audio / Voice / Cinematics | ⬜ |
 | 19 | Multiplayer Hardening | ⬜ |
@@ -346,3 +346,17 @@ Details: [PARADISE.md](PARADISE.md).
 gereinigt (alle Gebiete befreit, 0 Rudel) → Pforte öffnet sich → MQ13 → Pforte → Gebiet Paradies → Schrein → MQ13
 abgeschlossen → Finale; Rückkehr in die Hauptstadt; Koop: Client geht durch die Pforte, Paradies-Stimmung und Finale auf
 dem Client; gerendert: Pforte am Thron, Insel mit Blick über den Kontinent, Finale-Bildschirm, Rückkehr-Tor; 92–100 FPS.
+
+## Abschluss Phase 16 – Endgame (Stand 2026-10-07)
+
+**ERGÄNZT**: Regelkern `Endgame.h` (Zyklus-, Echo- und Abgrund-Skalierung, Endgame-Beute) und Weltstand Version 5;
+New Game+ über die Pforte des Blutmonds im Paradies (mit Bestätigung, Welt zurück an die Dämonen, Charaktere und
+Siedlungen bleiben, Hauptquest neu); Skalierung aller Dämonen und Bosse beim Spielbeginn; Halle der Echos über dem
+Westmeer mit 17 Gedenksteinen und geisterhaften Echos; der Abgrund als endloser Dungeon mit gemeinsamem Abstieg;
+Seltenheits-Bonus für Beute und Truhen; NG+-Anzeige im HUD, „Echo:“-Bosstitel; Schreine als Steinlaternen statt
+Platzhalter, durchscheinende Portal-Schleier; Testbefehle `DBEndgame`, `DBNewCycle`, `DBAbyss`, `DBDescend`,
+`DBEchoHall`, `DBEcho`. Details: [ENDGAME.md](ENDGAME.md).
+
+**GETESTET**: Regelkern 72/72; headless (Abgrund 1 → 2, Ebene 5 mit Wächter, NG+1 mit skaliertem Vasallen, Echo
+Rang 1 → 2, Speichern/Laden); Koop (Echo repliziert, gemeinsamer Abstieg); gerendert (Halle, Abgrund, Schrein, Pforte),
+93 FPS im Paradies.

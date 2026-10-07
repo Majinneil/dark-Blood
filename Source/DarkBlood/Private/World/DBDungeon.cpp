@@ -6,6 +6,7 @@
 #include "AbilitySystemInterface.h"
 #include "Art/DBArtBatcher.h"
 #include "Art/DBArtMaterials.h"
+#include "Art/DBModelLibrary.h"
 #include "Boss/DBBoss.h"
 #include "Boss/DBBossDefinition.h"
 #include "Character/DBHorse.h"
@@ -21,6 +22,7 @@
 #include "Framework/DBGameState.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
@@ -28,6 +30,7 @@
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 #include "UObject/StrongObjectPtr.h"
+#include "World/DBEchoHall.h"
 #include "World/DBEconomyActors.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBWorldStateComponent.h"
@@ -51,6 +54,21 @@ namespace
 	constexpr double InteriorFloorHeight = 30.0;
 	/** Seconds an uncleared, empty interior waits before it is removed (fresh demons next time). */
 	constexpr float EmptyLifetime = 300.f;
+	/** Abyss floors are left behind for good: an empty one goes sooner, cleared or not. */
+	constexpr float AbyssEmptyLifetime = 90.f;
+	/** The two places Abyss floors alternate between are this far apart (cm) - more than a whole 40-cell grid. */
+	constexpr double AbyssFloorSpacing = 30000.0;
+
+	const UDBWorldStateComponent* GetDungeonWorldState(const UWorld* World)
+	{
+		const ADBGameState* GameState = World ? World->GetGameState<ADBGameState>() : nullptr;
+		return GameState ? GameState->GetWorldState() : nullptr;
+	}
+
+	FText AbyssFloorName(int32 Depth)
+	{
+		return FText::Format(LOCTEXT("AbyssFloor", "Der Abgrund - Ebene {0}"), FText::AsNumber(Depth));
+	}
 
 	UWorld* GetWorldOf(const APlayerController* User)
 	{
@@ -135,6 +153,10 @@ const TArray<FDBDungeonSite>& DBDungeon::GetSites()
 		{TEXT("D_AshMine"), TEXT("Aschestollen"), TEXT("Region05"), 4, FVector2D(600.0, 600.0)},
 		{TEXT("D_FortressDungeon"), TEXT("Festungskerker"), TEXT("Region14"), 5, FVector2D(-500.0, 400.0)},
 		{TEXT("D_DemonMaw"), TEXT("Daemonenschlund"), TEXT("Region13"), 5, FVector2D(400.0, -600.0)},
+		// The Abyss: a rift that tore open outside the capital when the demon king fell.
+		{TEXT("D_Abyss"), TEXT("Der Abgrund"), TEXT("Capital"), 5, FVector2D(-650.0, -450.0)},
+		// The way to the Hall of Echoes, where the fallen vassals are remembered.
+		{TEXT("D_EchoHall"), TEXT("Halle der Echos"), TEXT("Capital"), 5, FVector2D(650.0, 450.0)},
 	};
 	const TArray<FDBRealmRegion>& Regions = DBRealm::GetRegions();
 	for (const FDef& Def : Defs)
@@ -145,6 +167,8 @@ const TArray<FDBDungeonSite>& DBDungeon::GetSites()
 		Site.RegionId = Def.Region;
 		Site.Difficulty = Def.Difficulty;
 		Site.Seed = FCrc::StrCrc32(Def.Id);
+		Site.bAbyss = FCString::Strcmp(Def.Id, TEXT("D_Abyss")) == 0;
+		Site.bEchoHall = FCString::Strcmp(Def.Id, TEXT("D_EchoHall")) == 0;
 		const FDBRealmRegion* Region = Regions.FindByPredicate([&Def](const FDBRealmRegion& Candidate) { return Candidate.RegionId == FName(Def.Region); });
 		const FVector2D Center = Region ? Region->Center : FVector2D::ZeroVector;
 		// On dry land, inside the realm and clear of settlements: turn and push the offset until it fits.
@@ -188,6 +212,18 @@ FVector DBDungeon::CellToWorld(const FDBDungeonSite& Site, int32 X, int32 Y)
 	return Site.InteriorOrigin + FVector((X + 0.5f) * CellSize, (Y + 0.5f) * CellSize, 0.f);
 }
 
+int32 DBDungeon::GetAbyssSite()
+{
+	return GetSites().IndexOfByPredicate([](const FDBDungeonSite& Site) { return Site.bAbyss; });
+}
+
+FVector DBDungeon::GetAbyssOrigin(int32 Depth)
+{
+	const int32 Site = GetAbyssSite();
+	const FVector Base = GetSites().IsValidIndex(Site) ? GetSites()[Site].InteriorOrigin : FVector::ZeroVector;
+	return Base + FVector(0.0, (Depth % 2) * AbyssFloorSpacing, 0.0);
+}
+
 // ---- Instance ------------------------------------------------------------------------------------------------
 
 ADBDungeonInstance::ADBDungeonInstance()
@@ -211,7 +247,7 @@ ADBDungeonInstance* ADBDungeonInstance::Find(const UWorld* World, int32 SiteInde
 {
 	for (TActorIterator<ADBDungeonInstance> It(const_cast<UWorld*>(World)); It; ++It)
 	{
-		if (It->SiteIndex == SiteIndex && !It->IsActorBeingDestroyed())
+		if (It->SiteIndex == SiteIndex && !It->IsActorBeingDestroyed() && !It->bRetired)
 		{
 			return *It;
 		}
@@ -242,6 +278,14 @@ ADBDungeonInstance* ADBDungeonInstance::FindOrSpawn(UWorld* World, int32 SiteInd
 		return Existing;
 	}
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
+	if (Site.bAbyss)
+	{
+		return FindOrSpawnAbyss(World, 1);
+	}
+	if (Site.bEchoHall)
+	{
+		return nullptr;
+	}
 	FActorSpawnParameters Params;
 	Params.bDeferConstruction = true;
 	ADBDungeonInstance* Instance = World->SpawnActor<ADBDungeonInstance>(ADBDungeonInstance::StaticClass(), FTransform(Site.InteriorOrigin), Params);
@@ -249,6 +293,36 @@ ADBDungeonInstance* ADBDungeonInstance::FindOrSpawn(UWorld* World, int32 SiteInd
 	{
 		Instance->SiteIndex = SiteIndex;
 		Instance->FinishSpawning(FTransform(Site.InteriorOrigin));
+	}
+	return Instance;
+}
+
+ADBDungeonInstance* ADBDungeonInstance::FindOrSpawnAbyss(UWorld* World, int32 Depth)
+{
+	const int32 Site = DBDungeon::GetAbyssSite();
+	if (!World || Site == INDEX_NONE)
+	{
+		return nullptr;
+	}
+	Depth = FMath::Max(1, Depth);
+	for (TActorIterator<ADBDungeonInstance> It(World); It; ++It)
+	{
+		if (It->SiteIndex == Site && It->AbyssDepth == Depth && !It->bRetired && !It->IsActorBeingDestroyed())
+		{
+			return *It;
+		}
+	}
+	const UDBWorldStateComponent* WorldState = GetDungeonWorldState(World);
+	const FTransform At(DBDungeon::GetAbyssOrigin(Depth));
+	FActorSpawnParameters Params;
+	Params.bDeferConstruction = true;
+	ADBDungeonInstance* Instance = World->SpawnActor<ADBDungeonInstance>(ADBDungeonInstance::StaticClass(), At, Params);
+	if (Instance)
+	{
+		Instance->SiteIndex = Site;
+		Instance->AbyssDepth = Depth;
+		Instance->AbyssCycle = WorldState ? WorldState->GetCycle() : 0;
+		Instance->FinishSpawning(At);
 	}
 	return Instance;
 }
@@ -270,7 +344,25 @@ void ADBDungeonInstance::OnRep_Site()
 		return;
 	}
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
-	Layout = R::GenerateDungeon(Site.Seed, Site.GetParams());
+	if (Site.bAbyss)
+	{
+		if (AbyssDepth <= 0)
+		{
+			return; // the depth replicates with the site; wait for it
+		}
+		// Each floor its own layout: fewer, tighter rooms than a dungeon, more of them and more demons further down.
+		AbyssFloor = R::GetAbyssFloor(AbyssDepth, AbyssCycle);
+		R::FDungeonParams Params;
+		Params.RoomCount = AbyssFloor.Rooms;
+		Params.Difficulty = FMath::Clamp(1 + (AbyssDepth - 1) / 3, 1, 5);
+		Params.GridSize = 32;
+		Params.ExtraLinks = 1;
+		Layout = R::GenerateDungeon(AbyssFloor.Seed, Params);
+	}
+	else
+	{
+		Layout = R::GenerateDungeon(Site.Seed, Site.GetParams());
+	}
 	RoomStates.Init(RoomDormant, static_cast<int32>(Layout.Rooms.size()));
 	RoomEnemies.SetNum(static_cast<int32>(Layout.Rooms.size()));
 	Build();
@@ -281,9 +373,11 @@ void ADBDungeonInstance::Build()
 {
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
 	const bool bDemonic = Site.Difficulty >= 5;
-	const EDBArtMaterial Floor = bDemonic ? EDBArtMaterial::DarkBloodStone : EDBArtMaterial::StoneTemple;
-	const EDBArtMaterial Wall = bDemonic ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneMountain;
-	const EDBArtMaterial Ceiling = bDemonic ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneRuin;
+	// The Abyss is old, cold stone; the dark blood only glows in the seams (a vein strip along the floor of every wall)
+	// and in the red light of the guardian's room - glowing lava on every surface would drown the fight.
+	const EDBArtMaterial Floor = Site.bAbyss ? EDBArtMaterial::StoneRuin : bDemonic ? EDBArtMaterial::DarkBloodStone : EDBArtMaterial::StoneTemple;
+	const EDBArtMaterial Wall = Site.bAbyss ? EDBArtMaterial::TerrainCliff : bDemonic ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneMountain;
+	const EDBArtMaterial Ceiling = Site.bAbyss ? EDBArtMaterial::StoneMountain : bDemonic ? EDBArtMaterial::StoneCorrupted : EDBArtMaterial::StoneRuin;
 	FDBArtBatcher Batcher(*this, *Root, Pieces);
 	Batcher.SetCollision(true);
 	const float Half = DBDungeon::CellSize * 0.5f;
@@ -313,6 +407,12 @@ void ADBDungeonInstance::Build()
 				const FVector Size = Step[0] != 0 ? FVector(Thickness, DBDungeon::CellSize + Thickness, DBDungeon::WallHeight)
 												  : FVector(DBDungeon::CellSize + Thickness, Thickness, DBDungeon::WallHeight);
 				Batcher.Box(Wall, Edge, Size);
+				if (Site.bAbyss)
+				{
+					// The seam of dark blood where wall meets floor.
+					const FVector Seam = Center + FVector(Step[0] * (Half - Thickness * 0.5f - 6.f), Step[1] * (Half - Thickness * 0.5f - 6.f), 6.f);
+					Batcher.Box(EDBArtMaterial::DarkBloodVeins, Seam, Step[0] != 0 ? FVector(12.f, DBDungeon::CellSize, 12.f) : FVector(DBDungeon::CellSize, 12.f, 12.f));
+				}
 			}
 			// A torch every few corridor cells.
 			if (Cell == R::EDungeonCell::Corridor && (++CorridorCells % 5) == 0)
@@ -322,7 +422,7 @@ void ADBDungeonInstance::Build()
 				Torch->SetRelativeLocation(Center + FVector(0.f, 0.f, DBDungeon::WallHeight - 80.f));
 				Torch->SetIntensity(2500.f);
 				Torch->SetAttenuationRadius(1400.f);
-				Torch->SetLightColor(FLinearColor(1.f, 0.55f, 0.25f));
+				Torch->SetLightColor(Site.bAbyss ? FLinearColor(0.75f, 0.32f, 0.42f) : FLinearColor(1.f, 0.55f, 0.25f));
 				Torch->SetCastShadows(false);
 				Torch->RegisterComponent();
 				Lights.Add(Torch);
@@ -342,21 +442,26 @@ void ADBDungeonInstance::Build()
 		Light->SetAttenuationRadius(FMath::Max(Room.W, Room.H) * DBDungeon::CellSize);
 		Light->SetLightColor(Room.Kind == R::EDungeonRoomKind::Boss ? FLinearColor(1.f, 0.2f, 0.15f)
 							 : Room.Kind == R::EDungeonRoomKind::Rest ? FLinearColor(0.6f, 0.8f, 1.f)
+							 : Site.bAbyss							  ? FLinearColor(0.8f, 0.45f, 0.6f)
 																		: FLinearColor(1.f, 0.65f, 0.35f));
 		Light->SetCastShadows(false);
 		Light->RegisterComponent();
 		Lights.Add(Light);
 	}
-	UE_LOG(LogDarkBlood, Log, TEXT("Dungeon %s built: %d rooms, %d instances, %d lights"), *Site.Name, static_cast<int32>(Layout.Rooms.size()),
-		Batcher.GetInstanceCount(), Lights.Num());
+	UE_LOG(LogDarkBlood, Log, TEXT("Dungeon %s%s built: %d rooms, %d instances, %d lights"), *Site.Name,
+		AbyssDepth > 0 ? *FString::Printf(TEXT(" floor %d"), AbyssDepth) : TEXT(""), static_cast<int32>(Layout.Rooms.size()), Batcher.GetInstanceCount(), Lights.Num());
 }
 
 void ADBDungeonInstance::SpawnFixtures()
 {
+	if (!bBuilt)
+	{
+		return;
+	}
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
-	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
-	const UDBWorldStateComponent* WorldState = GameState ? GameState->GetWorldState() : nullptr;
-	bCleared = WorldState && WorldState->IsDungeonCleared(Site.Id);
+	const UDBWorldStateComponent* WorldState = GetDungeonWorldState(GetWorld());
+	// Abyss floors are always fresh; a dungeon remembers that it was cleared.
+	bCleared = !IsAbyss() && WorldState && WorldState->IsDungeonCleared(Site.Id);
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	for (int32 Index = 0; Index < static_cast<int32>(Layout.Rooms.size()); ++Index)
@@ -367,7 +472,7 @@ void ADBDungeonInstance::SpawnFixtures()
 		{
 		case R::EDungeonRoomKind::Entrance:
 			if (ADBDungeonPortal* Exit = GetWorld()->SpawnActor<ADBDungeonPortal>(ADBDungeonPortal::StaticClass(),
-					DBDungeon::CellToWorld(Site, Room.X + Room.W - 1, Room.CenterY()), FRotator(0.f, 90.f, 0.f), Params))
+					GetCellLocation(Room.X + Room.W - 1, Room.CenterY()), FRotator(0.f, 90.f, 0.f), Params))
 			{
 				Exit->Setup(SiteIndex, true);
 			}
@@ -375,7 +480,7 @@ void ADBDungeonInstance::SpawnFixtures()
 		case R::EDungeonRoomKind::Treasure:
 			if (ADBLootChest* Chest = GetWorld()->SpawnActor<ADBLootChest>(ADBLootChest::StaticClass(), Center + FVector(0.f, 0.f, 40.f), FRotator::ZeroRotator, Params))
 			{
-				Chest->Setup(TEXT("LT_DungeonChest"));
+				Chest->Setup(TEXT("LT_DungeonChest"), IsAbyss() ? AbyssFloor.RarityBonus : 0.f);
 			}
 			break;
 		case R::EDungeonRoomKind::Rest:
@@ -387,7 +492,7 @@ void ADBDungeonInstance::SpawnFixtures()
 			{
 				for (int32 X = Room.X; X < Room.X + Room.W; ++X)
 				{
-					if (ADBDungeonTrap* Trap = GetWorld()->SpawnActor<ADBDungeonTrap>(ADBDungeonTrap::StaticClass(), DBDungeon::CellToWorld(Site, X, Y), FRotator::ZeroRotator, Params))
+					if (ADBDungeonTrap* Trap = GetWorld()->SpawnActor<ADBDungeonTrap>(ADBDungeonTrap::StaticClass(), GetCellLocation(X, Y), FRotator::ZeroRotator, Params))
 					{
 						Trap->PhaseOffset = ((X + Y) % 2) * ADBDungeonTrap::CycleSeconds * 0.5f;
 					}
@@ -418,7 +523,12 @@ FVector ADBDungeonInstance::GetRoomCenter(int32 Room) const
 	{
 		return GetActorLocation();
 	}
-	return DBDungeon::CellToWorld(DBDungeon::GetSites()[SiteIndex], Layout.Rooms[static_cast<size_t>(Room)].CenterX(), Layout.Rooms[static_cast<size_t>(Room)].CenterY());
+	return GetCellLocation(Layout.Rooms[static_cast<size_t>(Room)].CenterX(), Layout.Rooms[static_cast<size_t>(Room)].CenterY());
+}
+
+FVector ADBDungeonInstance::GetCellLocation(int32 X, int32 Y) const
+{
+	return GetActorLocation() + FVector((X + 0.5f) * DBDungeon::CellSize, (Y + 0.5f) * DBDungeon::CellSize, 0.f);
 }
 
 bool ADBDungeonInstance::ContainsLocation(const FVector& Location) const
@@ -494,28 +604,55 @@ void ADBDungeonInstance::Tick(float DeltaSeconds)
 			}
 		}
 	}
-	// Abandoned before the end: the demons regroup (a fresh interior next time).
-	if (!bCleared && EmptySeconds > EmptyLifetime)
+	// Abandoned before the end: the demons regroup (a fresh interior next time). Abyss floors are never revisited.
+	if ((!bCleared && EmptySeconds > EmptyLifetime) || (IsAbyss() && EmptySeconds > AbyssEmptyLifetime))
 	{
-		for (TArray<TWeakObjectPtr<ADBEnemyCharacter>>& Enemies : RoomEnemies)
-		{
-			for (const TWeakObjectPtr<ADBEnemyCharacter>& Enemy : Enemies)
-			{
-				if (Enemy.IsValid())
-				{
-					Enemy->Destroy();
-				}
-			}
-		}
-		for (TActorIterator<AActor> It(GetWorld()); It; ++It)
-		{
-			if ((It->IsA<ADBDungeonPortal>() || It->IsA<ADBDungeonTrap>() || It->IsA<ADBDungeonShrine>() || It->IsA<ADBLootChest>()) && ContainsLocation(It->GetActorLocation()))
-			{
-				It->Destroy();
-			}
-		}
-		Destroy();
+		DestroyWithFixtures();
 	}
+}
+
+void ADBDungeonInstance::DestroyWithFixtures()
+{
+	for (TArray<TWeakObjectPtr<ADBEnemyCharacter>>& Enemies : RoomEnemies)
+	{
+		for (const TWeakObjectPtr<ADBEnemyCharacter>& Enemy : Enemies)
+		{
+			if (Enemy.IsValid())
+			{
+				Enemy->Destroy();
+			}
+		}
+	}
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		if ((It->IsA<ADBDungeonPortal>() || It->IsA<ADBDungeonTrap>() || It->IsA<ADBDungeonShrine>() || It->IsA<ADBLootChest>()) && ContainsLocation(It->GetActorLocation()))
+		{
+			It->Destroy();
+		}
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s%s removed"), *DBDungeon::GetSites()[SiteIndex].Name, IsAbyss() ? *FString::Printf(TEXT(" floor %d"), AbyssDepth) : TEXT(""));
+	Destroy();
+}
+
+ADBEnemyCharacter* ADBDungeonInstance::SpawnDemon(const FVector& Location, const FRotator& Rotation)
+{
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	Params.bDeferConstruction = true;
+	ADBLesserDemon* Demon = GetWorld()->SpawnActor<ADBLesserDemon>(ADBLesserDemon::StaticClass(), Location, Rotation, Params);
+	if (!Demon)
+	{
+		return nullptr;
+	}
+	if (IsAbyss())
+	{
+		// The floor's strength replaces the cycle scale (the floor already includes the cycle).
+		const R::FEndgameScale Cycle = R::GetCycleScale(AbyssCycle);
+		Demon->SetEndgameScale({AbyssFloor.EnemyHealth, AbyssFloor.EnemyDamage, Cycle.Experience * (1.f + 0.05f * (AbyssDepth - 1)), AbyssFloor.RarityBonus,
+			AbyssFloor.EnemyLevelBonus});
+	}
+	Demon->FinishSpawning(FTransform(Rotation, Location));
+	return Demon;
 }
 
 void ADBDungeonInstance::ActivateRoom(int32 Room)
@@ -527,34 +664,44 @@ void ADBDungeonInstance::ActivateRoom(int32 Room)
 		return;
 	}
 	RoomStates[Room] = RoomFighting;
-	// Co-op: one more demon per additional player inside.
-	const int32 Count = FMath::Min(10, Data.Enemies + FMath::Max(0, GetPlayersInside().Num() - 1));
+	// Co-op: one more demon per additional player inside. Abyss floors set their own numbers; without a guardian the
+	// last room holds an elite pack instead.
+	const bool bGuardian = Data.Kind == R::EDungeonRoomKind::Boss && (!IsAbyss() || AbyssFloor.bGuardianFloor);
+	const int32 Base = !IsAbyss() ? Data.Enemies : Data.Kind == R::EDungeonRoomKind::Boss ? (bGuardian ? 2 : AbyssFloor.EnemiesPerRoom + 2) : AbyssFloor.EnemiesPerRoom;
+	const int32 Count = FMath::Min(10, Base + FMath::Max(0, GetPlayersInside().Num() - 1));
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	FRandomStream Random(static_cast<int32>(Site.Seed) + Room * 131);
+	FRandomStream Random(static_cast<int32>(IsAbyss() ? AbyssFloor.Seed : Site.Seed) + Room * 131);
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		// Along the far side of the room from the entrance.
 		const int32 X = Data.X + Random.RandRange(0, Data.W - 1);
 		const int32 Y = Data.Y + Random.RandRange(0, Data.H - 1);
-		const FVector Location = DBDungeon::CellToWorld(Site, X, Y) + FVector(Random.FRandRange(-150.f, 150.f), Random.FRandRange(-150.f, 150.f), 120.f);
-		if (ADBLesserDemon* Demon = GetWorld()->SpawnActor<ADBLesserDemon>(ADBLesserDemon::StaticClass(), Location, FRotator(0.f, Random.FRandRange(0.f, 360.f), 0.f), Params))
+		const FVector Location = GetCellLocation(X, Y) + FVector(Random.FRandRange(-150.f, 150.f), Random.FRandRange(-150.f, 150.f), 120.f);
+		if (ADBEnemyCharacter* Demon = SpawnDemon(Location, FRotator(0.f, Random.FRandRange(0.f, 360.f), 0.f)))
 		{
 			RoomEnemies[Room].Add(Demon);
 		}
 	}
-	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s: room %d (%hs) wakes with %d demons"), *Site.Name, Room, R::ToString(Data.Kind), Count);
-	if (Data.Kind == R::EDungeonRoomKind::Boss)
+	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s%s: room %d (%hs) wakes with %d demons"), *Site.Name, IsAbyss() ? *FString::Printf(TEXT(" floor %d"), AbyssDepth) : TEXT(""),
+		Room, R::ToString(Data.Kind), Count);
+	if (bGuardian)
 	{
-		// The guardian: a boss (phases, telegraphed attacks) that grows with the dungeon stage and the party size.
+		// The guardian: a boss (phases, telegraphed attacks) that grows with the dungeon stage and the party size; in the
+		// Abyss with the floor (every fifth floor).
 		const FVector Center = GetRoomCenter(Room) + FVector(0.f, 0.f, 150.f);
+		FDBEndgameScale GuardianScale;
+		if (IsAbyss())
+		{
+			GuardianScale = {AbyssFloor.EnemyHealth, AbyssFloor.EnemyDamage, R::GetCycleScale(AbyssCycle).Experience * (1.f + 0.1f * AbyssDepth), AbyssFloor.RarityBonus,
+				AbyssFloor.EnemyLevelBonus};
+		}
 		if (ADBBossCharacter* Guardian = ADBBossCharacter::SpawnBoss(GetWorld(), DBBosses::Find(TEXT("B_DungeonGuardian")), Center, FRotator::ZeroRotator,
-				FMath::Max(1, GetPlayersInside().Num()), 0.5f + 0.25f * Site.Difficulty))
+				FMath::Max(1, GetPlayersInside().Num()), 0.5f + 0.25f * Site.Difficulty, nullptr, IsAbyss() ? &GuardianScale : nullptr))
 		{
 			RoomEnemies[Room].Add(Guardian);
 		}
-		NotifyPlayersInside(LOCTEXT("Guardian", "Der Waechter des Dungeons erwacht!"));
+		NotifyPlayersInside(IsAbyss() ? FText::Format(LOCTEXT("AbyssGuardian", "Der Waechter der Ebene {0} erwacht!"), FText::AsNumber(AbyssDepth))
+									  : LOCTEXT("Guardian", "Der Waechter des Dungeons erwacht!"));
 	}
 }
 
@@ -566,6 +713,11 @@ void ADBDungeonInstance::ClearDungeon()
 	}
 	bCleared = true;
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
+	if (IsAbyss())
+	{
+		ClearAbyssFloor();
+		return;
+	}
 	if (const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>(); GameState && GameState->GetWorldState())
 	{
 		GameState->GetWorldState()->NotifyDungeonCleared(Site.Id);
@@ -594,6 +746,45 @@ void ADBDungeonInstance::ClearDungeon()
 	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s cleared (+%lld XP for %d players)"), *Site.Name, Xp, GetPlayersInside().Num());
 }
 
+void ADBDungeonInstance::ClearAbyssFloor()
+{
+	if (const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>(); GameState && GameState->GetWorldState())
+	{
+		GameState->GetWorldState()->NotifyAbyssFloorCleared(AbyssDepth);
+	}
+	const int64 Xp = FMath::RoundToInt64(90.0 * AbyssDepth * R::GetCycleScale(AbyssCycle).Experience);
+	for (const APawn* Player : GetPlayersInside())
+	{
+		if (const ADBPlayerState* PlayerState = Player->GetPlayerState<ADBPlayerState>(); PlayerState && PlayerState->GetProgression())
+		{
+			PlayerState->GetProgression()->AwardXp(Xp);
+		}
+	}
+	const FText Text = AbyssFloor.bGuardianFloor
+		? FText::Format(LOCTEXT("AbyssGuardianDown", "Ebene {0} bezwungen, der Waechter ist gefallen! (+{1} XP) Ab hier beginnt ihr kuenftig tiefer."),
+			FText::AsNumber(AbyssDepth), FText::AsNumber(Xp))
+		: FText::Format(LOCTEXT("AbyssFloorDown", "Ebene {0} bezwungen (+{1} XP). Die Treppe fuehrt tiefer hinab."), FText::AsNumber(AbyssDepth), FText::AsNumber(Xp));
+	NotifyPlayersInside(Text);
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const FVector Center = GetRoomCenter(Layout.FindRoom(R::EDungeonRoomKind::Boss));
+	// The stair down in the middle, the way home beside it, the floor's hoard behind.
+	if (ADBDungeonPortal* Down = GetWorld()->SpawnActor<ADBDungeonPortal>(ADBDungeonPortal::StaticClass(), Center, FRotator::ZeroRotator, Params))
+	{
+		Down->Setup(SiteIndex, false, AbyssDepth + 1);
+	}
+	if (ADBDungeonPortal* Exit = GetWorld()->SpawnActor<ADBDungeonPortal>(ADBDungeonPortal::StaticClass(), Center + FVector(0.f, DBDungeon::CellSize, 0.f), FRotator::ZeroRotator, Params))
+	{
+		Exit->Setup(SiteIndex, true);
+	}
+	if (ADBLootChest* Hoard = GetWorld()->SpawnActor<ADBLootChest>(ADBLootChest::StaticClass(), Center + FVector(DBDungeon::CellSize, 0.f, 40.f), FRotator::ZeroRotator, Params))
+	{
+		Hoard->Setup(AbyssFloor.bGuardianFloor ? TEXT("LT_DungeonGuardian") : TEXT("LT_DungeonChest"), AbyssFloor.RarityBonus);
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("Abyss floor %d cleared (+%lld XP for %d players, guardian %d, rarity bonus %.2f)"), AbyssDepth, Xp, GetPlayersInside().Num(),
+		AbyssFloor.bGuardianFloor ? 1 : 0, AbyssFloor.RarityBonus);
+}
+
 void ADBDungeonInstance::NotifyPlayersInside(const FText& Text) const
 {
 	for (const APawn* Player : GetPlayersInside())
@@ -613,6 +804,32 @@ bool ADBDungeonInstance::Enter(APlayerController* User, int32 SiteIndex)
 	{
 		return false;
 	}
+	if (DBDungeon::GetSites()[SiteIndex].bEchoHall)
+	{
+		return DBEchoHall::Enter(User);
+	}
+	if (DBDungeon::GetSites()[SiteIndex].bAbyss)
+	{
+		const UDBWorldStateComponent* WorldState = GetDungeonWorldState(World);
+		if (!WorldState || !WorldState->IsEndgameOpen())
+		{
+			if (ADBPlayerController* Controller = Cast<ADBPlayerController>(User))
+			{
+				Controller->ClientShowNotification(LOCTEXT("AbyssSealed", "Der Abgrund ist versiegelt. Erst wenn der Daemonenkoenig faellt, reisst er auf."));
+			}
+			return false;
+		}
+		// A party already below: join it. Otherwise resume after the last guardian this world has beaten.
+		const int32 Site = SiteIndex;
+		for (TActorIterator<ADBDungeonInstance> It(World); It; ++It)
+		{
+			if (It->SiteIndex == Site && !It->bRetired && !It->IsActorBeingDestroyed() && It->GetPlayersInside().Num() > 0)
+			{
+				return EnterAbyss(User, It->AbyssDepth);
+			}
+		}
+		return EnterAbyss(User, WorldState->GetAbyssDeepest() / 5 * 5 + 1);
+	}
 	if (ADBHorse* Horse = ADBHorse::FindRiddenBy(Pawn))
 	{
 		Horse->Interact(User); // horses wait outside
@@ -625,7 +842,7 @@ bool ADBDungeonInstance::Enter(APlayerController* User, int32 SiteIndex)
 	}
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
 	const R::FDungeonRoom& Entrance = Instance->Layout.Rooms[static_cast<size_t>(Instance->Layout.FindRoom(R::EDungeonRoomKind::Entrance))];
-	const FVector Arrival = DBDungeon::CellToWorld(Site, Entrance.X, Entrance.CenterY()) + FVector(0.f, 0.f, 120.f);
+	const FVector Arrival = Instance->GetCellLocation(Entrance.X, Entrance.CenterY()) + FVector(0.f, 0.f, 120.f);
 	const TWeakObjectPtr<APawn> WeakPawn = Pawn;
 	auto Teleport = [WeakPawn, Arrival]()
 	{
@@ -652,6 +869,84 @@ bool ADBDungeonInstance::Enter(APlayerController* User, int32 SiteIndex)
 													: FText::Format(LOCTEXT("Enter", "{0} (Stufe {1}) betreten"), FText::FromString(Site.Name), FText::AsNumber(Site.Difficulty)));
 	}
 	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s: %s enters%s"), *Site.Name, *GetNameSafe(Pawn), bCleared ? TEXT(" (cleared)") : TEXT(""));
+	return true;
+}
+
+bool ADBDungeonInstance::EnterAbyss(APlayerController* User, int32 Depth)
+{
+	APawn* Pawn = User ? User->GetPawn() : nullptr;
+	UWorld* World = GetWorldOf(User);
+	if (!Pawn || !World || !Pawn->HasAuthority())
+	{
+		return false;
+	}
+	if (ADBHorse* Horse = ADBHorse::FindRiddenBy(Pawn))
+	{
+		Horse->Interact(User);
+	}
+	Depth = FMath::Max(1, Depth);
+	bool bNew = true;
+	for (TActorIterator<ADBDungeonInstance> It(World); It && bNew; ++It)
+	{
+		bNew = !(It->SiteIndex == DBDungeon::GetAbyssSite() && It->AbyssDepth == Depth && !It->bRetired);
+	}
+	ADBDungeonInstance* Instance = FindOrSpawnAbyss(World, Depth);
+	if (!Instance || !Instance->bBuilt)
+	{
+		return false;
+	}
+	const R::FDungeonRoom& Entrance = Instance->Layout.Rooms[static_cast<size_t>(Instance->Layout.FindRoom(R::EDungeonRoomKind::Entrance))];
+	const FVector Arrival = Instance->GetCellLocation(Entrance.X, Entrance.CenterY()) + FVector(0.f, 0.f, 120.f);
+	const TWeakObjectPtr<APawn> WeakPawn = Pawn;
+	FTimerHandle Handle;
+	World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([WeakPawn, Arrival]()
+	{
+		if (WeakPawn.IsValid())
+		{
+			WeakPawn->TeleportTo(Arrival, FRotator(0.f, 0.f, 0.f));
+		}
+	}), bNew ? 0.6f : 0.05f, false);
+	const R::FAbyssFloor& Floor = Instance->AbyssFloor;
+	if (ADBPlayerController* Controller = Cast<ADBPlayerController>(User))
+	{
+		Controller->ClientShowNotification(FText::Format(LOCTEXT("EnterAbyss", "{0}: {1} Raeume, Daemonen Stufe +{2}{3}"), AbyssFloorName(Depth),
+			FText::AsNumber(Floor.Rooms), FText::AsNumber(Floor.EnemyLevelBonus), Floor.bGuardianFloor ? LOCTEXT("GuardianFloor", " - ein Waechter wartet") : FText::GetEmpty()));
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("Abyss floor %d: %s enters (seed %u, %d rooms, %d per room, health x%.2f, damage x%.2f, guardian %d)"), Depth, *GetNameSafe(Pawn),
+		Floor.Seed, Floor.Rooms, Floor.EnemiesPerRoom, Floor.EnemyHealth, Floor.EnemyDamage, Floor.bGuardianFloor ? 1 : 0);
+	return true;
+}
+
+bool ADBDungeonInstance::Descend(APlayerController* User)
+{
+	APawn* Pawn = User ? User->GetPawn() : nullptr;
+	ADBDungeonInstance* Current = Pawn ? FindAt(Pawn->GetWorld(), Pawn->GetActorLocation()) : nullptr;
+	if (!Current || !Current->IsAbyss() || !Current->bCleared || Current->bRetired)
+	{
+		return false;
+	}
+	// The whole party goes down together; the floor they leave is gone a moment later.
+	const TArray<APawn*> Party = Current->GetPlayersInside();
+	bool bAll = true;
+	for (APawn* Member : Party)
+	{
+		APlayerController* Controller = Cast<APlayerController>(Member->GetController());
+		bAll &= Controller && EnterAbyss(Controller, Current->AbyssDepth + 1);
+	}
+	if (!bAll)
+	{
+		return false;
+	}
+	Current->bRetired = true;
+	const TWeakObjectPtr<ADBDungeonInstance> WeakOld = Current;
+	FTimerHandle Handle;
+	Current->GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([WeakOld]()
+	{
+		if (WeakOld.IsValid())
+		{
+			WeakOld->DestroyWithFixtures();
+		}
+	}), 4.f, false);
 	return true;
 }
 
@@ -697,31 +992,80 @@ void ADBDungeonPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADBDungeonPortal, SiteIndex);
 	DOREPLIFETIME(ADBDungeonPortal, bExit);
+	DOREPLIFETIME(ADBDungeonPortal, DescendTo);
 }
 
-void ADBDungeonPortal::Setup(int32 InSiteIndex, bool bInExit)
+void ADBDungeonPortal::Setup(int32 InSiteIndex, bool bInExit, int32 InDescendTo)
 {
 	SiteIndex = InSiteIndex;
 	bExit = bInExit;
+	DescendTo = InDescendTo;
 	OnRep_Setup();
 }
 
 void ADBDungeonPortal::OnRep_Setup()
 {
+	// The veil: a translucent shimmer (warm for the way out, blood red for the way in) - an opaque emissive block
+	// burned out to white under the auto exposure.
+	if (!VeilMaterial)
+	{
+		if (UMaterialInterface* Barrier = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_BloodBarrier.M_DB_BloodBarrier"), nullptr,
+				LOAD_NoWarn | LOAD_Quiet))
+		{
+			VeilMaterial = UMaterialInstanceDynamic::Create(Barrier, this);
+		}
+	}
+	if (VeilMaterial)
+	{
+		const bool bAbyssSite = DBDungeon::GetSites().IsValidIndex(SiteIndex) && DBDungeon::GetSites()[SiteIndex].bAbyss;
+		const bool bHallSite = DBDungeon::GetSites().IsValidIndex(SiteIndex) && DBDungeon::GetSites()[SiteIndex].bEchoHall;
+		const FLinearColor Color = bExit ? FLinearColor(1.f, 0.72f, 0.38f) : bHallSite ? FLinearColor(0.45f, 0.7f, 1.f)
+								 : DescendTo > 0 || bAbyssSite ? FLinearColor(0.75f, 0.1f, 0.35f) : FLinearColor(1.f, 0.12f, 0.06f);
+		VeilMaterial->SetVectorParameterValue(TEXT("BarrierColor"), Color);
+		VeilMaterial->SetScalarParameterValue(TEXT("Intensity"), 1.6f);
+		VeilMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.4f);
+	}
 	for (int32 Index = 0; Index < Parts.Num(); ++Index)
 	{
-		const EDBArtMaterial Material = Index == Parts.Num() - 1 ? (bExit ? EDBArtMaterial::LanternPaper : EDBArtMaterial::DarkBloodVeins) : EDBArtMaterial::WoodLacquerRed;
-		Parts[Index]->SetMaterial(0, UDBArtMaterialSubsystem::Get(Material));
+		const bool bAbyssGate = DescendTo > 0 || (!bExit && DBDungeon::GetSites().IsValidIndex(SiteIndex) && DBDungeon::GetSites()[SiteIndex].bAbyss);
+		const bool bHallGate = !bExit && DBDungeon::GetSites().IsValidIndex(SiteIndex) && DBDungeon::GetSites()[SiteIndex].bEchoHall;
+		const EDBArtMaterial Frame = bAbyssGate ? EDBArtMaterial::StoneCorrupted : bHallGate ? EDBArtMaterial::StoneTemple : EDBArtMaterial::WoodLacquerRed;
+		const bool bVeil = Index == Parts.Num() - 1;
+		const EDBArtMaterial Material = bVeil ? (bExit ? EDBArtMaterial::LanternPaper : EDBArtMaterial::DarkBloodVeins) : Frame;
+		Parts[Index]->SetMaterial(0, bVeil && VeilMaterial ? static_cast<UMaterialInterface*>(VeilMaterial) : UDBArtMaterialSubsystem::Get(Material));
 	}
 	if (DBDungeon::GetSites().IsValidIndex(SiteIndex))
 	{
 		const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
-		Label->SetText(bExit ? LOCTEXT("ExitLabel", "Ausgang") : FText::Format(LOCTEXT("GateLabel", "{0} (Stufe {1})"), FText::FromString(Site.Name), FText::AsNumber(Site.Difficulty)));
+		if (DescendTo > 0)
+		{
+			Label->SetText(FText::Format(LOCTEXT("DescendLabel", "Tiefer hinab - Ebene {0}"), FText::AsNumber(DescendTo)));
+		}
+		else if ((Site.bAbyss || Site.bEchoHall) && !bExit)
+		{
+			Label->SetText(FText::FromString(Site.Name));
+		}
+		else
+		{
+			Label->SetText(bExit ? LOCTEXT("ExitLabel", "Ausgang") : FText::Format(LOCTEXT("GateLabel", "{0} (Stufe {1})"), FText::FromString(Site.Name), FText::AsNumber(Site.Difficulty)));
+		}
 	}
 }
 
 FText ADBDungeonPortal::GetInteractionText() const
 {
+	if (DescendTo > 0)
+	{
+		return FText::Format(LOCTEXT("DescendPrompt", "Hinabsteigen (Ebene {0})"), FText::AsNumber(DescendTo));
+	}
+	if (!bExit && DBDungeon::GetSites().IsValidIndex(SiteIndex) && DBDungeon::GetSites()[SiteIndex].bAbyss)
+	{
+		return LOCTEXT("AbyssPrompt", "In den Abgrund steigen");
+	}
+	if (!bExit && DBDungeon::GetSites().IsValidIndex(SiteIndex) && DBDungeon::GetSites()[SiteIndex].bEchoHall)
+	{
+		return LOCTEXT("EchoHallPrompt", "Die Halle der Echos betreten");
+	}
 	return bExit ? LOCTEXT("Leave", "Dungeon verlassen") : LOCTEXT("EnterPrompt", "Dungeon betreten");
 }
 
@@ -731,7 +1075,11 @@ void ADBDungeonPortal::Interact(APlayerController* User)
 	{
 		return;
 	}
-	if (bExit)
+	if (DescendTo > 0)
+	{
+		ADBDungeonInstance::Descend(User);
+	}
+	else if (bExit)
 	{
 		ADBDungeonInstance::Leave(User, SiteIndex);
 	}
@@ -850,6 +1198,45 @@ ADBDungeonShrine::ADBDungeonShrine()
 	Parts.Add(MakePart(this, ShrineRoot, TEXT("Base"), Cube.Object, FVector(0.f, 0.f, 40.f), FVector(1.2f, 1.2f, 0.8f)));
 	Parts.Add(MakePart(this, ShrineRoot, TEXT("Pillar"), Cube.Object, FVector(0.f, 0.f, 120.f), FVector(0.5f, 0.5f, 1.f)));
 	Parts.Add(MakePart(this, ShrineRoot, TEXT("Flame"), Sphere.Object, FVector(0.f, 0.f, 200.f), FVector(0.45f), FRotator::ZeroRotator, false));
+}
+
+void ADBDungeonShrine::BeginPlay()
+{
+	Super::BeginPlay();
+	// The primitive pillar gives way to a stone lantern from the art library; the plinth keeps its collision.
+	const TArray<DBModels::FPlacedPart> Lantern = DBModels::GetNormalizedParts(TEXT("lantern_stone"), 230.f);
+	if (Lantern.Num() > 0 && Parts.Num() >= 3)
+	{
+		Parts[1]->SetVisibility(false);
+		Parts[1]->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Parts[0]->SetRelativeScale3D(FVector(1.6f, 1.6f, 0.3f));
+		Parts[0]->SetRelativeLocation(FVector(0.f, 0.f, 15.f));
+		Parts[0]->SetMaterial(0, UDBArtMaterialSubsystem::Get(EDBArtMaterial::StoneRuin));
+		for (const DBModels::FPlacedPart& Piece : Lantern)
+		{
+			UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+			Part->SetupAttachment(RootComponent);
+			Part->SetStaticMesh(Piece.Mesh);
+			Part->SetRelativeTransform(Piece.Local * FTransform(FVector(0.f, 0.f, 30.f)));
+			Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Part->SetCanEverAffectNavigation(false);
+			Part->RegisterComponent();
+			LanternParts.Add(Part);
+		}
+		// The flame sits in the lantern's light chamber, small and spirit-blue.
+		Parts[2]->SetRelativeLocation(FVector(0.f, 0.f, 30.f + 230.f * 0.62f));
+		Parts[2]->SetRelativeScale3D(FVector(0.28f));
+	}
+	if (UMaterialInterface* Barrier = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_BloodBarrier.M_DB_BloodBarrier"), nullptr,
+			LOAD_NoWarn | LOAD_Quiet); Barrier && Parts.Num() >= 3)
+	{
+		UMaterialInstanceDynamic* Flame = UMaterialInstanceDynamic::Create(Barrier, this);
+		Flame->SetVectorParameterValue(TEXT("BarrierColor"), FLinearColor(0.5f, 0.78f, 1.f));
+		Flame->SetScalarParameterValue(TEXT("Intensity"), 3.f);
+		Flame->SetScalarParameterValue(TEXT("Opacity"), 0.9f);
+		Parts[2]->SetMaterial(0, Flame);
+		Parts[2]->SetCastShadow(false);
+	}
 }
 
 FText ADBDungeonShrine::GetInteractionText() const

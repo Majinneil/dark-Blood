@@ -5,6 +5,7 @@
 #include "DarkBlood.h"
 #include "Data/DBGameDataSubsystem.h"
 #include "Data/DBRegionDefinition.h"
+#include "DarkBloodRules/Endgame.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "World/DBRealmLayout.h"
@@ -55,6 +56,9 @@ void UDBWorldStateComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(UDBWorldStateComponent, DefeatedVassals);
 	DOREPLIFETIME(UDBWorldStateComponent, bFinalRegionOpen);
 	DOREPLIFETIME(UDBWorldStateComponent, Settlements);
+	DOREPLIFETIME(UDBWorldStateComponent, Cycle);
+	DOREPLIFETIME(UDBWorldStateComponent, bEndgameOpen);
+	DOREPLIFETIME(UDBWorldStateComponent, AbyssDeepest);
 }
 
 void UDBWorldStateComponent::BeginPlay()
@@ -212,6 +216,54 @@ void UDBWorldStateComponent::NotifyBossDefeated(FName BossId, EDBBossRank Rank, 
 	MulticastBossDefeated(BossId, Rank);
 }
 
+float UDBWorldStateComponent::GetCycleRarityBonus() const
+{
+	return R::GetCycleScale(Cycle).RarityBonus;
+}
+
+bool UDBWorldStateComponent::BeginNewCycle()
+{
+	if (!GetOwner()->HasAuthority() || !State.BeginNewCycle())
+	{
+		return false;
+	}
+	LastAttackHours.Reset();
+	UE_LOG(LogDBWorld, Display, TEXT("New Game+: cycle %d begins (%d bosses remembered)"), State.Cycle, static_cast<int32>(State.RememberedBosses.size()));
+	SyncReplicatedView();
+	return true;
+}
+
+int32 UDBWorldStateComponent::RecordEchoVictory(FName BossId)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return GetEchoRank(BossId);
+	}
+	const int32 Rank = State.RecordEchoVictory(DBBridge::ToStd(BossId));
+	SyncReplicatedView();
+	return Rank;
+}
+
+int32 UDBWorldStateComponent::GetEchoRank(FName BossId) const
+{
+	return State.GetEchoRank(DBBridge::ToStd(BossId));
+}
+
+bool UDBWorldStateComponent::IsBossRemembered(FName BossId) const
+{
+	const std::string Id = DBBridge::ToStd(BossId);
+	return State.RememberedBosses.count(Id) > 0 || State.DefeatedBosses.count(Id) > 0;
+}
+
+void UDBWorldStateComponent::NotifyAbyssFloorCleared(int32 Depth)
+{
+	if (GetOwner()->HasAuthority() && Depth > State.AbyssDeepest)
+	{
+		State.AbyssDeepest = Depth;
+		SyncReplicatedView();
+	}
+}
+
 void UDBWorldStateComponent::MulticastBossDefeated_Implementation(FName BossId, EDBBossRank Rank)
 {
 	OnBossDefeated.Broadcast(BossId, Rank);
@@ -301,6 +353,9 @@ void UDBWorldStateComponent::SyncReplicatedView()
 
 	DefeatedVassals = State.CountDefeatedVassals();
 	bFinalRegionOpen = State.IsFinalRegionOpen();
+	Cycle = State.Cycle;
+	bEndgameOpen = State.Cycle > 0 || State.DefeatedBosses.count("B_DemonKing") > 0 || State.RememberedBosses.count("B_DemonKing") > 0;
+	AbyssDeepest = State.AbyssDeepest;
 
 	Settlements.Reset();
 	auto ToByte = [](float Value) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(Value * 255.f), 0, 255)); };

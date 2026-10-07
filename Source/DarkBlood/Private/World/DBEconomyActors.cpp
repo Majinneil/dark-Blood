@@ -4,6 +4,7 @@
 #include "Components/TextRenderComponent.h"
 #include "DarkBlood.h"
 #include "Engine/StaticMesh.h"
+#include "Framework/DBGameState.h"
 #include "Inventory/DBInventoryComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -11,6 +12,7 @@
 #include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
 #include "UObject/ConstructorHelpers.h"
+#include "World/DBWorldStateComponent.h"
 
 namespace
 {
@@ -113,9 +115,10 @@ void ADBLootChest::BeginPlay()
 	Tint(Body, FLinearColor(0.55f, 0.35f, 0.1f));
 }
 
-void ADBLootChest::Setup(FName InLootTableId)
+void ADBLootChest::Setup(FName InLootTableId, float InRarityBonus)
 {
 	LootTableId = InLootTableId;
+	RarityBonus = InRarityBonus;
 }
 
 FText ADBLootChest::GetInteractionText() const
@@ -144,5 +147,11 @@ void ADBLootChest::Interact(APlayerController* User)
 		return;
 	}
 	OpenedBy.Add(PlayerState->GetProfile().CharacterId);
-	PlayerState->GetInventory()->GrantLootTable(LootTableId, TEXT("Truhe"));
+	float Bonus = RarityBonus;
+	if (Bonus <= 0.f)
+	{
+		const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+		Bonus = GameState && GameState->GetWorldState() ? GameState->GetWorldState()->GetCycleRarityBonus() : 0.f;
+	}
+	PlayerState->GetInventory()->GrantLootTable(LootTableId, TEXT("Truhe"), Bonus);
 }

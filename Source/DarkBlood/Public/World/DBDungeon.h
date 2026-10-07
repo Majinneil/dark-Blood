@@ -3,17 +3,22 @@
 // player enters: demons in combat rooms, fire vents in trap rooms, the guardian in the last room. Treasure rooms hold
 // a chest, the rest room a healing shrine. Clearing the guardian's room clears the dungeon (saved; demons return after
 // three game days) and opens the way out.
+// The Abyss (Phase 16, docs/ENDGAME.md) is a site of its own: an endless dungeon of floors (DarkBloodRules/Endgame.h),
+// each generated from its depth and the world's cycle, deeper floors stronger, a guardian every fifth floor. Once a
+// floor is clean a stair leads down; the next floor is built beside it and the party moves on.
 #pragma once
 
 #include "GameFramework/Actor.h"
 #include "Interaction/DBInteractable.h"
 
 #include "DarkBloodRules/Dungeon.h"
+#include "DarkBloodRules/Endgame.h"
 
 #include "DBDungeon.generated.h"
 
 class ADBEnemyCharacter;
 class UInstancedStaticMeshComponent;
+class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class UStaticMeshComponent;
 class UTextRenderComponent;
@@ -29,6 +34,10 @@ struct FDBDungeonSite
 	/** Corner of the interior grid (world, cm). */
 	FVector InteriorOrigin = FVector::ZeroVector;
 	uint32 Seed = 1;
+	/** The Abyss: floors instead of one fixed interior; opens after the demon king fell once. */
+	bool bAbyss = false;
+	/** The gate to the Hall of Echoes (DBEchoHall) - no interior of its own. */
+	bool bEchoHall = false;
 
 	DarkBlood::Rules::FDungeonParams GetParams() const;
 };
@@ -44,6 +53,11 @@ namespace DBDungeon
 	DARKBLOOD_API int32 FindSite(const FString& IdOrName);
 	/** World position of the center of a cell of a site's interior (floor height). */
 	DARKBLOOD_API FVector CellToWorld(const FDBDungeonSite& Site, int32 X, int32 Y);
+	/** Index of the Abyss site. */
+	DARKBLOOD_API int32 GetAbyssSite();
+	/** Interior origin of an Abyss floor: odd and even floors alternate between two places, so the next floor stands
+	 *  complete before the party leaves the last one. */
+	DARKBLOOD_API FVector GetAbyssOrigin(int32 Depth);
 }
 
 /** The interior of one dungeon. Spawned by the server on the first entry, replicated (clients build it locally). */
@@ -68,9 +82,22 @@ public:
 	static bool Enter(APlayerController* User, int32 SiteIndex);
 	static void Leave(APlayerController* User, int32 SiteIndex);
 
+	/** Server: the Abyss floor at Depth (spawns it if no party is there). */
+	static ADBDungeonInstance* FindOrSpawnAbyss(UWorld* World, int32 Depth);
+	/** Server: a party on a cleared Abyss floor goes down to the next one. */
+	static bool Descend(APlayerController* User);
+	/** Server: enter the Abyss at a floor (cheat DBAbyss; the gate resumes after the last guardian beaten). */
+	static bool EnterAbyss(APlayerController* User, int32 Depth);
+
+	bool IsAbyss() const { return AbyssDepth > 0; }
+	int32 GetAbyssDepth() const { return AbyssDepth; }
+	const DarkBlood::Rules::FAbyssFloor& GetAbyssFloor() const { return AbyssFloor; }
+
 	int32 GetSiteIndex() const { return SiteIndex; }
 	const DarkBlood::Rules::FDungeonLayout& GetLayout() const { return Layout; }
 	bool ContainsLocation(const FVector& Location) const;
+	/** World position of the center of a cell of this interior (floor height). */
+	FVector GetCellLocation(int32 X, int32 Y) const;
 	FVector GetRoomCenter(int32 Room) const;
 	/** Server: 0 dormant, 1 fighting, 2 cleared. */
 	uint8 GetRoomState(int32 Room) const { return RoomStates.IsValidIndex(Room) ? RoomStates[Room] : 0; }
@@ -89,11 +116,27 @@ private:
 	void SpawnFixtures();
 	void ActivateRoom(int32 Room);
 	void ClearDungeon();
+	/** Server: XP, the stair down, the way out and the floor's hoard. */
+	void ClearAbyssFloor();
 	void NotifyPlayersInside(const FText& Text) const;
 	TArray<APawn*> GetPlayersInside() const;
+	/** Server: removes the interior with its demons, chests, shrine, traps and portals. */
+	void DestroyWithFixtures();
+	ADBEnemyCharacter* SpawnDemon(const FVector& Location, const FRotator& Rotation);
 
 	UPROPERTY(ReplicatedUsing = OnRep_Site)
 	int32 SiteIndex = INDEX_NONE;
+
+	/** Abyss floor (0 = an ordinary dungeon) and the world's cycle it was built for (layout and strength). */
+	UPROPERTY(ReplicatedUsing = OnRep_Site)
+	int32 AbyssDepth = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Site)
+	int32 AbyssCycle = 0;
+
+	DarkBlood::Rules::FAbyssFloor AbyssFloor;
+	/** Server: the party moved on to the next floor; this one is about to go. */
+	bool bRetired = false;
 
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Dungeon")
 	TObjectPtr<USceneComponent> Root;
@@ -131,9 +174,11 @@ public:
 	virtual void Interact(APlayerController* User) override;
 	virtual float GetInteractionRange() const override { return 450.f; }
 
-	void Setup(int32 InSiteIndex, bool bInExit);
+	/** bInDescend: the stair of a cleared Abyss floor down to NextDepth. */
+	void Setup(int32 InSiteIndex, bool bInExit, int32 InDescendTo = 0);
 	int32 GetSiteIndex() const { return SiteIndex; }
 	bool IsExit() const { return bExit; }
+	bool IsDescend() const { return DescendTo > 0; }
 
 	/** Server: one entrance gate per dungeon on the landscape (idempotent). */
 	static void SpawnEntrances(UWorld* World);
@@ -148,6 +193,10 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Setup)
 	bool bExit = false;
 
+	/** Abyss stair: the floor it leads down to (0 = not a stair). */
+	UPROPERTY(ReplicatedUsing = OnRep_Setup)
+	int32 DescendTo = 0;
+
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Dungeon")
 	TObjectPtr<USceneComponent> Root;
 
@@ -156,6 +205,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Dungeon")
 	TObjectPtr<UTextRenderComponent> Label;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> VeilMaterial;
 };
 
 /** Fire vent of a trap room: glows as a warning, then bursts and burns everyone standing on it. */
@@ -202,7 +254,14 @@ public:
 	virtual bool CanInteract(const APawn* User) const override { return User != nullptr; }
 	virtual void Interact(APlayerController* User) override;
 
+protected:
+	/** Every machine: the stone lantern (art library) on its plinth, the spirit flame in its light chamber. */
+	virtual void BeginPlay() override;
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Dungeon")
 	TArray<TObjectPtr<UStaticMeshComponent>> Parts;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStaticMeshComponent>> LanternParts;
 };

@@ -1,7 +1,8 @@
 // DAS PARADIES and the finale (Phase 15, docs/PARADISE.md). When the demon king falls the world is purified and a gate
 // of light opens at his throne. It leads to the Paradise, a floating island high above DAS ENDE (the floating islands of
 // the world map): cherry trees, a pond, a pagoda and the Shrine of Peace. Resting at the shrine ends the story (finale,
-// credits); a gate brings the players back to the capital, the world goes on.
+// credits); a gate brings the players back to the capital, the world goes on - or the gate of the blood moon begins the
+// next New Game+ cycle (docs/ENDGAME.md).
 #pragma once
 
 #include "GameFramework/Actor.h"
@@ -11,6 +12,7 @@
 #include "DBParadise.generated.h"
 
 class UBoxComponent;
+class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class UStaticMeshComponent;
 class UTextRenderComponent;
@@ -20,8 +22,10 @@ namespace DBParadise
 	/** Center of the island's top (world cm), high above DAS ENDE. */
 	DARKBLOOD_API FVector GetIslandCenter();
 	DARKBLOOD_API bool IsInParadise(const FVector& WorldLocation);
-	/** Server: island, both gates and the shrine (idempotent). */
+	/** Server: island, the gates and the shrine (idempotent). */
 	DARKBLOOD_API void SpawnParadise(UWorld* World);
+	/** Where travellers arrive in the capital (gate home, New Game+). */
+	DARKBLOOD_API FVector GetCapitalArrival();
 }
 
 UENUM()
@@ -31,6 +35,8 @@ enum class EDBParadiseGate : uint8
 	ToParadise,
 	/** On the island: back down to the capital. */
 	Home,
+	/** On the island, the gate of the blood moon: begins the next New Game+ cycle (docs/ENDGAME.md). */
+	NewCycle,
 };
 
 UCLASS()
@@ -61,6 +67,8 @@ private:
 	UFUNCTION()
 	void OnRep_Gate();
 	void Build();
+	/** NewCycle: warn, then on the second use begin New Game+ and bring everyone in the Paradise home. */
+	void BeginNewCycle(APlayerController* User);
 
 	UPROPERTY(ReplicatedUsing = OnRep_Gate)
 	EDBParadiseGate Kind = EDBParadiseGate::ToParadise;
@@ -82,6 +90,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMeshComponent> Light;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> CurtainMaterial;
+
+	/** NewCycle: players who were warned and must use the gate again to confirm (server, world seconds). */
+	TMap<TWeakObjectPtr<APlayerController>, double> PendingConfirm;
 
 	float UpdateTimer = 0.f;
 	bool bBuilt = false;

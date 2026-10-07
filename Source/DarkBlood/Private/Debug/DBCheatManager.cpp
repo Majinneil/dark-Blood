@@ -9,6 +9,8 @@
 #include "World/DBRegionLife.h"
 #include "World/DBTheEnd.h"
 #include "World/DBParadise.h"
+#include "World/DBEchoHall.h"
+#include "DarkBloodRules/Endgame.h"
 #include "DarkBloodRules/Region.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemComponent.h"
@@ -1428,6 +1430,91 @@ void UDBCheatManager::DBFinale()
 	{
 		Controller->ClientShowFinale();
 	}
+}
+
+void UDBCheatManager::DBEndgame()
+{
+	if (ForwardToServer(TEXT("DBEndgame"))) return;
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	const UDBWorldStateComponent* WorldState = GameState ? GameState->GetWorldState() : nullptr;
+	if (!WorldState)
+	{
+		return;
+	}
+	const DarkBlood::Rules::FWorldState& State = WorldState->GetRulesState();
+	const DarkBlood::Rules::FEndgameScale Scale = DarkBlood::Rules::GetCycleScale(State.Cycle);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBENDGAME cycle %d (%hs) open %d purified %d: health x%.2f damage x%.2f xp x%.2f rarity +%.2f levels +%d; abyss deepest %d"),
+		State.Cycle, DarkBlood::Rules::GetCycleLabel(State.Cycle).c_str(), WorldState->IsEndgameOpen() ? 1 : 0, State.IsPurified() ? 1 : 0, Scale.EnemyHealth,
+		Scale.EnemyDamage, Scale.Experience, Scale.RarityBonus, Scale.EnemyLevelBonus, State.AbyssDeepest);
+	for (const std::string& Boss : State.RememberedBosses)
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBENDGAME   remembered %hs echo rank %d"), Boss.c_str(), State.GetEchoRank(Boss));
+	}
+	for (const auto& [Boss, Rank] : State.EchoRanks)
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBENDGAME   echo %hs rank %d"), Boss.c_str(), Rank);
+	}
+}
+
+void UDBCheatManager::DBNewCycle(const FString& Mode)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBNewCycle %s"), *Mode))) return;
+	ADBGameMode* GameMode = GetWorld()->GetAuthGameMode<ADBGameMode>();
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	UDBWorldStateComponent* WorldState = GameState ? GameState->GetWorldState() : nullptr;
+	if (!GameMode || !WorldState)
+	{
+		return;
+	}
+	if (Mode.Equals(TEXT("force"), ESearchCase::IgnoreCase) && !WorldState->GetRulesState().IsPurified())
+	{
+		for (const UDBBossDefinition* Definition : DBBosses::GetAll())
+		{
+			if (Definition->Rank == EDBBossRank::DemonKing)
+			{
+				WorldState->NotifyBossDefeated(Definition->BossId, Definition->Rank, Definition->RegionId);
+			}
+		}
+	}
+	const bool bBegun = GameMode->BeginNewCycle();
+	if (bBegun)
+	{
+		if (APawn* Pawn = GetOuterAPlayerController()->GetPawn())
+		{
+			Pawn->TeleportTo(DBParadise::GetCapitalArrival(), FRotator::ZeroRotator);
+		}
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBNewCycle: %s (cycle %d)"), bBegun ? TEXT("begun") : TEXT("refused - the demon king has not fallen"), WorldState->GetCycle());
+}
+
+void UDBCheatManager::DBAbyss(int32 Depth)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBAbyss %d"), Depth))) return;
+	const bool bEntered = ADBDungeonInstance::EnterAbyss(GetOuterAPlayerController(), Depth);
+	UE_LOG(LogDarkBlood, Display, TEXT("DBAbyss %d: %s"), Depth, bEntered ? TEXT("entered") : TEXT("failed"));
+}
+
+void UDBCheatManager::DBDescend()
+{
+	if (ForwardToServer(TEXT("DBDescend"))) return;
+	const bool bDown = ADBDungeonInstance::Descend(GetOuterAPlayerController());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBDescend: %s"), bDown ? TEXT("going down") : TEXT("not on a cleared Abyss floor"));
+}
+
+void UDBCheatManager::DBEchoHall()
+{
+	if (ForwardToServer(TEXT("DBEchoHall"))) return;
+	const bool bEntered = DBEchoHall::Enter(GetOuterAPlayerController());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBEchoHall: %s"), bEntered ? TEXT("entered") : TEXT("sealed or missing"));
+}
+
+void UDBCheatManager::DBEcho(const FString& Boss)
+{
+	if (ForwardToServer(FString::Printf(TEXT("DBEcho %s"), *Boss))) return;
+	const UDBBossDefinition* Definition = DBBosses::FindByName(Boss);
+	ADBEchoHall* Hall = ADBEchoHall::Find(GetWorld());
+	const bool bSummoned = Definition && Hall && Hall->SummonEcho(Definition->BossId, GetOuterAPlayerController());
+	UE_LOG(LogDarkBlood, Display, TEXT("DBEcho %s: %s"), *Boss, bSummoned ? TEXT("the echo rises") : TEXT("not remembered, busy or unknown"));
 }
 
 void UDBCheatManager::DBRegionDump()

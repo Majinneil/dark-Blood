@@ -155,6 +155,36 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dark Blood|World")
 	bool IsFinalRegionOpen() const { return bFinalRegionOpen; }
 
+	// ---- Endgame (Phase 16, docs/ENDGAME.md) ----
+
+	/** New Game+ cycle of this world (0 = the first playthrough). */
+	UFUNCTION(BlueprintPure, Category = "Dark Blood|World")
+	int32 GetCycle() const { return Cycle; }
+
+	/** The demon king fell at least once in this world: the Abyss and the Hall of Echoes are open. */
+	UFUNCTION(BlueprintPure, Category = "Dark Blood|World")
+	bool IsEndgameOpen() const { return bEndgameOpen; }
+
+	/** Deepest Abyss floor any party of this world has cleared. */
+	UFUNCTION(BlueprintPure, Category = "Dark Blood|World")
+	int32 GetAbyssDeepest() const { return AbyssDeepest; }
+
+	/** Loot bonus of the current cycle (DarkBlood::Rules::GetCycleScale). */
+	float GetCycleRarityBonus() const;
+
+	/** Server: the world is purified - begin the next cycle (the demons return stronger, the story starts again).
+	 *  Only the world state; ADBGameMode::BeginNewCycle also restarts the shared quests and gathers the players. */
+	bool BeginNewCycle();
+
+	/** Server: an echo of a remembered boss fell. Returns its new echo rank. */
+	int32 RecordEchoVictory(FName BossId);
+	int32 GetEchoRank(FName BossId) const;
+	/** A vassal or the demon king this world remembers (defeated in this or an earlier cycle). */
+	bool IsBossRemembered(FName BossId) const;
+
+	/** Server: a party cleared this Abyss floor. */
+	void NotifyAbyssFloorCleared(int32 Depth);
+
 	UPROPERTY(BlueprintAssignable, Category = "Dark Blood|World")
 	FDBOnWorldStateChanged OnWorldStateChanged;
 
@@ -195,6 +225,15 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_View)
 	TArray<FDBSettlementView> Settlements;
+
+	UPROPERTY(ReplicatedUsing = OnRep_View)
+	int32 Cycle = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_View)
+	bool bEndgameOpen = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_View)
+	int32 AbyssDeepest = 0;
 
 	/** Server: game hour of each settlement's last demon attack (for the view). */
 	TMap<FName, float> LastAttackHours;

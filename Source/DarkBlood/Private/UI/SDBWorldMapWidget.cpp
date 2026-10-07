@@ -106,9 +106,12 @@ namespace
 				const FVector2f At = ToLocal(Site.Entrance, Size);
 				const TArray<FVector2f> Diamond = {At + FVector2f(0.f, -8.f), At + FVector2f(8.f, 0.f), At + FVector2f(0.f, 8.f), At + FVector2f(-8.f, 0.f), At + FVector2f(0.f, -8.f)};
 				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, Shadow, true, 5.f);
-				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, DungeonRed, true, 2.5f);
-				Label(Out, Layer, Geometry, At + FVector2f(9.f, -3.f), FText::Format(LOCTEXT("DungeonLabel", "{0} ({1})"), FText::FromString(Site.Name),
-					FText::AsNumber(Site.Difficulty)), 10, DungeonRed);
+				// The endgame places (the Abyss, the Hall of Echoes) in spirit violet, without a stage.
+				const bool bEndgame = Site.bAbyss || Site.bEchoHall;
+				const FLinearColor Color = bEndgame ? FLinearColor(0.72f, 0.55f, 1.f) : DungeonRed;
+				FSlateDrawElement::MakeLines(Out, Layer, Geometry.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, Color, true, 2.5f);
+				Label(Out, Layer, Geometry, At + FVector2f(9.f, -3.f), bEndgame ? FText::FromString(Site.Name)
+					: FText::Format(LOCTEXT("DungeonLabel", "{0} ({1})"), FText::FromString(Site.Name), FText::AsNumber(Site.Difficulty)), 10, Color);
 			}
 
 			const UWorld* MapWorld = Owner.IsValid() ? Owner->GetWorld() : nullptr;

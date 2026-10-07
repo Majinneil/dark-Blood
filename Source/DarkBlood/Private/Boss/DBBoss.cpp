@@ -98,10 +98,11 @@ void ADBBossCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADBBossCharacter, BossId);
 	DOREPLIFETIME(ADBBossCharacter, Phase);
+	DOREPLIFETIME(ADBBossCharacter, bEcho);
 }
 
 ADBBossCharacter* ADBBossCharacter::SpawnBoss(UWorld* World, const UDBBossDefinition* Definition, const FVector& Location, const FRotator& Rotation,
-	int32 InPlayerCount, float StatMultiplier, ADBBossArena* InArena)
+	int32 InPlayerCount, float StatMultiplier, ADBBossArena* InArena, const FDBEndgameScale* Endgame, bool bEcho)
 {
 	if (!World || !Definition)
 	{
@@ -114,8 +115,14 @@ ADBBossCharacter* ADBBossCharacter::SpawnBoss(UWorld* World, const UDBBossDefini
 	if (Boss)
 	{
 		Boss->Setup(Definition, InPlayerCount, StatMultiplier, InArena);
+		Boss->bEcho = bEcho;
+		if (Endgame)
+		{
+			Boss->SetEndgameScale(*Endgame);
+		}
 		Boss->FinishSpawning(FTransform(Rotation, Location));
-		UE_LOG(LogDBCombat, Display, TEXT("Boss %s spawned: %d players, health %.0f"), *Definition->DisplayName.ToString(), InPlayerCount, Boss->MaxHealth);
+		UE_LOG(LogDBCombat, Display, TEXT("Boss %s spawned%s: %d players, level %d, health %.0f, attack %.0f"), *Definition->DisplayName.ToString(),
+			bEcho ? TEXT(" as an echo") : TEXT(""), InPlayerCount, Boss->Level, Boss->MaxHealth, Boss->AttackPower);
 	}
 	return Boss;
 }
@@ -146,6 +153,8 @@ const UDBBossDefinition* ADBBossCharacter::GetDefinition() const
 void ADBBossCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	// The endgame scale is applied in BeginPlay; enrage multiplies the scaled attack.
+	BaseAttackPower = AttackPower;
 	ApplyLook();
 }
 
@@ -172,11 +181,13 @@ void ADBBossCharacter::ApplyLook()
 			Visuals->SetProfileId(Wanted);
 		}
 	}
-	// The borrowed body takes the vassal's colour; the mark burns brighter with every phase.
-	Visuals->SetDemonAccent(Definition->Color, 0.8f + Phase * 0.35f, 9000.f);
-	Aura->SetLightColor(Definition->Color);
+	// The borrowed body takes the vassal's colour; the mark burns brighter with every phase. An echo is the memory of
+	// the vassal: its colour drained towards a cold spirit blue.
+	const FLinearColor Accent = bEcho ? FMath::Lerp(Definition->Color, FLinearColor(0.45f, 0.7f, 1.f), 0.65f) : Definition->Color;
+	Visuals->SetDemonAccent(Accent, 0.8f + Phase * 0.35f, 9000.f);
+	Aura->SetLightColor(Accent);
 	Aura->SetIntensity(5000.f + Phase * 4000.f);
-	Nameplate->SetTextRenderColor(Definition->Color.ToFColor(true));
+	Nameplate->SetTextRenderColor(Accent.ToFColor(true));
 	if (!HasAuthority())
 	{
 		UE_LOG(LogDBCombat, Log, TEXT("Boss %s replicated: phase %d, scale %.2f"), *BossId.ToString(), Phase + 1, GetActorScale3D().X);
@@ -833,6 +844,33 @@ void ADBBossCharacter::HandleOutOfHealth(AActor* DamageInstigator, AActor* Damag
 	{
 		return;
 	}
+	if (bEcho)
+	{
+		// An echo changes nothing in the world: it only remembers that it was beaten once more.
+		UDBWorldStateComponent* EchoWorld = GetWorldState(GetWorld());
+		const int32 Rank = EchoWorld ? EchoWorld->RecordEchoVictory(BossId) : 0;
+		const APlayerState* EchoKiller = Cast<APlayerState>(DamageInstigator);
+		if (const APawn* KillerPawn = Cast<APawn>(DamageInstigator); !EchoKiller && KillerPawn)
+		{
+			EchoKiller = KillerPawn->GetPlayerState();
+		}
+		for (const APawn* Fighter : Fighters)
+		{
+			const ADBPlayerState* FighterState = Fighter->GetPlayerState<ADBPlayerState>();
+			if (FighterState && FighterState != EchoKiller && FighterState->GetProgression())
+			{
+				FighterState->GetProgression()->AwardXp(XpReward);
+			}
+			if (ADBPlayerController* PC = Cast<ADBPlayerController>(Fighter->GetController()))
+			{
+				PC->ClientShowNotification(FText::Format(LOCTEXT("EchoDown", "Das Echo von {0} verklingt. Echo-Rang {1} - das naechste wird staerker."),
+					Definition->DisplayName, FText::AsNumber(Rank)));
+			}
+		}
+		UE_LOG(LogDBCombat, Display, TEXT("Echo of %s defeated after %.0f s by %d players: echo rank %d"), *Definition->DisplayName.ToString(), FightSeconds,
+			Fighters.Num(), Rank);
+		return;
+	}
 	if (Definition->Rank == EDBBossRank::DemonKing)
 	{
 		// The whole world hears it, not only those at the throne.
@@ -1407,6 +1445,13 @@ void ADBBossArena::Tick(float DeltaSeconds)
 		}
 		break;
 	case EDBArenaState::Defeated:
+		// New Game+: the vassal is back on its throne.
+		if (!bDefeatedInWorld)
+		{
+			ArenaState = EDBArenaState::Idle;
+			OnRep_State();
+			UE_LOG(LogDBCombat, Display, TEXT("Arena %s: the boss has returned (cycle %d)"), *BossId.ToString(), WorldState ? WorldState->GetCycle() : 0);
+		}
 		break;
 	}
 }

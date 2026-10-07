@@ -12,6 +12,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Framework/DBGameMode.h"
 #include "Framework/DBGameState.h"
 #include "GameFramework/GameStateBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -22,6 +23,7 @@
 #include "World/DBRealmLayout.h"
 #include "World/DBWorldStateComponent.h"
 
+#include "DarkBloodRules/Endgame.h"
 #include "DarkBloodRules/WorldState.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodParadise"
@@ -102,6 +104,13 @@ FVector DBParadise::GetIslandCenter()
 	return FVector(Throne.X, Throne.Y, IslandAltitude);
 }
 
+FVector DBParadise::GetCapitalArrival()
+{
+	const FDBRealmRegion& Capital = DBRealm::GetCapital();
+	const FVector2D At = Capital.Center + FVector2D(0.0, 120.0);
+	return FVector(At.X * 100.0, At.Y * 100.0, FMath::Max(DBRealm::SampleHeight(At.X, At.Y), 0.0) * 100.0 + 300.0);
+}
+
 bool DBParadise::IsInParadise(const FVector& WorldLocation)
 {
 	const FVector Center = GetIslandCenter();
@@ -126,6 +135,13 @@ void DBParadise::SpawnParadise(UWorld* World)
 	if (ADBParadiseGate* Home = World->SpawnActor<ADBParadiseGate>(ADBParadiseGate::StaticClass(), Center + FVector(-IslandRadius * 0.78f, 0.f, 0.f), FRotator::ZeroRotator, Params))
 	{
 		Home->Setup(EDBParadiseGate::Home);
+	}
+	// The gate of the blood moon stands apart, past the pond: the way into the next cycle.
+	const FVector CycleGateAt(2600.f, -2300.f, 0.f);
+	const float CycleGateYaw = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(-CycleGateAt.Y, -CycleGateAt.X)));
+	if (ADBParadiseGate* Cycle = World->SpawnActor<ADBParadiseGate>(ADBParadiseGate::StaticClass(), Center + CycleGateAt, FRotator(0.f, CycleGateYaw, 0.f), Params))
+	{
+		Cycle->Setup(EDBParadiseGate::NewCycle);
 	}
 	World->SpawnActor<ADBPeaceShrine>(ADBPeaceShrine::StaticClass(), Center + FVector(IslandRadius * 0.45f, 0.f, 0.f), FRotator(0.f, 180.f, 0.f), Params);
 	UE_LOG(LogDarkBlood, Display, TEXT("DAS PARADIES: island at (%.0f, %.0f, %.0f) m"), Center.X / 100.0, Center.Y / 100.0, Center.Z / 100.0);
@@ -204,6 +220,7 @@ void ADBParadiseGate::Build()
 	if (Curtain)
 	{
 		UMaterialInstanceDynamic* Golden = UMaterialInstanceDynamic::Create(Curtain, this);
+		CurtainMaterial = Golden;
 		Golden->SetVectorParameterValue(TEXT("BarrierColor"), FLinearColor(1.f, 0.8f, 0.45f));
 		Golden->SetScalarParameterValue(TEXT("Intensity"), 1.4f);
 		Golden->SetScalarParameterValue(TEXT("Opacity"), 0.3f);
@@ -232,12 +249,33 @@ void ADBParadiseGate::OnRep_Gate()
 	Glow->SetVisibility(bVisible);
 	Label->SetVisibility(bVisible);
 	Trigger->SetCollisionEnabled(bVisible ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
-	Label->SetText(Kind == EDBParadiseGate::Home ? LOCTEXT("GateHome", "Rueckkehr in die Welt") : LOCTEXT("GateUp", "Pforte ins Paradies"));
+	if (CurtainMaterial)
+	{
+		// The kind can arrive after the first build (spawn, then Setup / replication).
+		CurtainMaterial->SetVectorParameterValue(TEXT("BarrierColor"), Kind == EDBParadiseGate::NewCycle ? FLinearColor(1.f, 0.08f, 0.05f) : FLinearColor(1.f, 0.8f, 0.45f));
+	}
+	if (Kind == EDBParadiseGate::NewCycle)
+	{
+		const ADBGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ADBGameState>() : nullptr;
+		const int32 Next = (GameState && GameState->GetWorldState() ? GameState->GetWorldState()->GetCycle() : 0) + 1;
+		Label->SetText(FText::Format(LOCTEXT("GateCycle", "Pforte des Blutmonds ({0})"), FText::FromString(UTF8_TO_TCHAR(DarkBlood::Rules::GetCycleLabel(Next).c_str()))));
+		Label->SetTextRenderColor(FColor(255, 90, 70));
+		Glow->SetLightColor(FLinearColor(1.f, 0.15f, 0.08f));
+	}
+	else
+	{
+		Label->SetText(Kind == EDBParadiseGate::Home ? LOCTEXT("GateHome", "Rueckkehr in die Welt") : LOCTEXT("GateUp", "Pforte ins Paradies"));
+	}
 }
 
 FText ADBParadiseGate::GetInteractionText() const
 {
-	return Kind == EDBParadiseGate::Home ? LOCTEXT("UseHome", "Zurueck in die Hauptstadt") : LOCTEXT("UseUp", "Durch die Pforte ins Paradies schreiten");
+	switch (Kind)
+	{
+	case EDBParadiseGate::Home: return LOCTEXT("UseHome", "Zurueck in die Hauptstadt");
+	case EDBParadiseGate::NewCycle: return LOCTEXT("UseCycle", "Einen neuen Zyklus beginnen (New Game+)");
+	default: return LOCTEXT("UseUp", "Durch die Pforte ins Paradies schreiten");
+	}
 }
 
 void ADBParadiseGate::Interact(APlayerController* User)
@@ -256,13 +294,60 @@ void ADBParadiseGate::Interact(APlayerController* User)
 			Quests->ReportEvent(EDBObjectiveKind::Interact, TEXT("ParadiseGate"), 1, User->PlayerState);
 		}
 	}
+	else if (Kind == EDBParadiseGate::NewCycle)
+	{
+		BeginNewCycle(User);
+		return;
+	}
 	else
 	{
-		const FDBRealmRegion& Capital = DBRealm::GetCapital();
-		const FVector2D At = Capital.Center + FVector2D(0.0, 120.0);
-		TeleportPawn(Pawn, FVector(At.X * 100.0, At.Y * 100.0, FMath::Max(DBRealm::SampleHeight(At.X, At.Y), 0.0) * 100.0 + 300.0), 0.f);
+		TeleportPawn(Pawn, DBParadise::GetCapitalArrival(), 0.f);
 	}
 	UE_LOG(LogDarkBlood, Display, TEXT("Paradise gate (%s): %s"), Kind == EDBParadiseGate::Home ? TEXT("home") : TEXT("up"), *GetNameSafe(Pawn));
+}
+
+void ADBParadiseGate::BeginNewCycle(APlayerController* User)
+{
+	ADBGameMode* GameMode = GetWorld()->GetAuthGameMode<ADBGameMode>();
+	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();
+	const UDBWorldStateComponent* WorldState = GameState ? GameState->GetWorldState() : nullptr;
+	ADBPlayerController* Controller = Cast<ADBPlayerController>(User);
+	if (!GameMode || !WorldState || !Controller)
+	{
+		return;
+	}
+	const int32 Next = WorldState->GetCycle() + 1;
+	const FText CycleName = FText::FromString(UTF8_TO_TCHAR(DarkBlood::Rules::GetCycleLabel(Next).c_str()));
+	// Turning the whole world back is never an accident: the gate warns first and acts on the second use.
+	const double Now = GetWorld()->GetTimeSeconds();
+	const double* Warned = PendingConfirm.Find(User);
+	if (!Warned || Now - *Warned > 20.0)
+	{
+		PendingConfirm.Add(User, Now);
+		const DarkBlood::Rules::FEndgameScale Scale = DarkBlood::Rules::GetCycleScale(Next);
+		Controller->ClientShowNotification(FText::Format(LOCTEXT("CycleWarn",
+			"{0}: Alle Gebiete fallen zurueck an die Daemonen, die Vasallen kehren zurueck (Leben x{1}, Schaden x{2}, +{3} Stufen, bessere Beute). "
+			"Charakter, Ausruestung und Siedlungen bleiben. Erneut benutzen zum Bestaetigen."),
+			CycleName, FText::AsNumber(Scale.EnemyHealth), FText::AsNumber(Scale.EnemyDamage), FText::AsNumber(Scale.EnemyLevelBonus)));
+		return;
+	}
+	PendingConfirm.Remove(User);
+	if (!GameMode->BeginNewCycle())
+	{
+		Controller->ClientShowNotification(LOCTEXT("CycleRefused", "Die Pforte schweigt: Erst muss der Daemonenkoenig fallen."));
+		return;
+	}
+	// Everyone in the Paradise returns to the capital, where the story begins again.
+	for (TActorIterator<ADBPlayerController> It(GetWorld()); It; ++It)
+	{
+		APawn* Pawn = It->GetPawn();
+		if (Pawn && DBParadise::IsInParadise(Pawn->GetActorLocation()))
+		{
+			TeleportPawn(Pawn, DBParadise::GetCapitalArrival(), 0.f);
+		}
+		It->ClientShowNotification(FText::Format(LOCTEXT("CycleBegins", "{0} beginnt. Der Blutmond steigt - das Dunkle Blut erwacht staerker als zuvor."), CycleName));
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("Gate of the blood moon: %s begins %s"), *GetNameSafe(User->PlayerState), UTF8_TO_TCHAR(DarkBlood::Rules::GetCycleLabel(Next).c_str()));
 }
 
 void ADBParadiseGate::Tick(float DeltaSeconds)
@@ -277,7 +362,7 @@ void ADBParadiseGate::Tick(float DeltaSeconds)
 			Label->SetWorldRotation(FRotator(0.f, ToCamera.Rotation().Yaw, 0.f));
 		}
 	}
-	if (!HasAuthority() || Kind != EDBParadiseGate::ToParadise)
+	if (!HasAuthority() || Kind == EDBParadiseGate::Home)
 	{
 		return;
 	}
@@ -294,7 +379,7 @@ void ADBParadiseGate::Tick(float DeltaSeconds)
 	{
 		bActive = bOpen;
 		OnRep_Gate();
-		if (bActive)
+		if (bActive && Kind == EDBParadiseGate::ToParadise)
 		{
 			for (TActorIterator<ADBPlayerController> It(GetWorld()); It; ++It)
 			{

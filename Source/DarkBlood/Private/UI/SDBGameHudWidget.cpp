@@ -1,5 +1,7 @@
 #include "UI/SDBGameHudWidget.h"
 
+#include "DarkBloodRules/Endgame.h"
+
 #include "UI/DBUIStyle.h"
 
 #include "AbilitySystemComponent.h"
@@ -26,6 +28,7 @@
 #include "Player/DBSurvivalComponent.h"
 #include "Quest/DBQuestComponent.h"
 #include "Styling/CoreStyle.h"
+#include "World/DBWorldStateComponent.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Layout/SBox.h"
@@ -373,6 +376,10 @@ FText SDBGameHudWidget::GetBossTitle() const
 		return FText::GetEmpty();
 	}
 	const FText Phase = Definition->Phases.IsValidIndex(Boss->GetPhase()) ? Definition->Phases[Boss->GetPhase()].Name : FText::GetEmpty();
+	if (Boss->IsEcho())
+	{
+		return FText::Format(LOCTEXT("EchoTitle", "Echo: {0} - {1}   [{2}]"), Definition->DisplayName, Definition->Title, Phase);
+	}
 	return FText::Format(LOCTEXT("BossTitle", "{0} - {1}   [{2}]"), Definition->DisplayName, Definition->Title, Phase);
 }
 
@@ -444,6 +451,12 @@ FText SDBGameHudWidget::GetQuestTrackerText() const
 	}
 
 	FString Out;
+	// New Game+: the cycle heads the tracker, so the player always knows how hard the world has become.
+	if (const ADBGameState* GameState = World->GetGameState<ADBGameState>(); GameState && GameState->GetWorldState() && GameState->GetWorldState()->GetCycle() > 0)
+	{
+		Out += FString::Printf(TEXT("%s - %s\n"), UTF8_TO_TCHAR(DarkBlood::Rules::GetCycleLabel(GameState->GetWorldState()->GetCycle()).c_str()),
+			*LOCTEXT("CycleLine", "Der Blutmond ist erneut gestiegen").ToString());
+	}
 	for (const FDBQuestProgressView& Quest : Views)
 	{
 		const UDBQuestDefinition* Definition = Data->FindQuest(Quest.QuestId);
