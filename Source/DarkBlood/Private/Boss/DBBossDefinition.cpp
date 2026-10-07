@@ -177,6 +177,13 @@ namespace
 				Boss->VisualProfiles = Bodies[Boss->Order - 1];
 			}
 		}
+		// Authored bodies (Hyper3D Rodin, Tools/UE58/db_import_hyper3d.py) come first: CV_Hyper3D_<Name> for V_<Name>.
+		for (UDBBossDefinition* Boss : All)
+		{
+			FString Name = Boss->BossId.ToString();
+			Name.RemoveFromStart(TEXT("V_"));
+			Boss->VisualProfiles.Insert(TEXT("CV_Hyper3D_") + Name, 0);
+		}
 		for (UDBBossDefinition* Boss : All)
 		{
 			if (Boss->Order >= 1 && Boss->Order <= static_cast<int32>(UE_ARRAY_COUNT(Personas)))
@@ -255,7 +262,7 @@ namespace
 		King->Taunt = FText::FromString(TEXT("Ihr seid weit gekommen, Sterbliche. Hier, vor meinem Thron, endet euer Weg."));
 		King->PhaseTaunts = {FText::GetEmpty(), FText::FromString(TEXT("Spuert das Dunkle Blut, das diese Welt naehrt!")),
 			FText::FromString(TEXT("Genug! Seht meine wahre Gestalt - und vergeht!"))};
-		King->VisualProfiles = {TEXT("CV_ParagonSevarog")};
+		King->VisualProfiles = {TEXT("CV_Hyper3D_DemonKing"), TEXT("CV_ParagonSevarog")};
 		All.Add(King);
 
 		// The guardian of the dungeons (scaled by the dungeon's stage when spawned).

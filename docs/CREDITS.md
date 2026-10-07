@@ -95,6 +95,13 @@ Fab verbietet die Weitergabe als eigenständige Dateien; jede Person lädt sie a
   `.../Profiles/Paragon`, `/Game/DarkBlood/Animation/Sets/Paragon`, alle ignoriert). Ohne die Pakete behalten Bosse und
   Dämonen ihren Platzhalterkörper.
 
+## Hyper3D Rodin (Abo des Projektinhabers, nicht im Repository)
+
+Testweise erzeugte Körper (Akakage, Akaza) aus den eigenen Konzeptblättern: `SourceArt/Hyper3D/<Name>/` →
+`Tools/UE58/blender_rig_hyper3d.py` (Blender: Mannequin-Skelett, Gewichte, Export) → `Tools/UE58/db_import_hyper3d.py`
+(Unreal: `/Game/DarkBlood/Characters/Hyper3D/<Name>`, ignoriert). Vorhandene Körper werden als `CV_Hyper3D_<Name>`
+automatisch registriert und von Bossen bzw. der Spielerfigur (Akaza) bevorzugt.
+
 ## Unreal Engine
 
 Entwicklungs-Mannequin und -Animationen stammen aus der lokalen UE-5.8-Installation (Template-Inhalte) und werden

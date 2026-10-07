@@ -17,6 +17,7 @@
 #include "Animation/AnimMontage.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
+#include "AssetRegistry/IAssetRegistry.h"
 #include "Misc/PackageName.h"
 #include "Materials/MaterialInterface.h"
 #include "Visual/DBAnimationSetDefinition.h"
@@ -915,6 +916,27 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	AddVisual(TEXT("CV_NPC_Default"), EDBVisualQualityTier::ImportantNpc, Quinn, FLinearColor(0.5f, 0.44f, 0.34f));
 	AddVisual(TEXT("CV_Enemy_LesserDemon"), EDBVisualQualityTier::Crowd, Manny, FLinearColor(0.3f, 0.02f, 0.02f), 1.12f,
 		TEXT("/Game/DarkBlood/Art/Materials/DarkBlood/MI_DB_DarkBlood_Veins.MI_DB_DarkBlood_Veins"));
+
+	// Authored bodies from Hyper3D Rodin (Tools/UE58/blender_rig_hyper3d.py + db_import_hyper3d.py): SK_<Name> on the
+	// mannequin skeleton under /Game/DarkBlood/Characters/Hyper3D/<Name> becomes CV_Hyper3D_<Name> with the mannequin
+	// animations; bosses list these first (DBBossDefinition).
+	TArray<FAssetData> AuthoredBodies;
+	IAssetRegistry::GetChecked().GetAssetsByPath(TEXT("/Game/DarkBlood/Characters/Hyper3D"), AuthoredBodies, true);
+	for (const FAssetData& Asset : AuthoredBodies)
+	{
+		FString Name = Asset.AssetName.ToString();
+		if (Asset.AssetClassPath != USkeletalMesh::StaticClass()->GetClassPathName() || !Name.RemoveFromStart(TEXT("SK_")))
+		{
+			continue;
+		}
+		const FString MeshPath = Asset.GetSoftObjectPath().ToString();
+		if (UDBCharacterVisualDefinition* Body = AddVisual(FName(TEXT("CV_Hyper3D_") + Name), EDBVisualQualityTier::Hero, *MeshPath, FLinearColor::White))
+		{
+			Body->bDevelopmentPlaceholder = false;
+			Body->OutfitTintParameter = NAME_None;
+			Body->bProceduralBlink = false;
+		}
+	}
 
 	return bAddedAny;
 }
