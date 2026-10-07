@@ -44,3 +44,6 @@ Content/DarkBlood/Animation/Sets/Paragon/
 
 # Hyper3D Rodin bodies (subscription output, kept local until the art direction is decided)
 Content/DarkBlood/Characters/Hyper3D/
+
+# MetaHuman characters (Creator output, rebuilt locally from Tools/UE58/db_create_akaza_metahuman.py)
+Content/DarkBlood/Characters/MetaHumans/
