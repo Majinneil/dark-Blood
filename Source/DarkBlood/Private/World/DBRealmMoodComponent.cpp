@@ -182,7 +182,22 @@ void UDBRealmMoodComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 	{
 		Current = Blend(Current, Target, 1.f - FMath::Exp(-DeltaTime * 3.f / BlendSeconds));
 		Apply(Current);
+		bBaseDirty = false;
 	}
+	else if (bBaseDirty)
+	{
+		Apply(Current);
+		bBaseDirty = false;
+	}
+}
+
+void UDBRealmMoodComponent::SetSkyBase(float FogDensity, const FLinearColor& FogColor, float SunIntensity, const FLinearColor& SunColor)
+{
+	BaseFogDensity = FogDensity;
+	BaseFogColor = FogColor;
+	BaseSunIntensity = SunIntensity;
+	BaseSunColor = SunColor;
+	bBaseDirty = true;
 }
 
 void UDBRealmMoodComponent::Apply(const FMood& Mood)

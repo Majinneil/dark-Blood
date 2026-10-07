@@ -33,6 +33,9 @@ public:
 		float Vignette = 0.4f;
 	};
 
+	/** Time-of-day base values from DBRealmSkyComponent; the region mood multiplies these (applied next tick). */
+	void SetSkyBase(float FogDensity, const FLinearColor& FogColor, float SunIntensity, const FLinearColor& SunColor);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -55,4 +58,5 @@ private:
 	int32 TargetRegion = INDEX_NONE;
 	float RegionTimer = 0.f;
 	float SecondsSinceChange = 0.f;
+	bool bBaseDirty = false;
 };

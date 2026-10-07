@@ -14,6 +14,7 @@
 #include "World/DBTheEnd.h"
 #include "World/DBParadise.h"
 #include "World/DBRealmMoodComponent.h"
+#include "World/DBRealmSkyComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBSettlementBuilder.h"
 #include "World/DBShip.h"
@@ -41,6 +42,7 @@ FDBRealmSiteBatch::~FDBRealmSiteBatch() = default;
 ADBRealmDirector::ADBRealmDirector()
 {
 	Mood = CreateDefaultSubobject<UDBRealmMoodComponent>(TEXT("Mood"));
+	Sky = CreateDefaultSubobject<UDBRealmSkyComponent>(TEXT("Sky"));
 	Life = CreateDefaultSubobject<UDBSettlementLifeComponent>(TEXT("Life"));
 	RegionLife = CreateDefaultSubobject<UDBRegionLifeComponent>(TEXT("RegionLife"));
 	PrimaryActorTick.bCanEverTick = true;

@@ -85,6 +85,8 @@ public:
 	UFUNCTION(Exec) void DBVisualSlice(int32 bEnabled);
 	/** Server: Day | Dusk | Night | DemonNight. */
 	UFUNCTION(Exec) void DBTimeOfDay(const FString& Preset);
+	/** Local: realm sky at a fixed hour (18.33 = dusk look), -1 follows the game clock again. */
+	UFUNCTION(Exec) void DBSky(float Hour);
 	/** Local: character visual profiles on (1) or greybox bodies (0). */
 	UFUNCTION(Exec) void DBVisuals(int32 bEnabled);
 	/** Local: frame time, GPU time, draw calls, primitives and slice statistics. */

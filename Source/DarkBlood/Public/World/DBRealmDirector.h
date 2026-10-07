@@ -10,6 +10,7 @@
 class ADBModularBuilding;
 class FDBArtBatcher;
 class UDBRealmMoodComponent;
+class UDBRealmSkyComponent;
 class UDBRegionLifeComponent;
 class UDBSettlementLifeComponent;
 class UInstancedStaticMeshComponent;
@@ -79,6 +80,10 @@ private:
 	/** Region fog, sun and grading under the local camera. */
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")
 	TObjectPtr<UDBRealmMoodComponent> Mood;
+
+	/** Sun, blood moon, fog layers and cinematic grading over the day (dusk look). */
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")
+	TObjectPtr<UDBRealmSkyComponent> Sky;
 
 	/** Server: villagers and demon attacks of settlements near players. */
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|World")

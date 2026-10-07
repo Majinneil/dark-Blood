@@ -39,6 +39,7 @@
 #include "World/DBDungeon.h"
 #include "World/DBRealmDirector.h"
 #include "World/DBRealmLayout.h"
+#include "World/DBRealmSkyComponent.h"
 #include "World/DBSettlementLifeComponent.h"
 #include "World/DBShip.h"
 #include "Visual/DBAnimationSetDefinition.h"
@@ -697,6 +698,20 @@ void UDBCheatManager::DBTimeOfDay(const FString& Preset)
 		return;
 	}
 	Director->SetTimeOfDay(static_cast<EDBTimeOfDay>(Value));
+}
+
+void UDBCheatManager::DBSky(float Hour)
+{
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		if (UDBRealmSkyComponent* Sky = It->FindComponentByClass<UDBRealmSkyComponent>())
+		{
+			Sky->SetHourOverride(Hour);
+			UE_LOG(LogDarkBlood, Display, TEXT("DBSky %.2f"), Hour);
+			return;
+		}
+	}
+	UE_LOG(LogDarkBlood, Warning, TEXT("DBSky: no realm sky in this world"));
 }
 
 void UDBCheatManager::DBVisuals(int32 bEnabled)
