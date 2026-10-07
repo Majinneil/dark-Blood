@@ -131,11 +131,12 @@ void ADBPlayerCharacter::ApplyPlayerVisuals()
 	// Only replicated ids travel over the network; every machine builds the same visuals from them.
 	const FDBCharacterProfile& Profile = DBPlayerState->GetProfile();
 	FName Body = Profile.Appearance.BodyType == EDBBodyType::TypeB ? FName(TEXT("CV_Player_TypeB")) : FName(TEXT("CV_Player_TypeA"));
-	// Body type A is the hero, Akaza Kurosaki, once his authored body is imported (Tools/UE58/db_import_hyper3d.py).
+	// Body type A is the hero, Akaza Kurosaki, once his MetaHuman (or generated body) is built.
 	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
-	if (Profile.Appearance.BodyType != EDBBodyType::TypeB && Data && !Data->PickCharacterVisual({TEXT("CV_Hyper3D_Akaza")}).IsNone())
+	if (Profile.Appearance.BodyType != EDBBodyType::TypeB && Data)
 	{
-		Body = TEXT("CV_Hyper3D_Akaza");
+		const FName Hero = Data->PickCharacterVisual({TEXT("CV_MH_Akaza"), TEXT("CV_Hyper3D_Akaza")});
+		Body = Hero.IsNone() ? Body : Hero;
 	}
 	Visuals->SetAppearance(Profile.Appearance, Profile.ClassId, Body);
 	RefreshEquippedWeapon();

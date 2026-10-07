@@ -132,6 +132,8 @@ public:
 	UFUNCTION(Exec) void DBBossPortrait(const FString& Boss, float Distance = 520.f);
 	/** Body of every boss: mesh, visibility, bounds relative to the actor, scale (look debugging). */
 	UFUNCTION(Exec) void DBBossMeshInfo();
+	/** Standalone look check: an NPC (NpcId e.g. NPC_King, NPC_Captain, Villager) facing the camera, frozen. */
+	UFUNCTION(Exec) void DBSpawnNpc(const FString& NpcId, const FString& Name = TEXT("Test"), float Distance = 260.f);
 
 	/** Regions (Phase 11): packs, camps and region states; teleport to a region's demon camp; spawn a pack now. */
 	UFUNCTION(Exec) void DBRegionDump();

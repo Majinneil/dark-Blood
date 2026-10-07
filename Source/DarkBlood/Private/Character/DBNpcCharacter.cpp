@@ -40,9 +40,20 @@ void ADBNpcCharacter::Setup(FName InNpcId, const FText& InDisplayName, FName InD
 	DisplayName = InDisplayName;
 	DialogueId = InDialogueId;
 	ReplicatedName = DisplayName;
-	const FName Candidate(*(TEXT("CV_") + NpcId.ToString()));
+	// Body: the MetaHuman of this NPC (CV_MH_<NpcId>; villagers one of CV_MH_Villager_01..06 by name), else the profile
+	// CV_<NpcId>, else the default body.
 	const UDBGameDataSubsystem* Data = UDBGameDataSubsystem::Get(this);
-	VisualProfileId = Data && Data->FindCharacterVisual(Candidate) ? Candidate : FName(TEXT("CV_NPC_Default"));
+	TArray<FString> Bodies;
+	if (NpcId == TEXT("Villager"))
+	{
+		const uint32 Pick = GetTypeHash(DisplayName.ToString()) % 6u;
+		Bodies.Add(FString::Printf(TEXT("CV_MH_Villager_%02u"), Pick + 1u));
+		Bodies.Add(TEXT("CV_MH_Villager_*"));
+	}
+	Bodies.Add(TEXT("CV_MH_") + NpcId.ToString());
+	Bodies.Add(TEXT("CV_") + NpcId.ToString());
+	const FName Picked = Data ? Data->PickCharacterVisual(Bodies) : NAME_None;
+	VisualProfileId = Picked.IsNone() ? FName(TEXT("CV_NPC_Default")) : Picked;
 	OnRep_Identity();
 }
 

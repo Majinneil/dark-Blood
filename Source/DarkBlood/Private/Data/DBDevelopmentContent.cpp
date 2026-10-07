@@ -15,6 +15,7 @@
 #include "Data/DBRegionDefinition.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "Engine/Blueprint.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "AssetRegistry/IAssetRegistry.h"
@@ -916,6 +917,29 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 	AddVisual(TEXT("CV_NPC_Default"), EDBVisualQualityTier::ImportantNpc, Quinn, FLinearColor(0.5f, 0.44f, 0.34f));
 	AddVisual(TEXT("CV_Enemy_LesserDemon"), EDBVisualQualityTier::Crowd, Manny, FLinearColor(0.3f, 0.02f, 0.02f), 1.12f,
 		TEXT("/Game/DarkBlood/Art/Materials/DarkBlood/MI_DB_DarkBlood_Veins.MI_DB_DarkBlood_Veins"));
+
+	// MetaHuman builds (Tools/UE58/db_metahuman_cast.py): BP_<Name> under /Game/DarkBlood/Characters/MetaHumans/Build becomes
+	// CV_MH_<Name>. The hidden mannequin plays the animation set, the MetaHuman body follows it (VisualActorClass).
+	// The editor scans assets in the background at startup: the character folders are scanned right here.
+	IAssetRegistry::GetChecked().ScanPathsSynchronous({TEXT("/Game/DarkBlood/Characters/MetaHumans/Build"), TEXT("/Game/DarkBlood/Characters/Hyper3D")}, false);
+	TArray<FAssetData> MetaHumanBuilds;
+	IAssetRegistry::GetChecked().GetAssetsByPath(TEXT("/Game/DarkBlood/Characters/MetaHumans/Build"), MetaHumanBuilds, true);
+	for (const FAssetData& Asset : MetaHumanBuilds)
+	{
+		FString Name = Asset.AssetName.ToString();
+		if (Asset.AssetClassPath != UBlueprint::StaticClass()->GetClassPathName() || !Name.RemoveFromStart(TEXT("BP_")))
+		{
+			continue;
+		}
+		const FString ClassPath = Asset.PackageName.ToString() + TEXT(".") + Asset.AssetName.ToString() + TEXT("_C");
+		if (UDBCharacterVisualDefinition* Body = AddVisual(FName(TEXT("CV_MH_") + Name), EDBVisualQualityTier::Hero, Manny, FLinearColor::White))
+		{
+			Body->bDevelopmentPlaceholder = false;
+			Body->OutfitTintParameter = NAME_None;
+			Body->bProceduralBlink = false;
+			Body->VisualActorClass = TSoftClassPtr<AActor>(FSoftObjectPath(ClassPath));
+		}
+	}
 
 	// Authored bodies from Hyper3D Rodin (Tools/UE58/blender_rig_hyper3d.py + db_import_hyper3d.py): SK_<Name> on the
 	// mannequin skeleton under /Game/DarkBlood/Characters/Hyper3D/<Name> becomes CV_Hyper3D_<Name> with the mannequin

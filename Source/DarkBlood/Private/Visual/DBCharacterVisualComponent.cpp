@@ -15,6 +15,7 @@
 #include "DarkBlood.h"
 #include "Engine/SkeletalMesh.h"
 #include "EngineUtils.h"
+#include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/CommandLine.h"
@@ -232,6 +233,7 @@ void UDBCharacterVisualComponent::ApplyProfile(const UDBCharacterVisualDefinitio
 			TintableMaterials.Add(Material);
 		}
 	}
+	ApplyVisualActor(Profile, *Mesh);
 	ActiveProfile = &Profile;
 	bHasVisualBody = true;
 	Character->SetPlaceholderVisible(false);
@@ -403,6 +405,18 @@ void UDBCharacterVisualComponent::ClearVisuals()
 	}
 	PartComponents.Reset();
 	TintableMaterials.Reset();
+	if (VisualActor)
+	{
+		VisualActor->Destroy();
+		VisualActor = nullptr;
+		if (ADBCharacterBase* Character = GetCharacter())
+		{
+			USkeletalMeshComponent* Mesh = Character->GetMesh();
+			Mesh->SetRenderInMainPass(true);
+			Mesh->SetRenderInDepthPass(true);
+			Mesh->SetCastShadow(true);
+		}
+	}
 	ActiveProfile = nullptr;
 	if (bHasVisualBody)
 	{
@@ -526,4 +540,49 @@ void UDBCharacterVisualComponent::ApplyDemonAccent()
 	AccentOverlay->SetScalarParameterValue(TEXT("BodyOpacity"), FMath::Min(0.3f * AccentStrength, 0.45f));
 	Mesh->SetOverlayMaterial(AccentOverlay);
 	Mesh->SetOverlayMaterialMaxDrawDistance(AccentDrawDistance);
+}
+
+void UDBCharacterVisualComponent::ApplyVisualActor(const UDBCharacterVisualDefinition& Profile, USkeletalMeshComponent& Leader)
+{
+	UClass* ActorClass = Profile.VisualActorClass.LoadSynchronous();
+	UWorld* World = GetWorld();
+	if (!ActorClass || !World)
+	{
+		return;
+	}
+	FActorSpawnParameters Params;
+	Params.Owner = GetOwner();
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.ObjectFlags |= RF_Transient;
+	AActor* Actor = World->SpawnActor<AActor>(ActorClass, Leader.GetComponentTransform(), Params);
+	if (!Actor)
+	{
+		return;
+	}
+	// Local presentation like the rest of this component: never replicated, never colliding.
+	Actor->SetReplicates(false);
+	Actor->SetActorEnableCollision(false);
+	Actor->AttachToComponent(&Leader, FAttachmentTransformRules::SnapToTargetIncludingScale);
+	// Skeletal meshes carrying the mannequin body bones follow the leader; face and grooms keep their own setup
+	// (a MetaHuman face copies the body pose itself).
+	TArray<USkeletalMeshComponent*> Meshes;
+	Actor->GetComponents(Meshes);
+	int32 Followers = 0;
+	for (USkeletalMeshComponent* Part : Meshes)
+	{
+		if (Part->GetSkeletalMeshAsset() && Part->GetBoneIndex(TEXT("pelvis")) != INDEX_NONE && Part->GetBoneIndex(TEXT("thigh_l")) != INDEX_NONE)
+		{
+			Part->SetRelativeTransform(FTransform::Identity);
+			Part->SetLeaderPoseComponent(&Leader);
+			++Followers;
+		}
+	}
+	// The leader keeps animating (and receives montages) but is not drawn.
+	Leader.SetRenderInMainPass(false);
+	Leader.SetRenderInDepthPass(false);
+	Leader.SetCastShadow(false);
+	Leader.VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	VisualActor = Actor;
+	UE_LOG(LogDarkBlood, Log, TEXT("Visual profile %s: authored actor %s, %d body meshes follow the animation"), *Profile.ProfileId.ToString(),
+		*ActorClass->GetName(), Followers);
 }

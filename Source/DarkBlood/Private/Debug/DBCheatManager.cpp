@@ -1193,6 +1193,31 @@ void UDBCheatManager::DBBossMeshInfo()
 	}
 }
 
+void UDBCheatManager::DBSpawnNpc(const FString& NpcId, const FString& Name, float Distance)
+{
+	APlayerController* Controller = GetOuterAPlayerController();
+	ADBPlayerCharacter* Character = Controller ? Cast<ADBPlayerCharacter>(Controller->GetPawn()) : nullptr;
+	if (!Character || !Character->HasAuthority())
+	{
+		return;
+	}
+	const FVector Forward = Character->GetActorForwardVector();
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	ADBNpcCharacter* Npc = GetWorld()->SpawnActor<ADBNpcCharacter>(ADBNpcCharacter::StaticClass(),
+		Character->GetActorLocation() + Forward * Distance + FVector(0.f, 0.f, 20.f), (-Forward).Rotation(), Params);
+	if (!Npc)
+	{
+		return;
+	}
+	Npc->Setup(FName(*NpcId), FText::FromString(Name), NAME_None);
+	Character->SetActorHiddenInGame(true);
+	Character->GetCameraBoom()->TargetArmLength = 140.f;
+	Character->GetCameraBoom()->bDoCollisionTest = false;
+	Controller->SetControlRotation(FRotator(-2.f, Forward.Rotation().Yaw, 0.f));
+	UE_LOG(LogDarkBlood, Display, TEXT("DBSpawnNpc %s '%s'"), *NpcId, *Name);
+}
+
 void UDBCheatManager::DBBossDump()
 {
 	if (ForwardToServer(TEXT("DBBossDump"))) return;

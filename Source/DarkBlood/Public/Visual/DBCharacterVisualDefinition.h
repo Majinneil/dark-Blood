@@ -10,6 +10,7 @@
 
 #include "DBCharacterVisualDefinition.generated.h"
 
+class AActor;
 class UAnimInstance;
 class UDBAnimationSetDefinition;
 class UMaterialInterface;
@@ -76,6 +77,11 @@ public:
 	/** Parts always attached (outfit layers, armor, accessories). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body", meta = (TitleProperty = "PartId"))
 	TArray<FDBVisualPart> DefaultParts;
+
+	/** Authored character shown instead of BodyMesh (a MetaHuman build, BP_<Name>): spawned and attached to the character
+	 * mesh; its body follows the hidden BodyMesh by bone name, so every animation of the profile drives it. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
+	TSoftClassPtr<AActor> VisualActorClass;
 
 	// ---- Appearance mapping (FDBAppearance -> visuals) ------------------------------------------------
 

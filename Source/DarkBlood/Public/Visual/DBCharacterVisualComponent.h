@@ -88,6 +88,11 @@ private:
 	void ClearVisuals();
 	void ApplyWeapon();
 	void ApplyDemonAccent();
+	void ApplyVisualActor(const UDBCharacterVisualDefinition& Profile, USkeletalMeshComponent& Leader);
+
+	/** Spawned authored character (VisualActorClass), destroyed with the profile. */
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> VisualActor = nullptr;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> AccentOverlay = nullptr;
