@@ -159,6 +159,11 @@ public:
 	UFUNCTION(Exec) void DBDescend();
 	UFUNCTION(Exec) void DBEchoHall();
 	UFUNCTION(Exec) void DBEcho(const FString& Boss);
+
+	/** Phase 17: every combat effect in a row ahead of the player, replayed for a few seconds (look check). */
+	UFUNCTION(Exec) void DBFxShow(float Spacing = 260.f, int32 Repeats = 6);
+	/** Phase 17: lists the waterfalls; with an index, stands the player before that one, looking at it. */
+	UFUNCTION(Exec) void DBWaterfall(int32 Index = -1, float Distance = 6000.f);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

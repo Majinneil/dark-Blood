@@ -33,6 +33,7 @@
 #include "Player/DBProgressionComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Visual/DBCharacterVisualComponent.h"
+#include "Visual/DBCombatFeedback.h"
 #include "World/DBRealmVegetation.h"
 #include "World/DBRegionLife.h"
 #include "World/DBWorldStateComponent.h"
@@ -156,6 +157,14 @@ void ADBBossCharacter::BeginPlay()
 	// The endgame scale is applied in BeginPlay; enrage multiplies the scaled attack.
 	BaseAttackPower = AttackPower;
 	ApplyLook();
+}
+
+void ADBBossCharacter::PlayDeathPresentation()
+{
+	Super::PlayDeathPresentation();
+	// The fall of a boss shakes the ground.
+	DBCombatFeedback::Play(this, EDBCombatFx::BossDeath, GetActorLocation() - FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()), FVector::UpVector,
+		GetActorScale3D().X);
 }
 
 void ADBBossCharacter::OnRep_Boss()
@@ -953,13 +962,23 @@ ADBBossTelegraph::ADBBossTelegraph()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
-	Disc = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Disc"));
-	RootComponent = Disc;
-	Disc->SetStaticMesh(Cylinder.Object);
-	Disc->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
-	Disc->SetCastShadow(false);
-	Disc->SetCanEverAffectNavigation(false);
-	Disc->SetRelativeScale3D(FVector(1.f, 1.f, 0.02f));
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = Root;
+	UStaticMesh* CylinderMesh = Cylinder.Object;
+	auto MakeDisc = [this, CylinderMesh](const TCHAR* Name, float Lift)
+	{
+		UStaticMeshComponent* Part = CreateDefaultSubobject<UStaticMeshComponent>(Name);
+		Part->SetupAttachment(Root);
+		Part->SetStaticMesh(CylinderMesh);
+		Part->SetRelativeLocation(FVector(0.f, 0.f, Lift));
+		Part->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+		Part->SetCastShadow(false);
+		Part->SetCanEverAffectNavigation(false);
+		Part->SetRelativeScale3D(FVector(1.f, 1.f, 0.02f));
+		return Part;
+	};
+	Disc = MakeDisc(TEXT("Disc"), 2.f);
+	Fill = MakeDisc(TEXT("Fill"), 4.f);
 }
 
 void ADBBossTelegraph::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -984,32 +1003,56 @@ void ADBBossTelegraph::Arm(ADBBossCharacter* InBoss, float InRadius, float InDel
 
 void ADBBossTelegraph::OnRep_Setup()
 {
-	UMaterialInstanceDynamic* Material = Cast<UMaterialInstanceDynamic>(Disc->GetMaterial(0));
-	if (!Material)
+	// Translucent energy (the blood barrier material): a faint area showing where the blow will land and a core that
+	// fills it as the moment comes; an opaque disc of light burned out to white under the auto exposure.
+	if (!AreaMaterial)
 	{
-		Material = UMaterialInstanceDynamic::Create(UDBArtMaterialSubsystem::Get(EDBArtMaterial::LanternFire), this);
-		Disc->SetMaterial(0, Material);
+		UMaterialInterface* Energy = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_BloodBarrier.M_DB_BloodBarrier"), nullptr,
+			LOAD_NoWarn | LOAD_Quiet);
+		UMaterialInterface* Base = Energy ? Energy : UDBArtMaterialSubsystem::Get(EDBArtMaterial::LanternFire);
+		AreaMaterial = UMaterialInstanceDynamic::Create(Base, this);
+		FillMaterial = UMaterialInstanceDynamic::Create(Base, this);
+		Disc->SetMaterial(0, AreaMaterial);
+		Fill->SetMaterial(0, FillMaterial);
 	}
-	Material->SetVectorParameterValue(TEXT("BaseTint"), FLinearColor::Black);
-	Material->SetVectorParameterValue(TEXT("TintVariation"), FLinearColor::Black);
-	Material->SetVectorParameterValue(TEXT("EmissiveColor"), Color * 0.12f);
+	for (UMaterialInstanceDynamic* Material : {AreaMaterial.Get(), FillMaterial.Get()})
+	{
+		Material->SetVectorParameterValue(TEXT("BarrierColor"), Color);
+		Material->SetVectorParameterValue(TEXT("EmissiveColor"), Color * 0.12f);
+		Material->SetVectorParameterValue(TEXT("BaseTint"), FLinearColor::Black);
+		Material->SetVectorParameterValue(TEXT("TintVariation"), FLinearColor::Black);
+	}
+	AreaMaterial->SetScalarParameterValue(TEXT("Intensity"), 0.45f);
+	AreaMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.12f);
+	FillMaterial->SetScalarParameterValue(TEXT("Intensity"), 0.9f);
+	FillMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.26f);
+	const float Size = Radius * 2.f / 100.f;
+	Disc->SetRelativeScale3D(FVector(Size, Size, 0.02f));
 }
 
 void ADBBossTelegraph::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	Age += DeltaSeconds;
-	// Warning: the ring grows to the full size; then it flares while it hits.
+	// Warning: the core grows to the edge of the area; when it is full the blow lands and the area flares.
 	const float Grow = Delay > 0.f ? FMath::Clamp(Age / Delay, 0.f, 1.f) : 1.f;
-	const float Size = Radius * 2.f / 100.f * (0.3f + 0.7f * Grow);
-	Disc->SetRelativeScale3D(FVector(Size, Size, 0.02f));
+	const float Size = Radius * 2.f / 100.f;
+	Fill->SetRelativeScale3D(FVector(Size * FMath::Max(0.02f, Grow), Size * FMath::Max(0.02f, Grow), 0.02f));
 	const bool bNowActive = Age >= Delay;
 	if (bNowActive != bActive)
 	{
 		bActive = bNowActive;
-		if (UMaterialInstanceDynamic* Material = Cast<UMaterialInstanceDynamic>(Disc->GetMaterial(0)))
+		if (bActive && FillMaterial && AreaMaterial)
 		{
-			Material->SetVectorParameterValue(TEXT("EmissiveColor"), Color * (bActive ? 0.9f : 0.12f));
+			FillMaterial->SetScalarParameterValue(TEXT("Intensity"), Duration > 0.f ? 1.3f : 2.4f);
+			FillMaterial->SetScalarParameterValue(TEXT("Opacity"), Duration > 0.f ? 0.34f : 0.5f);
+			FillMaterial->SetVectorParameterValue(TEXT("EmissiveColor"), Color * 0.9f);
+			AreaMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.22f);
+		}
+		if (bActive)
+		{
+			// The blow itself: a shockwave across the area (every machine that renders).
+			DBCombatFeedback::Play(this, EDBCombatFx::GroundBlast, GetActorLocation() + FVector(0.f, 0.f, 10.f), FVector::UpVector, FMath::Clamp(Radius / 350.f, 0.6f, 3.f));
 		}
 	}
 	if (!HasAuthority() || !bActive)

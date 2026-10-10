@@ -22,7 +22,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 14 | Dämonenkönig | ✅ Gameplay (drei Formen mit eigener Katastrophe, Sprüche je Form, Arena-Verwandlung, weltweite Meldung, Hauptquest MQ12; headless und gerendert getestet, 90–106 FPS) · 🟡 Modell mit Flügeln, Animationen, Musik, Zwischensequenzen |
 | 15 | Paradies & Finale | ✅ Gameplay (Welt gereinigt nach dem König, Pforte aus Licht am Thron, schwebende Paradies-Insel über DAS ENDE, Schrein des Friedens mit Finale und Abspann, Quest MQ13, Rückkehr in die Hauptstadt; Regelkern, headless, Koop, gerendert getestet, 92–100 FPS) · 🟡 Zwischensequenz, Musik, Ahnengeister |
 | 16 | Endgame | ✅ Gameplay (New Game+ mit 7 skalierten Zyklen, Halle der Echos mit 17 Revanchen und Echo-Rängen, endloser Abgrund mit Wächtern alle 5 Ebenen, Beute-Bonus; Regelkern, headless, Koop, gerendert getestet, 93 FPS) · 🟡 eigene Modelle, Musik, Ranglisten |
-| 17 | High-End Visual Overhaul | ⬜ |
+| 17 | High-End Visual Overhaul | 🟡 Kampf-Effekte über GameplayCues, Boss-Warnzonen, Portale/Schreine, triplanarer Fels, Wasserfälle, Abgrund-Look (gerendert + Koop getestet, 78–92 FPS) · ⬜ Klippen-Meshes, Wetter, Charaktere (MetaHumans) |
 | 18 | Audio / Voice / Cinematics | ⬜ |
 | 19 | Multiplayer Hardening | ⬜ |
 | 20 | Optimierung | ⬜ |

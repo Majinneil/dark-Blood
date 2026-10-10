@@ -47,3 +47,6 @@ Content/DarkBlood/Characters/Hyper3D/
 
 # MetaHuman characters (Creator output, rebuilt locally from Tools/UE58/db_create_akaza_metahuman.py)
 Content/DarkBlood/Characters/MetaHumans/
+
+# Copies of Paragon textures (Epic content, local only like Content/Paragon*/): see Tools/UE58/db_create_waterfall_material.py
+Content/DarkBlood/Art/Textures/Water/T_DB_WaterfallFoam.uasset

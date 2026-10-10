@@ -10,6 +10,8 @@
 #include "World/DBTheEnd.h"
 #include "World/DBParadise.h"
 #include "World/DBEchoHall.h"
+#include "World/DBWaterfall.h"
+#include "Visual/DBCombatFeedback.h"
 #include "DarkBloodRules/Endgame.h"
 #include "DarkBloodRules/Region.h"
 #include "GameFramework/PlayerState.h"
@@ -1515,6 +1517,63 @@ void UDBCheatManager::DBEcho(const FString& Boss)
 	ADBEchoHall* Hall = ADBEchoHall::Find(GetWorld());
 	const bool bSummoned = Definition && Hall && Hall->SummonEcho(Definition->BossId, GetOuterAPlayerController());
 	UE_LOG(LogDarkBlood, Display, TEXT("DBEcho %s: %s"), *Boss, bSummoned ? TEXT("the echo rises") : TEXT("not remembered, busy or unknown"));
+}
+
+void UDBCheatManager::DBFxShow(float Spacing, int32 Repeats)
+{
+	const APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	const FVector Forward = Pawn->GetActorForwardVector();
+	const FVector Right = FVector::CrossProduct(FVector::UpVector, Forward);
+	const int32 Count = static_cast<int32>(EDBCombatFx::Count);
+	const FVector Start = Pawn->GetActorLocation() + Forward * 700.f - Right * Spacing * (Count - 1) * 0.5f;
+	TWeakObjectPtr<UWorld> World = GetWorld();
+	for (int32 Repeat = 0; Repeat < FMath::Max(1, Repeats); ++Repeat)
+	{
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([World, Start, Right, Forward, Spacing, Count]()
+		{
+			for (int32 Index = 0; Index < Count && World.IsValid(); ++Index)
+			{
+				DBCombatFeedback::Play(World.Get(), static_cast<EDBCombatFx>(Index), Start + Right * Spacing * Index, -Forward);
+			}
+		}), 0.05f + Repeat * 1.f, false);
+	}
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBFxShow %d %s: %s"), Index, DBCombatFeedback::GetName(static_cast<EDBCombatFx>(Index)),
+			DBCombatFeedback::GetSystem(static_cast<EDBCombatFx>(Index)) ? TEXT("ok") : TEXT("missing"));
+	}
+}
+
+void UDBCheatManager::DBWaterfall(int32 Index, float Distance)
+{
+	const TArray<FDBWaterfallSite>& Sites = DBWaterfalls::GetSites();
+	if (!Sites.IsValidIndex(Index))
+	{
+		for (int32 Site = 0; Site < Sites.Num(); ++Site)
+		{
+			UE_LOG(LogDarkBlood, Display, TEXT("DBWaterfall %d: %s (%.0f, %.0f) m, drop %.0f m"), Site, *Sites[Site].RegionId.ToString(), Sites[Site].Top.X / 100.0,
+				Sites[Site].Top.Y / 100.0, (Sites[Site].Top.Z - Sites[Site].Bottom.Z) / 100.0);
+		}
+		return;
+	}
+	APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+	// In front of the fall, out over its foot, looking back at the face.
+	const FDBWaterfallSite& Site = Sites[Index];
+	const FVector Flat = FVector(Site.Bottom - Site.Top).GetSafeNormal2D();
+	const FVector2D Stand = FVector2D(Site.Bottom + Flat * Distance) / 100.0;
+	const double Ground = FMath::Max(DBRealm::SampleHeight(Stand.X, Stand.Y), 0.0) * 100.0;
+	Pawn->TeleportTo(FVector(Stand.X * 100.0, Stand.Y * 100.0, Ground + 200.0), (-Flat).Rotation());
+	GetOuterAPlayerController()->SetControlRotation(FRotator(8.f, (-Flat).Rotation().Yaw, 0.f));
+	UE_LOG(LogDarkBlood, Display, TEXT("DBWaterfall %d: standing %.0f m before it"), Index, Distance / 100.0);
 }
 
 void UDBCheatManager::DBRegionDump()

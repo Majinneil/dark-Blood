@@ -2,8 +2,8 @@
 #   UnrealEditor-Cmd DarkBlood.uproject -run=pythonscript -script=Tools/UE58/db_create_realm_landscape_material.py
 #
 # Landscape material of the open world (L_Realm): 8 weight-blended paint layers with Poly Haven CC0 textures, world-
-# projected, shared samplers (no sampler limit), two-scale macro variation against tiling, glowing lava cracks and a
-# faint pulse in corrupted soil. Layer names must match DBBuildRealmCommandlet (Meadow, Forest, Rock, Snow, Sand, Soil,
+# projected (the rock layer triplanar, so cliffs keep their texture instead of smearing it), shared samplers (no
+# sampler limit), two-scale macro variation against tiling, glowing lava cracks and a faint pulse in corrupted soil. Layer names must match DBBuildRealmCommandlet (Meadow, Forest, Rock, Snow, Sand, Soil,
 # Corrupt, Lava).
 import os
 
@@ -99,6 +99,9 @@ def vector_rgb(material, name, value, x, y):
 path = FOLDER + "/M_DB_Realm_Landscape"
 material = unreal.load_asset(path) or tools.create_asset("M_DB_Realm_Landscape", FOLDER, unreal.Material, unreal.MaterialFactoryNew())
 mel.delete_all_material_expressions(material)
+# The grass output survives delete_all; a second one breaks the material ("only one Landscape Grass node").
+for expression in mel.get_material_expressions(material):
+    mel.delete_material_expression(material, expression)
 
 world = node(material, E.MaterialExpressionWorldPosition, -3200, 0)
 world_xy = node(material, E.MaterialExpressionComponentMask, -3000, 0, r=True, g=True, b=False, a=False)
@@ -131,10 +134,69 @@ for blend in (color_blend, normal_blend, rough_blend):
         inputs.append(layer)
     blend.set_editor_property("layers", inputs)
 
+# Triplanar weights for the rock layer: cliffs are steep, a top-down projection smears their texture into streaks.
+world_xz = node(material, E.MaterialExpressionComponentMask, -3000, 120, r=True, g=False, b=True, a=False)
+link(world, "", world_xz, "")
+world_yz = node(material, E.MaterialExpressionComponentMask, -3000, 240, r=False, g=True, b=True, a=False)
+link(world, "", world_yz, "")
+vertex_normal = node(material, E.MaterialExpressionVertexNormalWS, -3200, 400)
+normal_abs = node(material, E.MaterialExpressionAbs, -3000, 400)
+link(vertex_normal, "", normal_abs, "")
+normal_sharp = node(material, E.MaterialExpressionPower, -2850, 400)
+link(normal_abs, "", normal_sharp, "Base")
+link(constant(material, 4.0, -3000, 470), "", normal_sharp, "Exp")
+weight_sum = node(material, E.MaterialExpressionDotProduct, -2700, 470)
+link(normal_sharp, "", weight_sum, "A")
+link(node(material, E.MaterialExpressionConstant3Vector, -2850, 520, constant=unreal.LinearColor(1.0, 1.0, 1.0, 1.0)), "", weight_sum, "B")
+tri_weights = binary(material, E.MaterialExpressionDivide, normal_sharp, weight_sum, -2550, 400)
+
+
+def project(texture, sampler_type, uv_xy, uv_xz, uv_yz, x, y, large_scale=0.0):
+    """One texture seen from above (XY) and from the two sides (XZ, YZ), blended by the surface direction. With
+    large_scale, each view also samples the texture that much larger and averages both - a cliff hundreds of meters
+    high no longer shows the same tile over and over."""
+    samples = []
+    for offset, uv in enumerate((uv_xy, uv_xz, uv_yz)):
+        sample = node(material, E.MaterialExpressionTextureSample, x, y + offset * 130, texture=texture, sampler_type=sampler_type, sampler_source=SHARED)
+        link(uv, "", sample, "UVs")
+        if large_scale > 0.0:
+            large_uv = node(material, E.MaterialExpressionMultiply, x - 150, y + offset * 130 + 60, const_b=large_scale)
+            link(uv, "", large_uv, "A")
+            large = node(material, E.MaterialExpressionTextureSample, x, y + offset * 130 + 60, texture=texture, sampler_type=sampler_type,
+                         sampler_source=SHARED)
+            link(large_uv, "", large, "UVs")
+            average = node(material, E.MaterialExpressionLinearInterpolate, x + 120, y + offset * 130, const_alpha=0.5)
+            link(sample, "RGB", average, "A")
+            link(large, "RGB", average, "B")
+            sample = average
+        samples.append(sample)
+    mask_z = node(material, E.MaterialExpressionComponentMask, x + 160, y + 400, r=False, g=False, b=True, a=False)
+    mask_y = node(material, E.MaterialExpressionComponentMask, x + 160, y + 460, r=False, g=True, b=False, a=False)
+    mask_x = node(material, E.MaterialExpressionComponentMask, x + 160, y + 520, r=True, g=False, b=False, a=False)
+    for mask in (mask_z, mask_y, mask_x):
+        link(tri_weights, "", mask, "")
+    out = "RGB" if large_scale <= 0.0 else ""
+    top = binary(material, E.MaterialExpressionMultiply, samples[0], mask_z, x + 300, y, out)
+    side_a = binary(material, E.MaterialExpressionMultiply, samples[1], mask_y, x + 300, y + 130, out)
+    side_b = binary(material, E.MaterialExpressionMultiply, samples[2], mask_x, x + 300, y + 260, out)
+    return binary(material, E.MaterialExpressionAdd, binary(material, E.MaterialExpressionAdd, top, side_a, x + 450, y), side_b, x + 600, y)
+
+
 lava_diffuse = None
 for index, (name, asset, tile, tint, rough) in enumerate(LAYERS):
     y = -1600 + index * 420
     uv = binary(material, E.MaterialExpressionDivide, world_xy, constant(material, tile, -2600, y + 60), -2400, y)
+    if name == "Rock":
+        uv_xz = binary(material, E.MaterialExpressionDivide, world_xz, constant(material, tile, -2600, y + 140), -2400, y + 120)
+        uv_yz = binary(material, E.MaterialExpressionDivide, world_yz, constant(material, tile, -2600, y + 220), -2400, y + 240)
+        diffuse = project(import_texture(asset, "D"), unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, uv, uv_xz, uv_yz, -2300, y - 2400, 0.23)
+        normal = project(import_texture(asset, "N"), unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, uv, uv_xz, uv_yz, -2300, y - 1700)
+        tinted = binary(material, E.MaterialExpressionMultiply, diffuse, vector_rgb(material, name + "_Tint", tint, -1900, y + 100), -1500, y)
+        link(binary(material, E.MaterialExpressionMultiply, tinted, macro_factor, -1300, y), "", color_blend, "Layer " + name)
+        link(normal, "", normal_blend, "Layer " + name)
+        link(node(material, E.MaterialExpressionScalarParameter, -1300, y + 200, parameter_name=name + "_Roughness", default_value=rough), "",
+             rough_blend, "Layer " + name)
+        continue
     diffuse = node(material, E.MaterialExpressionTextureSample, -2100, y, texture=import_texture(asset, "D"), sampler_source=SHARED)
     link(uv, "", diffuse, "UVs")
     normal = node(material, E.MaterialExpressionTextureSample, -2100, y + 200, texture=import_texture(asset, "N"),

@@ -1022,8 +1022,8 @@ void ADBDungeonPortal::OnRep_Setup()
 		const FLinearColor Color = bExit ? FLinearColor(1.f, 0.72f, 0.38f) : bHallSite ? FLinearColor(0.45f, 0.7f, 1.f)
 								 : DescendTo > 0 || bAbyssSite ? FLinearColor(0.75f, 0.1f, 0.35f) : FLinearColor(1.f, 0.12f, 0.06f);
 		VeilMaterial->SetVectorParameterValue(TEXT("BarrierColor"), Color);
-		VeilMaterial->SetScalarParameterValue(TEXT("Intensity"), 1.6f);
-		VeilMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.4f);
+		VeilMaterial->SetScalarParameterValue(TEXT("Intensity"), 0.7f);
+		VeilMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.3f);
 	}
 	for (int32 Index = 0; Index < Parts.Num(); ++Index)
 	{

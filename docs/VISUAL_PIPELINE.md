@@ -38,3 +38,25 @@ Realistisch/semi-realistisch, menschliche Proportionen, normale Architektur, rea
 Vollständiger Grafik-Pass erst bei stabilem Kernspiel: Modelle, Gesichter, Haare, Kleidung (Chaos Cloth),
 Rüstungen, Waffen, Dämonen, Vasallen, Umgebung, Vegetation, Wasser, Wetter, Nebel, Licht, Color Grading, UI, VFX,
 Cinematics.
+
+### Stand Phase 17 (2026-10-08)
+
+- **Kampf-Effekte** (`DBCombatFeedback`): Treffer, schwere Treffer, Dämonenklauen, Block, Parade, Haltungsbruch,
+  Tod von Dämonen und Bossen. Der Server löst GameplayCues aus (`DBDamageExecution` mit Trefferort und Schaden),
+  `ADBCharacterBase` empfängt sie über `IGameplayCueInterface` auf jedem Rechner und spielt Paragon-Partikel
+  (Cascade, lokal unter `Content/Paragon*`, nicht im Git – fehlen sie, passiert nichts). Testbefehl `DBFxShow`.
+- **Boss-Warnzonen**: durchscheinende Fläche plus Kern, der sich bis zum Einschlag füllt; Schockwelle beim Treffer
+  (statt einer grellen Lichtscheibe).
+- **Portale und Schreine**: durchscheinende Schleier (Ausgang warm, Eingang blutrot, Abgrund violett, Halle der Echos
+  geisterblau); Rast-Schreine als Steinlaterne aus der Modellbibliothek statt Platzhalter-Würfel.
+- **Abgrund**: kalter Fels, Blutnaht zwischen Wand und Boden statt Lava auf allen Flächen.
+- **Landschaft**: Fels-Schicht triplanar mit zwei Maßstäben (`db_create_realm_landscape_material.py`) – Steilhänge
+  zeigen geschichtetes Gestein statt gestreckter Schlieren; das Skript ist jetzt wiederholt ausführbar.
+- **Wasserfälle** (`ADBWaterfall`, Material `M_DB_Waterfall` mit Schaum-Fließtextur): Orte werden aus dem Gelände
+  gesucht (Klippen ab 56°, Fuß im Meer oder auf ebenem Boden; 6 Stück, 0,15 s), in DAS ENDE und der Dämonenöde als
+  Blutfälle; Gischt-Partikel nur in Kameranähe. Testbefehl `DBWaterfall [Index]`.
+- **Koop-Korrektur**: Die Paradies-Insel war nicht repliziert und wurde nur auf dem Server gebaut – Clients standen
+  dort ohne Boden. Insel und Wasserfälle baut jetzt jeder Rechner selbst.
+- Gemessen (offscreen 1600 × 900, kein anderes Spiel aktiv): 78–92 FPS.
+- Offen: echte Klippen-Meshes statt geglätteter Rauschhänge (die Wasserfälle wirken dadurch eher dezent), Wetter,
+  eigene VFX statt Paragon, Charaktere (MetaHumans, am Ende).

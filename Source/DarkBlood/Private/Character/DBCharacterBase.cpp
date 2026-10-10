@@ -14,6 +14,7 @@
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Visual/DBCharacterVisualComponent.h"
+#include "Visual/DBCombatFeedback.h"
 
 ADBCharacterBase::ADBCharacterBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDBCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -70,6 +71,15 @@ void ADBCharacterBase::SetPlaceholderVisible(bool bVisible)
 UAbilitySystemComponent* ADBCharacterBase::GetAbilitySystemComponent() const
 {
 	return CachedAbilitySystem.Get();
+}
+
+void ADBCharacterBase::HandleGameplayCue(AActor* Self, FGameplayTag GameplayCueTag, EGameplayCueEvent::Type EventType, const FGameplayCueParameters& Parameters)
+{
+	IGameplayCueInterface::HandleGameplayCue(Self, GameplayCueTag, EventType, Parameters);
+	if (EventType == EGameplayCueEvent::Executed)
+	{
+		DBCombatFeedback::HandleCue(this, GameplayCueTag, Parameters);
+	}
 }
 
 UDBAbilitySystemComponent* ADBCharacterBase::GetDBAbilitySystemComponent() const

@@ -14,6 +14,7 @@
 #include "World/DBTheEnd.h"
 #include "World/DBEchoHall.h"
 #include "World/DBParadise.h"
+#include "World/DBWaterfall.h"
 #include "World/DBRealmMoodComponent.h"
 #include "World/DBRealmSkyComponent.h"
 #include "World/DBSettlementLifeComponent.h"
@@ -115,6 +116,9 @@ void ADBRealmDirector::BeginPlay()
 		// The Hall of Echoes over the western sea (Phase 16).
 		DBEchoHall::SpawnHall(GetWorld());
 	}
+	// Static scenery every machine builds for itself (nothing replicated): the Paradise island, the waterfalls.
+	DBParadise::SpawnIsland(GetWorld());
+	DBWaterfalls::SpawnAll(GetWorld());
 	UE_LOG(LogDarkBlood, Log, TEXT("DBREALM director ready: %d regions, %d settlements"), DBRealm::GetRegions().Num(), Sites.Num());
 }
 

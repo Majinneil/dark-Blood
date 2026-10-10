@@ -201,7 +201,7 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 		}
 	}
 
-	// Presentation hooks; without GameplayCue notify assets these are no-ops.
+	// Presentation: ADBCharacterBase plays these through DBCombatFeedback on every machine.
 	if (TargetASC && !SpecTags.HasTagExact(DBTags::Damage_OverTime))
 	{
 		const FGameplayTag Cue = Result.bParried  ? DBTags::GameplayCue_Combat_Parried
@@ -210,7 +210,16 @@ void UDBDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecu
 												  : DBTags::GameplayCue_Combat_Hit;
 		if (Cue.IsValid())
 		{
-			TargetASC->ExecuteGameplayCue(Cue, Spec.GetEffectContext());
+			// Where the blow landed: on the target's side facing the attacker, at chest height.
+			FGameplayCueParameters CueParameters(Spec.GetEffectContext());
+			CueParameters.RawMagnitude = Result.FinalDamage;
+			if (TargetAvatar)
+			{
+				const FVector Towards = SourceAvatar ? (SourceAvatar->GetActorLocation() - TargetAvatar->GetActorLocation()).GetSafeNormal2D() : TargetAvatar->GetActorForwardVector();
+				CueParameters.Normal = Towards;
+				CueParameters.Location = TargetAvatar->GetActorLocation() + Towards * 35.f + FVector(0.f, 0.f, 35.f);
+			}
+			TargetASC->ExecuteGameplayCue(Cue, CueParameters);
 		}
 	}
 

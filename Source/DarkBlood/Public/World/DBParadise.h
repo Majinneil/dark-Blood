@@ -24,6 +24,8 @@ namespace DBParadise
 	DARKBLOOD_API bool IsInParadise(const FVector& WorldLocation);
 	/** Server: island, the gates and the shrine (idempotent). */
 	DARKBLOOD_API void SpawnParadise(UWorld* World);
+	/** Every machine: the island itself (static, not replicated - clients build their own; idempotent). */
+	DARKBLOOD_API void SpawnIsland(UWorld* World);
 	/** Where travellers arrive in the capital (gate home, New Game+). */
 	DARKBLOOD_API FVector GetCapitalArrival();
 }

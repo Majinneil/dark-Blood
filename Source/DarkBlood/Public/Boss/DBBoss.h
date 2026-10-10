@@ -15,6 +15,7 @@
 class ADBBossArena;
 class UDBBossDefinition;
 class UDBMeleeAIComponent;
+class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class UStaticMeshComponent;
 class UTextRenderComponent;
@@ -52,6 +53,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, float DamageMagnitude) override;
+	virtual void PlayDeathPresentation() override;
 
 private:
 	UFUNCTION()
@@ -158,8 +160,21 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Setup)
 	FLinearColor Color = FLinearColor::Red;
 
+	/** The danger area (full size, faint) and the core that fills it until the blow lands. */
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Boss")
+	TObjectPtr<USceneComponent> Root;
+
 	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Boss")
 	TObjectPtr<UStaticMeshComponent> Disc;
+
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Boss")
+	TObjectPtr<UStaticMeshComponent> Fill;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> AreaMaterial;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> FillMaterial;
 
 	TWeakObjectPtr<ADBBossCharacter> Boss;
 	FDBHitParams Hit;

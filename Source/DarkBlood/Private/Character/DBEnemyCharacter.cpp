@@ -21,6 +21,7 @@
 #include "Inventory/DBInventoryComponent.h"
 #include "Quest/DBQuestSubsystem.h"
 #include "TimerManager.h"
+#include "Visual/DBCombatFeedback.h"
 #include "World/DBWorldStateComponent.h"
 
 ADBEnemyCharacter::ADBEnemyCharacter(const FObjectInitializer& ObjectInitializer)
@@ -264,6 +265,11 @@ void ADBEnemyCharacter::RespawnInPlace()
 void ADBEnemyCharacter::PlayDeathPresentation()
 {
 	Super::PlayDeathPresentation();
+	if (!bRespawnInPlace)
+	{
+		// The demon's body dissolves into black smoke (every machine).
+		DBCombatFeedback::Play(this, EDBCombatFx::DemonDeath, GetActorLocation(), FVector::UpVector);
+	}
 	SetPlaceholderVisible(false);
 	RefreshNameplate();
 }

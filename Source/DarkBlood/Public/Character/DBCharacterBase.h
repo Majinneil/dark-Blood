@@ -3,6 +3,7 @@
 #pragma once
 
 #include "AbilitySystemInterface.h"
+#include "GameplayCueInterface.h"
 #include "GameFramework/Character.h"
 
 #include "DBCharacterBase.generated.h"
@@ -24,7 +25,7 @@ enum class EDBTeam : uint8
 };
 
 UCLASS(Abstract)
-class DARKBLOOD_API ADBCharacterBase : public ACharacter, public IAbilitySystemInterface
+class DARKBLOOD_API ADBCharacterBase : public ACharacter, public IAbilitySystemInterface, public IGameplayCueInterface
 {
 	GENERATED_BODY()
 
@@ -33,6 +34,9 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UDBAbilitySystemComponent* GetDBAbilitySystemComponent() const;
+
+	/** Combat cues (hit, block, parry, stagger) reach the presentation here on every machine (DBCombatFeedback). */
+	virtual void HandleGameplayCue(AActor* Self, FGameplayTag GameplayCueTag, EGameplayCueEvent::Type EventType, const FGameplayCueParameters& Parameters) override;
 
 	UFUNCTION(BlueprintPure, Category = "Dark Blood|Character")
 	bool IsDead() const { return bIsDead; }

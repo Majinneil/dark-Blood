@@ -104,6 +104,18 @@ FVector DBParadise::GetIslandCenter()
 	return FVector(Throne.X, Throne.Y, IslandAltitude);
 }
 
+void DBParadise::SpawnIsland(UWorld* World)
+{
+	if (!World || TActorIterator<ADBParadiseIsland>(World) || ThroneLocation().IsZero())
+	{
+		return;
+	}
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	World->SpawnActor<ADBParadiseIsland>(ADBParadiseIsland::StaticClass(), GetIslandCenter(), FRotator::ZeroRotator, Params);
+	UE_LOG(LogDarkBlood, Log, TEXT("DAS PARADIES: island built (%s)"), World->GetNetMode() == NM_Client ? TEXT("client") : TEXT("server/standalone"));
+}
+
 FVector DBParadise::GetCapitalArrival()
 {
 	const FDBRealmRegion& Capital = DBRealm::GetCapital();
@@ -126,7 +138,7 @@ void DBParadise::SpawnParadise(UWorld* World)
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	const FVector Center = GetIslandCenter();
-	World->SpawnActor<ADBParadiseIsland>(ADBParadiseIsland::StaticClass(), Center, FRotator::ZeroRotator, Params);
+	SpawnIsland(World);
 	// The gate of light at the heart of the throne (inactive until the king falls) and the way home on the island.
 	if (ADBParadiseGate* Up = World->SpawnActor<ADBParadiseGate>(ADBParadiseGate::StaticClass(), ThroneLocation() + FVector(0.f, 0.f, 25.f), FRotator::ZeroRotator, Params))
 	{
