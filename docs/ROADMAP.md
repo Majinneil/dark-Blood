@@ -24,7 +24,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 16 | Endgame | ✅ Gameplay (New Game+ mit 7 skalierten Zyklen, Halle der Echos mit 17 Revanchen und Echo-Rängen, endloser Abgrund mit Wächtern alle 5 Ebenen, Beute-Bonus; Regelkern, headless, Koop, gerendert getestet, 93 FPS) · 🟡 eigene Modelle, Musik, Ranglisten |
 | 17 | High-End Visual Overhaul | 🟡 Kampf-Effekte über GameplayCues, Boss-Warnzonen, Portale/Schreine, triplanarer Fels, Wasserfälle, Abgrund-Look (gerendert + Koop getestet, 78–92 FPS) · ⬜ Klippen-Meshes, Wetter, Charaktere (MetaHumans) |
 | 18 | Audio / Voice / Cinematics | 🟡 Audio ✅ (181 CC0-Klänge, Kampf über GameplayCues, Schritte je Untergrund, Umgebung je Gebiet und Tageszeit, Wasserfälle, Musik Erkundung/Kampf/Boss mit Überblendung, Lautstärke-Einstellungen; verdeckt und stumm getestet) · ⬜ Sprachausgabe, Zwischensequenzen |
-| 19 | Multiplayer Hardening | ⬜ |
+| 19 | Multiplayer Hardening | ✅ 4 Spieler unter 150 ms Latenz/2 % Verlust, Dedicated Server mit serverseitiger Speicherung, doppelter Charakter, Wiederverbinden beim Speichern, Gruppen-Fortschritt mit Reichweite; behoben: Teleport auf besetzte Punkte, Charakterverlust ohne Plattform-ID (alles headless/verdeckt getestet) |
 | 20 | Optimierung | ⬜ |
 | 21 | QA & Release | ⬜ |
 

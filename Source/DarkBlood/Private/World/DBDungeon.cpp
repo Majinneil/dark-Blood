@@ -34,6 +34,7 @@
 #include "World/DBEconomyActors.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBWorldStateComponent.h"
+#include "World/DBTeleport.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodDungeon"
 
@@ -848,7 +849,7 @@ bool ADBDungeonInstance::Enter(APlayerController* User, int32 SiteIndex)
 	{
 		if (WeakPawn.IsValid())
 		{
-			WeakPawn->TeleportTo(Arrival, FRotator(0.f, 0.f, 0.f));
+			DBTeleport::MovePawn(WeakPawn.Get(), Arrival, 0.f);
 		}
 	};
 	// A new interior first reaches the clients, then the player follows (never fall into an empty void).
@@ -903,7 +904,7 @@ bool ADBDungeonInstance::EnterAbyss(APlayerController* User, int32 Depth)
 	{
 		if (WeakPawn.IsValid())
 		{
-			WeakPawn->TeleportTo(Arrival, FRotator(0.f, 0.f, 0.f));
+			DBTeleport::MovePawn(WeakPawn.Get(), Arrival, 0.f);
 		}
 	}), bNew ? 0.6f : 0.05f, false);
 	const R::FAbyssFloor& Floor = Instance->AbyssFloor;
@@ -959,7 +960,7 @@ void ADBDungeonInstance::Leave(APlayerController* User, int32 SiteIndex)
 	}
 	const FDBDungeonSite& Site = DBDungeon::GetSites()[SiteIndex];
 	const FVector2D Out = Site.Entrance + FVector2D(4.0, 0.0);
-	Pawn->TeleportTo(FVector(Out.X * 100.0, Out.Y * 100.0, FMath::Max(DBRealm::SampleHeight(Out.X, Out.Y), 0.0) * 100.0 + 150.0), FRotator(0.f, 0.f, 0.f));
+	DBTeleport::MovePawn(Pawn, FVector(Out.X * 100.0, Out.Y * 100.0, FMath::Max(DBRealm::SampleHeight(Out.X, Out.Y), 0.0) * 100.0 + 150.0), 0.f);
 	UE_LOG(LogDarkBlood, Display, TEXT("Dungeon %s: %s leaves"), *Site.Name, *GetNameSafe(Pawn));
 }
 

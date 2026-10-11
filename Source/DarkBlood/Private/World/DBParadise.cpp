@@ -25,6 +25,7 @@
 
 #include "DarkBloodRules/Endgame.h"
 #include "DarkBloodRules/WorldState.h"
+#include "World/DBTeleport.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodParadise"
 
@@ -88,11 +89,7 @@ namespace
 		{
 			return;
 		}
-		Pawn->TeleportTo(Location, FRotator(0.f, Yaw, 0.f));
-		if (AController* Controller = Pawn->GetController())
-		{
-			Controller->SetControlRotation(FRotator(-8.f, Yaw, 0.f));
-		}
+		DBTeleport::MovePawn(Pawn, Location, Yaw);
 	}
 }
 

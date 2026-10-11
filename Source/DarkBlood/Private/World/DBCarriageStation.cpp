@@ -15,6 +15,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "World/DBRealmLayout.h"
 #include "World/DBWorldStateComponent.h"
+#include "World/DBTeleport.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodCarriage"
 
@@ -218,7 +219,7 @@ bool ADBCarriageStation::Travel(APlayerController* User, int32 Destination, FTex
 	const FVector Arrival = GetStationLocation(Destination);
 	const FVector Center(Settlements[Destination].Center.X * 100.0, Settlements[Destination].Center.Y * 100.0, Arrival.Z);
 	const FVector Spot = Arrival + (Center - Arrival).GetSafeNormal2D() * 400.f + FVector(0.f, 0.f, 120.f);
-	Pawn->TeleportTo(Spot, FRotator(0.f, (Center - Arrival).Rotation().Yaw, 0.f));
+	DBTeleport::MovePawn(Pawn, Spot, (Center - Arrival).Rotation().Yaw);
 
 	const float Hours = GetTravelHours(SiteIndex, Destination);
 	const ADBGameState* GameState = GetWorld()->GetGameState<ADBGameState>();

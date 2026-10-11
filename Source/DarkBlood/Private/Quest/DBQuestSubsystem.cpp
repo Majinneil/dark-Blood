@@ -108,12 +108,21 @@ void UDBQuestSubsystem::ReportEvent(EDBObjectiveKind Kind, FName Target, int32 A
 		}
 	}
 
-	// Kills and scripted events are group achievements; pickups, talks and locations are personal.
+	// Kills and scripted events are group achievements; pickups, talks and locations are personal. A kill counts for
+	// the players who fought together - within 150 m of the one who landed the blow - not for a friend on the other side
+	// of the realm (Phase 19). Without a known killer (a trap, a hazard) it counts for everyone.
 	const bool bGroupEvent = Kind == EDBObjectiveKind::Kill || Kind == EDBObjectiveKind::Custom;
+	const APawn* KillerPawn = Kind == EDBObjectiveKind::Kill && Instigator ? Instigator->GetPawn() : nullptr;
+	constexpr float GroupRange = 15000.f;
 	for (APlayerState* Candidate : GameState->PlayerArray)
 	{
 		ADBPlayerState* Player = Cast<ADBPlayerState>(Candidate);
 		if (!Player || (!bGroupEvent && Candidate != Instigator))
+		{
+			continue;
+		}
+		const APawn* PlayerPawn = Player->GetPawn();
+		if (KillerPawn && Candidate != Instigator && (!PlayerPawn || FVector::Dist(PlayerPawn->GetActorLocation(), KillerPawn->GetActorLocation()) > GroupRange))
 		{
 			continue;
 		}

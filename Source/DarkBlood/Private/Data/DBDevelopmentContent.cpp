@@ -581,6 +581,24 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		bAddedAny = true;
 	}
 
+	// A personal bounty (Phase 19): each player hunts on their own account; kills of the group count within 150 m.
+	if (!Data.FindQuest(TEXT("SQ_DemonHunt")))
+	{
+		UDBQuestDefinition* Quest = NewObject<UDBQuestDefinition>(&Data, NAME_None, RF_Transient);
+		Quest->QuestId = TEXT("SQ_DemonHunt");
+		Quest->Title = FText::FromString(TEXT("Daemonenjagd [DEV]"));
+		Quest->Category = EDBQuestCategory::Bounty;
+		Quest->Scope = EDBQuestScope::Personal;
+		Quest->RegionId = TEXT("Capital");
+		Quest->bAutoComplete = true;
+		Quest->bCanAbandon = true;
+		Quest->Objectives.Add(Objective(TEXT("HuntDemons"), EDBObjectiveKind::Kill, TEXT("LesserDemon"), 3, TEXT("Erschlage niedere Daemonen")));
+		Quest->Reward.Xp = 150;
+		Quest->Reward.Currency = 60;
+		Data.RegisterQuest(Quest);
+		bAddedAny = true;
+	}
+
 	// ---- Region liberation quests (Phase 11, docs/REGIONS.md) ------------------------------------
 	// Start when the party first enters a vassal region: thin the region's demons, break its demon camp (commander),
 	// defeat its vassal. Objectives in any order; shared progress for the party.

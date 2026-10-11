@@ -67,6 +67,7 @@
 #include "Quest/DBQuestSubsystem.h"
 #include "World/DBEconomyActors.h"
 #include "World/DBWorldStateComponent.h"
+#include "World/DBTeleport.h"
 
 namespace
 {
@@ -305,6 +306,19 @@ void UDBCheatManager::DBDumpCharacter()
 	{
 		UE_LOG(LogDarkBlood, Display, TEXT("  [%d:%d] %s x%d (dur %d)"), Entry.Section, Entry.SlotIndex, *Entry.Stack.ItemId.ToString(),
 			Entry.Stack.Count, Entry.Stack.Durability);
+	}
+	if (const UDBQuestComponent* Personal = PlayerState->GetPersonalQuests())
+	{
+		for (const FDBQuestProgressView& Quest : Personal->GetQuests())
+		{
+			FString Counts;
+			for (const int32 Count : Quest.ObjectiveCounts)
+			{
+				Counts += FString::Printf(TEXT(" %d"), Count);
+			}
+			UE_LOG(LogDarkBlood, Display, TEXT("  quest %s: %s,%s"), *Quest.QuestId.ToString(), *StaticEnum<EDBQuestStatus>()->GetNameStringByValue(static_cast<int64>(Quest.Status)),
+				*Counts);
+		}
 	}
 	for (uint8 SlotIndex = 0; SlotIndex <= static_cast<uint8>(EDBEquipSlot::Accessory2); ++SlotIndex)
 	{
@@ -888,7 +902,7 @@ void UDBCheatManager::DBTravel(const FString& Region, float OffsetX, float Offse
 	const double X = Target->Center.X + OffsetX;
 	const double Y = Target->Center.Y + OffsetY;
 	const double Ground = FMath::Max(DBRealm::SampleHeight(X, Y), 0.0);
-	Pawn->TeleportTo(FVector(X * 100.0, Y * 100.0, Ground * 100.0 + 250.0), Pawn->GetActorRotation());
+	DBTeleport::MovePawn(Pawn, FVector(X * 100.0, Y * 100.0, Ground * 100.0 + 250.0), Pawn->GetActorRotation().Yaw);
 	UE_LOG(LogDarkBlood, Display, TEXT("DBTravel: %s (%s) at %.0f / %.0f m, ground %.0f m"), Target->DisplayName, *Target->RegionId.ToString(), X, Y, Ground);
 }
 
@@ -1484,7 +1498,7 @@ void UDBCheatManager::DBNewCycle(const FString& Mode)
 	{
 		if (APawn* Pawn = GetOuterAPlayerController()->GetPawn())
 		{
-			Pawn->TeleportTo(DBParadise::GetCapitalArrival(), FRotator::ZeroRotator);
+			DBTeleport::MovePawn(Pawn, DBParadise::GetCapitalArrival(), 0.f);
 		}
 	}
 	UE_LOG(LogDarkBlood, Display, TEXT("DBNewCycle: %s (cycle %d)"), bBegun ? TEXT("begun") : TEXT("refused - the demon king has not fallen"), WorldState->GetCycle());

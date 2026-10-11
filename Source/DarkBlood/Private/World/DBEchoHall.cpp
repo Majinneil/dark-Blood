@@ -27,6 +27,7 @@
 #include "World/DBWorldStateComponent.h"
 
 #include "DarkBloodRules/Endgame.h"
+#include "World/DBTeleport.h"
 
 #define LOCTEXT_NAMESPACE "DarkBloodEchoHall"
 
@@ -116,11 +117,7 @@ bool DBEchoHall::Enter(APlayerController* User)
 	{
 		Horse->Interact(User); // horses wait outside
 	}
-	Pawn->TeleportTo(GetArrival(), FRotator::ZeroRotator);
-	if (AController* PawnController = Pawn->GetController())
-	{
-		PawnController->SetControlRotation(FRotator(-8.f, 0.f, 0.f));
-	}
+	DBTeleport::MovePawn(Pawn, GetArrival(), 0.f);
 	if (Controller)
 	{
 		Controller->ClientShowNotification(LOCTEXT("HallEnter", "Halle der Echos: Beruehre den Stein eines besiegten Vasallen, um sein Echo herauszufordern."));

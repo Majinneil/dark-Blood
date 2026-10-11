@@ -1,6 +1,9 @@
 #include "Player/DBPlayerController.h"
 
 #include "Audio/DBAudioSubsystem.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameSession.h"
+#include "TimerManager.h"
 
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Core/DBGameSettings.h"
@@ -141,6 +144,20 @@ void ADBPlayerController::ServerUploadCharacter_Implementation(const TArray<uint
 		else
 		{
 			ClientCharacterRejected(Error);
+			// Without a valid character there is nothing to play: the reason reaches the player first, then the
+			// connection is closed so the slot is free again.
+			UE_LOG(LogDBSave, Warning, TEXT("Character of %s rejected: %s - disconnecting in 8 s"), *GetNameSafe(PlayerState), *Error);
+			const TWeakObjectPtr<ADBPlayerController> WeakThis = this;
+			const FText Reason = FText::FromString(Error);
+			FTimerHandle Handle;
+			GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([WeakThis, Reason]()
+			{
+				AGameModeBase* Mode = WeakThis.IsValid() ? WeakThis->GetWorld()->GetAuthGameMode() : nullptr;
+				if (Mode && Mode->GameSession)
+				{
+					Mode->GameSession->KickPlayer(WeakThis.Get(), Reason);
+				}
+			}), 8.f, false);
 		}
 	}
 }
@@ -183,6 +200,11 @@ void ADBPlayerController::ClientCharacterRejected_Implementation(const FString& 
 {
 	UE_LOG(LogDBSave, Error, TEXT("Server rejected character: %s"), *Reason);
 	ClientMessage(FString::Printf(TEXT("Charakter abgelehnt: %s"), *Reason));
+	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
+	{
+		GameHUD->ShowNotification(FText::Format(NSLOCTEXT("DarkBlood", "CharacterRejected", "Der Server lehnt deinen Charakter ab: {0} Die Verbindung wird getrennt."),
+			FText::FromString(Reason)));
+	}
 }
 
 void ADBPlayerController::ClientRequestCharacterCreation_Implementation()

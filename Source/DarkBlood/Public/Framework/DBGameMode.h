@@ -68,4 +68,6 @@ private:
 	EDBPersistenceMode PersistenceMode = EDBPersistenceMode::LocalCharacters;
 	FTimerHandle AutosaveTimer;
 	TMap<TWeakObjectPtr<APlayerController>, FString> RequestedCharacterIndex;
+	/** Lasting player keys sent with the login (UDBLocalPlayer), for platforms without a stable id. */
+	TMap<TWeakObjectPtr<APlayerController>, FString> PlayerKeys;
 };

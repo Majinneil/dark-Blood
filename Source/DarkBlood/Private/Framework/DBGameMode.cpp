@@ -15,6 +15,7 @@
 #include "GameFramework/PlayerStart.h"
 #include "Inventory/DBInventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/DBLocalPlayer.h"
 #include "Player/DBPlayerController.h"
 #include "Player/DBPlayerState.h"
 #include "Player/DBProgressionComponent.h"
@@ -109,14 +110,26 @@ FString ADBGameMode::InitNewPlayer(APlayerController* NewPlayerController, const
 	const FString& Portal)
 {
 	RequestedCharacterIndex.Add(NewPlayerController, UGameplayStatics::ParseOption(Options, TEXT("Character")));
+	const FString Key = UGameplayStatics::ParseOption(Options, TEXT("DBKey"));
+	if (UDBLocalPlayer::IsValidPlayerKey(Key))
+	{
+		PlayerKeys.Add(NewPlayerController, Key);
+	}
 	return Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 }
 
 FString ADBGameMode::GetServerSlotKey(const APlayerController* Controller) const
 {
 	const APlayerState* PlayerState = Controller ? Controller->PlayerState : nullptr;
-	const FString PlayerId = PlayerState && PlayerState->GetUniqueId().IsValid() ? PlayerState->GetUniqueId().ToString()
+	FString PlayerId = PlayerState && PlayerState->GetUniqueId().IsValid() ? PlayerState->GetUniqueId().ToString()
 		: (PlayerState ? PlayerState->GetPlayerName() : TEXT("Unknown"));
+	// The NULL subsystem (LAN / direct IP) hands out a new id at every start: the player's lasting key finds the
+	// characters instead. A real platform id (Steam, EOS) always wins.
+	const bool bPlatformId = PlayerState && PlayerState->GetUniqueId().IsValid() && PlayerState->GetUniqueId().GetType() != FName(TEXT("NULL"));
+	if (const FString* Key = PlayerKeys.Find(const_cast<APlayerController*>(Controller)); Key && !bPlatformId)
+	{
+		PlayerId = TEXT("Key:") + *Key;
+	}
 	const FString* Index = RequestedCharacterIndex.Find(const_cast<APlayerController*>(Controller));
 	return UDBSaveSubsystem::MakeServerSlotKey(PlayerId, Index ? *Index : FString());
 }
@@ -328,6 +341,7 @@ void ADBGameMode::Logout(AController* Exiting)
 	{
 		SaveCharacter(Controller->GetPlayerState<ADBPlayerState>());
 		RequestedCharacterIndex.Remove(const_cast<APlayerController*>(Controller));
+		PlayerKeys.Remove(const_cast<APlayerController*>(Controller));
 	}
 	Super::Logout(Exiting);
 }
