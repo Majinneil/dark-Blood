@@ -8,6 +8,7 @@
 #include "EngineUtils.h"
 #include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Audio/DBAudioSubsystem.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Visual/DBCombatFeedback.h"
@@ -306,6 +307,11 @@ void ADBWaterfall::Build(const FDBWaterfallSite& Site)
 			FTransform(FRotator::ZeroRotator, FVector(Landing.X, Landing.Y, FMath::Max(Landing.Z, 0.f) + 45.f), FVector(Site.Width * 1.5f / 100.f, Site.Width * 1.5f / 100.f, 0.2f)));
 	}
 	Foot = FVector(Landing.X, Landing.Y, FMath::Max(Landing.Z, 0.f) + 60.f);
+	// The roar: heard from far, loudest at the foot (an audio component only on machines with audio).
+	if (UDBAudioSubsystem* Audio = UDBAudioSubsystem::Get(this))
+	{
+		Audio->PlayLoopAttached(TEXT("Ambience/Waterfall"), Root, (Foot + Site.Top) * 0.5f, Site.Width * 0.8f + (Site.Top.Z - Site.Bottom.Z) * 0.4f, 16000.f);
+	}
 	FootRadius = Site.Width * 0.45f;
 	Random.Initialize(static_cast<int32>(Site.Top.X + Site.Top.Y));
 }

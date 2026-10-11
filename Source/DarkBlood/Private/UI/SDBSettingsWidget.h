@@ -26,6 +26,11 @@ private:
 		bool bRayTracing = true;
 		int32 FrameRateIndex = 0;
 		bool bVSync = true;
+		/** Volumes in percent steps of 10. */
+		int32 Master = 10;
+		int32 Music = 8;
+		int32 Effects = 10;
+		int32 Voice = 10;
 	};
 
 	void LoadFromSettings();

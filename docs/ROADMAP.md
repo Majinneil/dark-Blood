@@ -23,7 +23,7 @@ Legende: ✅ fertig und getestet · 🟡 implementiert, nicht (vollständig) get
 | 15 | Paradies & Finale | ✅ Gameplay (Welt gereinigt nach dem König, Pforte aus Licht am Thron, schwebende Paradies-Insel über DAS ENDE, Schrein des Friedens mit Finale und Abspann, Quest MQ13, Rückkehr in die Hauptstadt; Regelkern, headless, Koop, gerendert getestet, 92–100 FPS) · 🟡 Zwischensequenz, Musik, Ahnengeister |
 | 16 | Endgame | ✅ Gameplay (New Game+ mit 7 skalierten Zyklen, Halle der Echos mit 17 Revanchen und Echo-Rängen, endloser Abgrund mit Wächtern alle 5 Ebenen, Beute-Bonus; Regelkern, headless, Koop, gerendert getestet, 93 FPS) · 🟡 eigene Modelle, Musik, Ranglisten |
 | 17 | High-End Visual Overhaul | 🟡 Kampf-Effekte über GameplayCues, Boss-Warnzonen, Portale/Schreine, triplanarer Fels, Wasserfälle, Abgrund-Look (gerendert + Koop getestet, 78–92 FPS) · ⬜ Klippen-Meshes, Wetter, Charaktere (MetaHumans) |
-| 18 | Audio / Voice / Cinematics | ⬜ |
+| 18 | Audio / Voice / Cinematics | 🟡 Audio ✅ (181 CC0-Klänge, Kampf über GameplayCues, Schritte je Untergrund, Umgebung je Gebiet und Tageszeit, Wasserfälle, Musik Erkundung/Kampf/Boss mit Überblendung, Lautstärke-Einstellungen; verdeckt und stumm getestet) · ⬜ Sprachausgabe, Zwischensequenzen |
 | 19 | Multiplayer Hardening | ⬜ |
 | 20 | Optimierung | ⬜ |
 | 21 | QA & Release | ⬜ |

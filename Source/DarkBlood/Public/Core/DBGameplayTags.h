@@ -64,6 +64,7 @@ namespace DBTags
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Parried);
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Stagger);
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Dodge);
+	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Combat_Swing);
 
 	// Animation keys (UDBAnimationSetDefinition); missing keys fall back to the parent tag
 	DARKBLOOD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Anim_Attack);

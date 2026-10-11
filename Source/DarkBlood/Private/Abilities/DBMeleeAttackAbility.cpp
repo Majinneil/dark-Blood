@@ -352,6 +352,12 @@ void UDBMeleeAttackAbility::PerformHit()
 		*StaticEnum<EDBAttackContext>()->GetNameStringByValue(static_cast<int64>(Context)), CurrentStep + 1, Steps.Num(), Charge.bCharged ? *FString::Printf(TEXT(" charged %.0f%%"), Charge.ChargeFraction * 100.f) : TEXT(""),
 		bCounter ? TEXT(" COUNTER") : TEXT(""));
 
+	if (Self->HasAuthority())
+	{
+		// Everyone hears the swing (presentation: DBCombatFeedback).
+		SourceASC->ExecuteGameplayCue(DBTags::GameplayCue_Combat_Swing, SourceASC->MakeEffectContext());
+	}
+
 	const FVector Origin = Self->GetActorLocation();
 	TArray<FOverlapResult> Overlaps;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(DBMeleeHit), false, Self);

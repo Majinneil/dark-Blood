@@ -65,4 +65,6 @@ private:
 	TSharedPtr<SDBCarriageWidget> CarriageWidget;
 	FDelegateHandle DialogueHandle;
 	bool bUIReady = false;
+	/** Open menu panels last time (UI open / close sounds). */
+	int32 OpenPanels = 0;
 };

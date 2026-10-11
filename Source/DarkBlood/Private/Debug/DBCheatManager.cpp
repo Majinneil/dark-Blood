@@ -10,6 +10,7 @@
 #include "World/DBTheEnd.h"
 #include "World/DBParadise.h"
 #include "World/DBEchoHall.h"
+#include "Audio/DBAudioSubsystem.h"
 #include "World/DBWaterfall.h"
 #include "Visual/DBCombatFeedback.h"
 #include "DarkBloodRules/Endgame.h"
@@ -1574,6 +1575,35 @@ void UDBCheatManager::DBWaterfall(int32 Index, float Distance)
 	Pawn->TeleportTo(FVector(Stand.X * 100.0, Stand.Y * 100.0, Ground + 200.0), (-Flat).Rotation());
 	GetOuterAPlayerController()->SetControlRotation(FRotator(8.f, (-Flat).Rotation().Yaw, 0.f));
 	UE_LOG(LogDarkBlood, Display, TEXT("DBWaterfall %d: standing %.0f m before it"), Index, Distance / 100.0);
+}
+
+void UDBCheatManager::DBAudio()
+{
+	const UDBAudioSubsystem* Audio = UDBAudioSubsystem::Get(this);
+	if (!Audio)
+	{
+		UE_LOG(LogDarkBlood, Display, TEXT("DBAudio: no audio subsystem"));
+		return;
+	}
+	UE_LOG(LogDarkBlood, Display, TEXT("DBAudio: %d sounds in the bank, ambience %s, music %s, audio device %s"), Audio->GetBankGroupCount(),
+		*Audio->GetAmbienceBed().ToString(), *StaticEnum<EDBMusicState>()->GetNameStringByValue(static_cast<int64>(Audio->GetMusicState())),
+		GetWorld()->GetAudioDeviceRaw() ? TEXT("yes") : TEXT("none (-nosound)"));
+}
+
+void UDBCheatManager::DBMusic(int32 State)
+{
+	if (UDBAudioSubsystem* Audio = UDBAudioSubsystem::Get(this))
+	{
+		Audio->ForceMusic(State);
+	}
+}
+
+void UDBCheatManager::DBSound(const FString& Sound)
+{
+	if (const APawn* Pawn = GetOuterAPlayerController()->GetPawn())
+	{
+		UDBAudioSubsystem::PlayAt(this, FName(Sound), Pawn->GetActorLocation(), EDBSoundReach::Combat);
+	}
 }
 
 void UDBCheatManager::DBRegionDump()

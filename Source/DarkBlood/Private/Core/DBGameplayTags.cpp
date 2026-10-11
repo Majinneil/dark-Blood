@@ -59,6 +59,7 @@ namespace DBTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Parried, "GameplayCue.Combat.Parried", "A hit was perfectly parried.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Stagger, "GameplayCue.Combat.Stagger", "Poise broken / hit reaction.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Dodge, "GameplayCue.Combat.Dodge", "Dodge started.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Swing, "GameplayCue.Combat.Swing", "A melee swing cuts the air.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack, "Ability.Attack", "Any attack.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Attack_Light, "Ability.Attack.Light", "Light attack / combo.");

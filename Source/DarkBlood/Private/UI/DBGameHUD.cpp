@@ -27,6 +27,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
+#include "Audio/DBAudioSubsystem.h"
 
 void ADBGameHUD::BeginPlay()
 {
@@ -408,6 +409,14 @@ void ADBGameHUD::UpdateInputMode()
 	if (!Controller || CreatorRoot.IsValid())
 	{
 		return;
+	}
+	// A panel opening or closing is heard (dialogue excluded: it speaks for itself).
+	const int32 Panels = SkillTreeRoot.IsValid() + InventoryRoot.IsValid() + SettingsRoot.IsValid() + CraftingWidget.IsValid() + MapRoot.IsValid()
+		+ CarriageWidget.IsValid();
+	if (Panels != OpenPanels)
+	{
+		UDBAudioSubsystem::Play2D(this, Panels > OpenPanels ? FName(TEXT("UI/Open")) : FName(TEXT("UI/Close")), 0.45f);
+		OpenPanels = Panels;
 	}
 	if (Controller->GetDialogue()->IsDialogueOpen() || SkillTreeRoot.IsValid() || InventoryRoot.IsValid() || SettingsRoot.IsValid() || CraftingWidget.IsValid()
 		|| MapRoot.IsValid() || CarriageWidget.IsValid())

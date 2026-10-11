@@ -1,5 +1,7 @@
 #include "UI/SDBSettingsWidget.h"
 
+#include "Audio/DBAudioSubsystem.h"
+#include "Engine/Engine.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Settings/DBGameUserSettings.h"
 #include "UI/DBUIStyle.h"
@@ -31,6 +33,11 @@ namespace
 	FText UpscalingName(int32 Mode)
 	{
 		return StaticEnum<EDBUpscaling>()->GetDisplayNameTextByIndex(FMath::Clamp(Mode, 0, 4));
+	}
+
+	FText Percent(int32 Tenths)
+	{
+		return FText::Format(LOCTEXT("Percent", "{0} %"), FText::AsNumber(Tenths * 10));
 	}
 
 	int32 Wrap(int32 Value, int32 Count)
@@ -76,7 +83,7 @@ void SDBSettingsWidget::Construct(const FArguments& InArgs)
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 16.f)
 				[
-					SNew(STextBlock).Font(DBUIStyle::Font(24, "Bold")).ColorAndOpacity(DBUIStyle::Gold).Text(LOCTEXT("Title", "Grafik"))
+					SNew(STextBlock).Font(DBUIStyle::Font(24, "Bold")).ColorAndOpacity(DBUIStyle::Gold).Text(LOCTEXT("Title", "Grafik und Klang"))
 				]
 				+ SVerticalBox::Slot().AutoHeight()
 				[
@@ -127,6 +134,26 @@ void SDBSettingsWidget::Construct(const FArguments& InArgs)
 				[
 					MakeRow(LOCTEXT("VSync", "VSync"), [this]() { return Pending.bVSync ? LOCTEXT("On", "An") : LOCTEXT("Off", "Aus"); },
 						[this](int32) { Pending.bVSync = !Pending.bVSync; })
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 10.f, 0.f, 0.f)
+				[
+					MakeRow(LOCTEXT("Master", "Gesamtlautstaerke"), [this]() { return Percent(Pending.Master); },
+						[this](int32 Step) { Pending.Master = FMath::Clamp(Pending.Master + Step, 0, 10); })
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					MakeRow(LOCTEXT("Music", "Musik"), [this]() { return Percent(Pending.Music); },
+						[this](int32 Step) { Pending.Music = FMath::Clamp(Pending.Music + Step, 0, 10); })
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					MakeRow(LOCTEXT("Effects", "Effekte und Umgebung"), [this]() { return Percent(Pending.Effects); },
+						[this](int32 Step) { Pending.Effects = FMath::Clamp(Pending.Effects + Step, 0, 10); })
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					MakeRow(LOCTEXT("Voice", "Stimmen"), [this]() { return Percent(Pending.Voice); },
+						[this](int32 Step) { Pending.Voice = FMath::Clamp(Pending.Voice + Step, 0, 10); })
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 12.f, 0.f, 0.f)
 				[
@@ -219,6 +246,10 @@ void SDBSettingsWidget::LoadFromSettings()
 		}
 	}
 	Pending.bVSync = Settings->IsVSyncEnabled();
+	Pending.Master = FMath::RoundToInt(Settings->MasterVolume * 10.f);
+	Pending.Music = FMath::RoundToInt(Settings->MusicVolume * 10.f);
+	Pending.Effects = FMath::RoundToInt(Settings->EffectsVolume * 10.f);
+	Pending.Voice = FMath::RoundToInt(Settings->VoiceVolume * 10.f);
 }
 
 void SDBSettingsWidget::Apply()
@@ -238,8 +269,20 @@ void SDBSettingsWidget::Apply()
 	Settings->bHardwareRayTracing = Pending.bRayTracing;
 	Settings->SetFrameRateLimit(FrameRates[FMath::Clamp(Pending.FrameRateIndex, 0, 4)]);
 	Settings->SetVSyncEnabled(Pending.bVSync);
+	Settings->MasterVolume = Pending.Master / 10.f;
+	Settings->MusicVolume = Pending.Music / 10.f;
+	Settings->EffectsVolume = Pending.Effects / 10.f;
+	Settings->VoiceVolume = Pending.Voice / 10.f;
 	Settings->ApplySettings(false);
 	Settings->SaveSettings();
+	// Volumes take effect at once in every running world.
+	for (const FWorldContext& Context : GEngine->GetWorldContexts())
+	{
+		if (UDBAudioSubsystem* Audio = Context.World() ? Context.World()->GetSubsystem<UDBAudioSubsystem>() : nullptr)
+		{
+			Audio->ApplyVolumes();
+		}
+	}
 	StatusText = FText::FromString(TEXT("Gespeichert: ") + Settings->Describe());
 }
 

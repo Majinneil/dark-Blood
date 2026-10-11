@@ -1,5 +1,7 @@
 #include "Player/DBPlayerController.h"
 
+#include "Audio/DBAudioSubsystem.h"
+
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Core/DBGameSettings.h"
 #include "DarkBlood.h"
@@ -278,6 +280,8 @@ void ADBPlayerController::ServerInteract_Implementation(AActor* Target)
 void ADBPlayerController::ClientShowNotification_Implementation(const FText& Text)
 {
 	UE_LOG(LogDarkBlood, Display, TEXT("Notification: %s"), *Text.ToString());
+	// Loot jingles, everything else gets a soft chime.
+	UDBAudioSubsystem::Play2D(this, Text.ToString().StartsWith(TEXT("Beute")) ? FName(TEXT("UI/Coins")) : FName(TEXT("UI/Notify")), 0.5f);
 	if (ADBGameHUD* GameHUD = GetHUD<ADBGameHUD>())
 	{
 		GameHUD->ShowNotification(Text);

@@ -2,6 +2,7 @@
 
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBAttributeSet.h"
+#include "Audio/DBFootstepComponent.h"
 #include "Character/DBCharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -26,6 +27,7 @@ ADBCharacterBase::ADBCharacterBase(const FObjectInitializer& ObjectInitializer)
 	PlaceholderBody->SetCanEverAffectNavigation(false);
 
 	Visuals = CreateDefaultSubobject<UDBCharacterVisualComponent>(TEXT("Visuals"));
+	Footsteps = CreateDefaultSubobject<UDBFootstepComponent>(TEXT("Footsteps"));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (Cylinder.Succeeded())

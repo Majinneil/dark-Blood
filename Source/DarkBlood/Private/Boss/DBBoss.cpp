@@ -1,6 +1,7 @@
 #include "Boss/DBBoss.h"
 
 #include "AI/DBMeleeAIComponent.h"
+#include "Audio/DBAudioSubsystem.h"
 #include "Abilities/DBAbilitySystemComponent.h"
 #include "Abilities/DBAttributeSet.h"
 #include "Abilities/DBMeleeAttackAbility.h"
@@ -157,6 +158,8 @@ void ADBBossCharacter::BeginPlay()
 	// The endgame scale is applied in BeginPlay; enrage multiplies the scaled attack.
 	BaseAttackPower = AttackPower;
 	ApplyLook();
+	// It announces itself (an echo higher and thinner, like a memory). Clients learn bEcho with the spawn.
+	UDBAudioSubsystem::PlayAt(this, TEXT("Voice/BossRoar"), GetActorLocation(), EDBSoundReach::Far, 1.f, bEcho ? 1.2f : 0.85f);
 }
 
 void ADBBossCharacter::PlayDeathPresentation()

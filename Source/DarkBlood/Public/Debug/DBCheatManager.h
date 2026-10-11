@@ -164,6 +164,12 @@ public:
 	UFUNCTION(Exec) void DBFxShow(float Spacing = 260.f, int32 Repeats = 6);
 	/** Phase 17: lists the waterfalls; with an index, stands the player before that one, looking at it. */
 	UFUNCTION(Exec) void DBWaterfall(int32 Index = -1, float Distance = 6000.f);
+
+	/** Phase 18: sound bank, ambience and music state; force music (0 silence, 1 explore, 2 battle, 3 boss, -1 auto);
+	 *  play one sound of the bank at the player ("Combat/Parry"). */
+	UFUNCTION(Exec) void DBAudio();
+	UFUNCTION(Exec) void DBMusic(int32 State = -1);
+	UFUNCTION(Exec) void DBSound(const FString& Sound);
 	/** Spawns a sailing ship at the water line in front of the player (Style 0 war, 1 fighting, 2 merchant, 3 boat). */
 	UFUNCTION(Exec) void DBSpawnShip(float Distance = 2500.f, int32 Style = 2);
 	/** Takes (or leaves) the helm of the nearest ship and steers it for Seconds (Rudder/Sails -1..1); logs the course. */

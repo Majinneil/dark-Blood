@@ -1,5 +1,6 @@
 #include "Visual/DBCombatFeedback.h"
 
+#include "Audio/DBAudioSubsystem.h"
 #include "Character/DBCharacterBase.h"
 #include "Core/DBGameplayTags.h"
 #include "DarkBlood.h"
@@ -70,9 +71,38 @@ UParticleSystem* DBCombatFeedback::GetSystem(EDBCombatFx Fx)
 	return Loaded[Index].Get();
 }
 
+void DBCombatFeedback::PlaySound(const UObject* WorldContext, EDBCombatFx Fx, const FVector& Location, float Scale)
+{
+	switch (Fx)
+	{
+	case EDBCombatFx::HitByPlayer: UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/HitFlesh"), Location, EDBSoundReach::Combat, 0.9f); break;
+	case EDBCombatFx::HitByPlayerHeavy: UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/HitHeavy"), Location, EDBSoundReach::Combat, 1.f, 0.9f); break;
+	case EDBCombatFx::HitByDemon: UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/HitClaw"), Location, EDBSoundReach::Combat, 0.9f); break;
+	case EDBCombatFx::Blocked: UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/Block"), Location, EDBSoundReach::Combat, 0.85f); break;
+	case EDBCombatFx::Parried:
+		// Steel ringing out: the reward of a perfect parry carries far.
+		UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/Parry"), Location, EDBSoundReach::Far, 1.f, 1.05f);
+		UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/Block"), Location, EDBSoundReach::Combat, 0.7f, 1.2f);
+		break;
+	case EDBCombatFx::Stagger: UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/Stagger"), Location, EDBSoundReach::Combat, 0.6f, 0.85f); break;
+	case EDBCombatFx::DemonDeath: UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Voice/DemonDeath"), Location, EDBSoundReach::Voice, 0.9f); break;
+	case EDBCombatFx::BossDeath:
+		UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Voice/BossRoar"), Location, EDBSoundReach::Far, 1.f, 0.7f);
+		UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/GroundBlast"), Location, EDBSoundReach::Far, 1.f, 0.6f);
+		break;
+	case EDBCombatFx::GroundBlast:
+		UDBAudioSubsystem::PlayAt(WorldContext, TEXT("Combat/GroundBlast"), Location, EDBSoundReach::Far, FMath::Clamp(0.6f + Scale * 0.2f, 0.6f, 1.f),
+			FMath::Clamp(1.1f - Scale * 0.15f, 0.65f, 1.1f));
+		break;
+	default:
+		break;
+	}
+}
+
 void DBCombatFeedback::Play(const UObject* WorldContext, EDBCombatFx Fx, const FVector& Location, const FVector& Normal, float Scale)
 {
 	UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
+	PlaySound(WorldContext, Fx, Location, Scale);
 	UParticleSystem* System = CanRender(World) ? GetSystem(Fx) : nullptr;
 	if (!System)
 	{
@@ -86,8 +116,21 @@ void DBCombatFeedback::Play(const UObject* WorldContext, EDBCombatFx Fx, const F
 void DBCombatFeedback::HandleCue(AActor* Target, FGameplayTag Cue, const FGameplayCueParameters& Parameters)
 {
 	UE_LOG(LogDBCombat, Verbose, TEXT("Combat cue %s on %s (%.1f)"), *Cue.ToString(), *GetNameSafe(Target), Parameters.RawMagnitude);
-	if (!Target || !CanRender(Target->GetWorld()))
+	if (!Target || !Target->GetWorld() || Target->GetWorld()->GetNetMode() == NM_DedicatedServer)
 	{
+		return;
+	}
+	if (Cue == DBTags::GameplayCue_Combat_Swing)
+	{
+		// The blade (or claw) cuts the air; demons snarl now and then as they strike.
+		const ADBCharacterBase* Attacker = Cast<ADBCharacterBase>(Target);
+		const bool bDemon = Attacker && Attacker->GetTeam() == EDBTeam::Demons;
+		UDBAudioSubsystem::PlayAt(Target, TEXT("Combat/Swing"), Target->GetActorLocation() + FVector(0.f, 0.f, 40.f), EDBSoundReach::Combat, bDemon ? 0.7f : 0.8f,
+			bDemon ? 0.8f : 1.f);
+		if (bDemon && FMath::FRand() < 0.3f)
+		{
+			UDBAudioSubsystem::PlayAt(Target, TEXT("Voice/DemonGrowl"), Target->GetActorLocation() + FVector(0.f, 0.f, 60.f), EDBSoundReach::Voice, 0.8f);
+		}
 		return;
 	}
 	// The server sends where the blow landed; older callers without a place hit the chest.

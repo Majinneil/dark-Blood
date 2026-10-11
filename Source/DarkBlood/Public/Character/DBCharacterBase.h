@@ -11,6 +11,7 @@
 class ADBCharacterBase;
 class UDBAbilitySystemComponent;
 class UDBCharacterVisualComponent;
+class UDBFootstepComponent;
 class UStaticMeshComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDBOnCharacterDied, ADBCharacterBase*, Character);
@@ -107,6 +108,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dark Blood|Visuals")
 	TObjectPtr<UDBCharacterVisualComponent> Visuals;
+
+	/** Footstep sounds (presentation, Phase 18). */
+	UPROPERTY(VisibleAnywhere, Category = "Dark Blood|Audio")
+	TObjectPtr<UDBFootstepComponent> Footsteps;
 
 	/** Tint of the placeholder body (players blue, enemies red, NPCs gold). */
 	UPROPERTY(EditDefaultsOnly, Category = "Dark Blood|Visuals")

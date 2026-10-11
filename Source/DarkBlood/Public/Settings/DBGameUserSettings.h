@@ -47,4 +47,17 @@ public:
 
 	UPROPERTY(Config)
 	bool bRecommendedDefaultsApplied = false;
+
+	/** Volumes 0..1 (Phase 18): everything, music, effects (combat, steps, ambience, interface), voices. */
+	UPROPERTY(Config)
+	float MasterVolume = 1.f;
+
+	UPROPERTY(Config)
+	float MusicVolume = 0.8f;
+
+	UPROPERTY(Config)
+	float EffectsVolume = 1.f;
+
+	UPROPERTY(Config)
+	float VoiceVolume = 1.f;
 };

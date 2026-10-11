@@ -37,6 +37,9 @@ namespace DBCombatFeedback
 	/** Plays one effect at a place (Normal points from the target towards the attacker). */
 	DARKBLOOD_API void Play(const UObject* WorldContext, EDBCombatFx Fx, const FVector& Location, const FVector& Normal, float Scale = 1.f);
 
+	/** Only the sound of an effect (Phase 18; Play includes it). */
+	DARKBLOOD_API void PlaySound(const UObject* WorldContext, EDBCombatFx Fx, const FVector& Location, float Scale = 1.f);
+
 	/** The particle system of an effect (loaded on first use; null if the pack is missing). */
 	DARKBLOOD_API UParticleSystem* GetSystem(EDBCombatFx Fx);
 	DARKBLOOD_API const TCHAR* GetName(EDBCombatFx Fx);

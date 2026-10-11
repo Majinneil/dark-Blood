@@ -26,6 +26,19 @@ Materialien von [ambientCG](https://ambientcg.com), Lizenz CC0 (https://docs.amb
 `Tools/UE58/ambientcg_fetch.py`: PaintedWood003, PaintedWood005, Paper001, Paper004, Fabric036, Fabric026, Fabric023,
 Metal009, Metal035, Bamboo002A.
 
+## Klang und Musik (CC0)
+
+Aufbereitet mit `Tools/Audio/db_prepare_audio.py`, importiert mit `Tools/UE58/db_import_audio.py` (Phase 18,
+[AUDIO.md](AUDIO.md)):
+
+- [Kenney](https://kenney.nl) (Kenney Vleugels): „RPG Audio“, „Impact Sounds“, „Interface Sounds“ – Schritte, Treffer,
+  Metall, Oberfläche
+- [OpenGameArt](https://opengameart.org): „Swishes Sound Pack“ und „RPG Sound Pack“ (artisticdude) – Schwünge,
+  Schwertziehen, Dämonenstimmen, Münzen; „Crickets Ambient Noise“ (Wolfgang_); „Birds and Wind – Ambient“
+  (Spring Spring); „Sea and river wave sounds“ (RandomMind); Musik „Asianoriental1“ (Tozan), „QaziJamJam“ und
+  „Determined Pursuit“ (Emma_MA)
+- Eigene Inhalte: Wasserfall-Rauschen, Bergwind und das Dröhnen der Dämonenlande sind im Skript synthetisiert.
+
 ## Fab – CC BY 4.0 (Namensnennung Pflicht, auch im späteren Spiel-Abspann)
 
 Über das Fab-Konto des Projektinhabers geladen, alle mit „Allows usage with AI: Yes“, Lizenz
