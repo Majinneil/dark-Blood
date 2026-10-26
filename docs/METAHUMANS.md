@@ -44,11 +44,21 @@ gilt der bisherige Körper – nichts bricht.
 Geprüft mit einem Stellvertreter-Blueprint (Quinn als `BP_NPC_Captain`): Der Hauptmann erschien als Quinn in der
 Idle-Pose des unsichtbaren Mannequins, 65,8 FPS. `DBSpawnNpc <NpcId> [Name]` stellt eine Figur vor die Kamera.
 
+## Speicherbedarf beim Bauen
+
+Der optimierte Build braucht beim Erzeugen des gemeinsamen Ordners `Build/Common` (nach dem Kompilieren von
+`Face_ControlBoard_CtrlRig`) über **110 GB zugesagten Speicher** – unabhängig von der Texturgröße (geprüft
+2026-10-26: Akaza mit 4K/2K und NPC_King mit 2K stürzten beide bei 108–109 GB mit „Auslagerungsdatei ist zu klein“
+ab). Auf einem Rechner mit 32 GB RAM muss die Auslagerungsdatei dafür vergrößert werden (z. B. 128 GB zusätzlich auf
+einem Laufwerk mit Platz), sonst bricht jeder Build ab. Das Skript setzt Texturquellen trotzdem auf Spielgröße
+(Akaza: Gesicht 4K, Körper 2K; NPCs 2K), weil 8K-Quellen zusätzlich Speicher und Videospeicher kosten.
+Bauen am besten je Figur in einem eigenen Editor-Prozess:
+`UnrealEditor.exe DarkBlood.uproject "-ExecCmds=py <Pfad>/db_metahuman_cast.py finish <Name>,QUIT_EDITOR"`.
+
 ## Offen
 
-- **Kleidung:** MetaHuman bringt nur moderne Kleidung mit. Kostenlos und ohne KI-Sperre gibt es auf Fab keine
-  japanische MetaHuman-Kleidung; „EDO_CITIZEN_X“ (DarkMattersForge, gratis, Edo-Zeit) ist mit „Allows usage with AI:
-  No“ markiert – Entscheidung des Projektinhabers.
+- **Kleidung:** MetaHuman bringt nur moderne Kleidung mit; Akazas Gewand entsteht deshalb in Blender
+  ([AKAZA_OUTFIT.md](AKAZA_OUTFIT.md)). NPC-Kleidung folgt nach demselben Verfahren.
 - Erst geriggte und gebaute MetaHumans (nach der Epic-Freigabe) zeigen das echte Ergebnis; danach FPS-Messung mit
   mehreren MetaHumans gleichzeitig.
 - Ein automatisches Anpassen des Gesichts an ein Hyper3D-Modell (`db_conform_metahuman_head.py`) verzerrt das Gesicht,

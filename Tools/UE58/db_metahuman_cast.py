@@ -1,6 +1,6 @@
 # Run in the Unreal Editor console (UE 5.8, MetaHuman Creator):
 #   py "Tools/UE58/db_metahuman_cast.py" create          create the cast's character assets from Epic presets (offline)
-#   py "Tools/UE58/db_metahuman_cast.py" finish [Name]   cloud auto rig (joints only) + optimized build of every cast
+#   py "Tools/UE58/db_metahuman_cast.py" finish [Name]   cloud auto rig (joints only), texture sources and optimized build of every cast
 #                                                        member (or one), skipping those already built - needs the
 #                                                        Epic account authorization of MetaHuman Creator once
 #
@@ -45,6 +45,25 @@ def create():
             unreal.log_warning("DBCAST %s: preset %s missing" % (name, preset))
 
 
+def set_texture_resolutions(character, hero):
+    """Returns True if the resolutions changed (the texture sources must then be fetched again)."""
+    skin = character.get_editor_property("skin_settings")
+    wanted = skin.get_editor_property("desired_texture_sources_resolutions")
+    face = unreal.RequestTextureResolution.RES4K if hero else unreal.RequestTextureResolution.RES2K
+    body = unreal.RequestTextureResolution.RES2K
+    values = {"face_albedo": face, "face_normal": face, "face_cavity": face, "face_animated_maps": body,
+              "body_albedo": body, "body_normal": body, "body_cavity": body, "body_masks": body}
+    changed = False
+    for field, value in values.items():
+        if wanted.get_editor_property(field) != value:
+            wanted.set_editor_property(field, value)
+            changed = True
+    if changed:
+        skin.set_editor_property("desired_texture_sources_resolutions", wanted)
+        subsystem.commit_skin_settings(character, skin)
+    return changed
+
+
 def finish(only=None):
     names = ["Akaza"] + list(CAST)
     for name in names:
@@ -66,8 +85,24 @@ def finish(only=None):
                 request.report_progress = False
                 request.rig_type = unreal.MetaHumanRigType.JOINTS_ONLY
                 subsystem.request_auto_rigging(character, request)
+                # Keep the cloud result at once, whatever happens next.
+                library.save_loaded_asset(character, False)
+                log("%s rigged" % name)
+            # Texture sources sized for a game: the hero's face 4K, everything else 2K. 8K sources made the build
+            # need more than 90 GB of memory (it compresses many 8K maps at once) and cost video memory in play.
+            resized = set_texture_resolutions(character, name == "Akaza")
+            if resized:
+                log("%s texture sources set to %s" % (name, "4K face / 2K body" if name == "Akaza" else "2K"))
+            if resized or not subsystem.can_build_meta_human(character, False):
+                # The build also needs the face and body texture sources (Epic cloud, same authorization).
+                textures = unreal.MetaHumanCharacterTextureRequestParams()
+                textures.blocking = True
+                textures.report_progress = False
+                subsystem.request_texture_sources(character, textures)
+                library.save_loaded_asset(character, False)
+                log("%s textures downloaded" % name)
             if not subsystem.can_build_meta_human(character, True):
-                unreal.log_warning("DBCAST %s: not buildable (rig missing - Epic authorization?)" % name)
+                unreal.log_warning("DBCAST %s: not buildable (rig or textures missing - see the MetaHuman error above)" % name)
                 continue
             params = unreal.MetaHumanCharacterEditorBuildParameters()
             params.pipeline_type = unreal.MetaHumanDefaultPipelineType.OPTIMIZED
