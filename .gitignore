@@ -42,6 +42,16 @@ Content/DarkBlood/Characters/Paragon/
 Content/DarkBlood/Characters/Profiles/Paragon/
 Content/DarkBlood/Animation/Sets/Paragon/
 
+# Korean heritage packs from Fab (CC BY 4.0, Unreal format, 5.6 GB): added from each developer's own Fab library through
+# the Epic Games Launcher ("Add to project", nearest engine version). The launcher also overwrites Config/Default*.ini -
+# restore them from git afterwards. Credits: docs/CREDITS.md.
+Content/KoreanTraditionalMartialArts/
+Content/koreanPeddlers/
+Content/KoreanTraditionalFestival/
+Content/Joseon_Royal_Wear/
+Content/__ExternalActors__/
+Content/__ExternalObjects__/
+
 # Hyper3D Rodin bodies (subscription output, kept local until the art direction is decided)
 Content/DarkBlood/Characters/Hyper3D/
 
