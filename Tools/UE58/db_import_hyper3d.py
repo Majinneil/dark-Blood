@@ -49,19 +49,46 @@ def node(material, cls, x, y, **props):
     return expression
 
 
+DEFAULTS = {"BaseColor": "/Engine/EngineResources/WhiteSquareTexture", "Normal": "/Engine/EngineMaterials/FlatNormal",
+            "ORM": "/Engine/EngineMaterials/T_Default_Material_Grid_M"}
+
+
 def master_material():
     # Base color, tangent-space normal and glTF metallic-roughness (G roughness, B metallic) - what Rodin bakes.
     material = unreal.load_asset(MASTER)
     if material:
+        # Masters made before the defaults existed: give their parameters a default texture and recompile.
+        changed = False
+        for expression in mel.get_material_expressions(material):
+            texture = expression.get_editor_property("texture") if isinstance(expression, E.MaterialExpressionTextureSampleParameter2D) else None
+            # Unset or Unreal's sRGB DefaultTexture: wrong for the normal and ORM samplers (the material then fails).
+            if isinstance(expression, E.MaterialExpressionTextureSampleParameter2D) and (texture is None or texture.get_name() == "DefaultTexture"):
+                name = str(expression.get_editor_property("parameter_name"))
+                if name in DEFAULTS:
+                    expression.set_editor_property("texture", unreal.load_asset(DEFAULTS[name]))
+                    changed = True
+        for expression in mel.get_material_expressions(material):
+            if (isinstance(expression, E.MaterialExpressionTextureSampleParameter2D) and str(expression.get_editor_property("parameter_name")) == "ORM"
+                    and expression.get_editor_property("sampler_type") != unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR):
+                # ORM: linear color sampler, like its engine default texture; the ORM textures are imported linear.
+                expression.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+                changed = True
+        if changed:
+            mel.recompile_material(material)
+            library.save_loaded_asset(material, False)
+            log("default textures added to " + MASTER)
         return material
     folder, name = MASTER.rsplit("/", 1)
     material = tools.create_asset(name, folder, unreal.Material, unreal.MaterialFactoryNew())
     material.set_editor_property("used_with_skeletal_mesh", True)
-    base = node(material, E.MaterialExpressionTextureSampleParameter2D, -600, -200, parameter_name="BaseColor")
+    # Every texture parameter needs a default texture of its sampler type, or the material does not compile and the
+    # body draws with the grey default material.
+    base = node(material, E.MaterialExpressionTextureSampleParameter2D, -600, -200, parameter_name="BaseColor",
+                texture=unreal.load_asset(DEFAULTS["BaseColor"]))
     normal = node(material, E.MaterialExpressionTextureSampleParameter2D, -600, 100, parameter_name="Normal",
-                  sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+                  sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, texture=unreal.load_asset(DEFAULTS["Normal"]))
     orm = node(material, E.MaterialExpressionTextureSampleParameter2D, -600, 400, parameter_name="ORM",
-               sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+               sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, texture=unreal.load_asset(DEFAULTS["ORM"]))
     tint = node(material, E.MaterialExpressionVectorParameter, -600, -420, parameter_name="Tint",
                 default_value=unreal.LinearColor(1.0, 1.0, 1.0, 1.0))
     tinted = node(material, E.MaterialExpressionMultiply, -300, -260)
@@ -86,28 +113,31 @@ def import_texture(path, destination, name, usage):
         texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
         texture.set_editor_property("srgb", False)
     elif usage == "ORM":
-        texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_MASKS)
+        # Linear color (not masks): matches the master's Linear Color sampler and its engine default texture.
+        texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT)
         texture.set_editor_property("srgb", False)
     library.save_loaded_asset(texture, False)
     return texture
 
 
 def mesh_options(skeleton, physics):
-    pipeline = unreal.InterchangeGenericAssetsPipeline()
-    common = pipeline.get_editor_property("common_skeletal_meshes_and_animations_properties")
-    common.set_editor_property("skeleton", skeleton)
-    meshes = pipeline.get_editor_property("mesh_pipeline")
-    meshes.set_editor_property("import_skeletal_meshes", True)
-    meshes.set_editor_property("import_static_meshes", False)
-    meshes.set_editor_property("create_physics_asset", False)
-    meshes.set_editor_property("physics_asset", physics)
-    anims = pipeline.get_editor_property("animation_pipeline")
-    anims.set_editor_property("import_animations", False)
-    materials = pipeline.get_editor_property("material_pipeline")
-    materials.set_editor_property("import_materials", False)
-    override = unreal.InterchangePipelineStackOverride()
-    override.add_pipeline(pipeline)
-    return override
+    """The classic FBX importer: Interchange (UE 5.8) reads the bind pose of Blender's skinned FBX inconsistently."""
+    unreal.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX false")
+    options = unreal.FbxImportUI()
+    options.set_editor_property("import_mesh", True)
+    options.set_editor_property("import_as_skeletal", True)
+    options.set_editor_property("mesh_type_to_import", unreal.FBXImportType.FBXIT_SKELETAL_MESH)
+    options.set_editor_property("skeleton", skeleton)
+    options.set_editor_property("physics_asset", physics)
+    options.set_editor_property("create_physics_asset", False)
+    options.set_editor_property("import_materials", False)
+    options.set_editor_property("import_textures", False)
+    options.set_editor_property("import_animations", False)
+    data = options.get_editor_property("skeletal_mesh_import_data")
+    data.set_editor_property("import_morph_targets", False)
+    data.set_editor_property("update_skeleton_reference_pose", False)
+    data.set_editor_property("convert_scene", True)
+    return options
 
 
 skeleton = unreal.load_asset(SKELETON)

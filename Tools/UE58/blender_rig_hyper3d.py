@@ -22,7 +22,8 @@ from mathutils import Matrix, Vector
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if len(args) < 3:
     raise SystemExit("usage: blender -b --python blender_rig_hyper3d.py -- <model.glb> <out folder> <Name> [max triangles]")
-SOURCE, OUT, NAME = args[0], args[1], args[2]
+# Absolute paths: Blender resolves relative image and render paths against its own folder, not the shell's.
+SOURCE, OUT, NAME = os.path.abspath(args[0]), os.path.abspath(args[1]), args[2]
 MAX_TRIS = int(args[3]) if len(args) > 3 else 120000
 PROJECT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 MANNY = os.path.join(PROJECT, "SourceArt", "Mannequin", "SKM_Manny_Simple.fbx")
