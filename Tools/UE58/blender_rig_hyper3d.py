@@ -270,12 +270,29 @@ for image in bpy.data.images:
     image.save()
     log("texture %s %dx%d -> %s" % (image.name, image.size[0], image.size[1], os.path.basename(path)))
 
+def rescale(factor):
+    """Scales armature and body about the origin and applies it (the body unparented meanwhile, so its bind stays)."""
+    body.parent = None
+    for obj in (armature, body):
+        obj.scale = (factor, factor, factor)
+    select_only(armature, body)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    body.parent = armature
+    body.matrix_parent_inverse = Matrix.Identity(4)
+
+
+# Export in centimetres, as Unreal works: with metres and "FBX units scale" the mesh arrived in centimetres but the
+# bones stayed in metres, and the body skinned to nothing in the game.
+rescale(100.0)
+bpy.context.scene.unit_settings.scale_length = 0.01
 select_only(armature, body)
-bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, "SK_%s.fbx" % NAME), use_selection=True, apply_unit_scale=True,
-                         apply_scale_options="FBX_SCALE_UNITS", add_leaf_bones=False, bake_anim=False,
+bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, "SK_%s.fbx" % NAME), use_selection=True, global_scale=1.0,
+                         apply_unit_scale=True, apply_scale_options="FBX_SCALE_NONE", add_leaf_bones=False, bake_anim=False,
                          mesh_smooth_type="FACE", path_mode="STRIP", embed_textures=False, use_armature_deform_only=False,
                          primary_bone_axis="Y", secondary_bone_axis="X", armature_nodetype="NULL")
 log("exported %s" % os.path.join(OUT, "SK_%s.fbx" % NAME))
+rescale(0.01)
+bpy.context.scene.unit_settings.scale_length = 1.0
 
 # Check renders: rest pose and a test pose (arms raised, a step), front view.
 scene = bpy.context.scene

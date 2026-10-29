@@ -47,9 +47,9 @@ Idle-Pose des unsichtbaren Mannequins, 65,8 FPS. `DBSpawnNpc <NpcId> [Name]` ste
 ## Speicherbedarf beim Bauen
 
 Der optimierte Build braucht beim Erzeugen des gemeinsamen Ordners `Build/Common` (nach dem Kompilieren von
-`Face_ControlBoard_CtrlRig`) über **110 GB zugesagten Speicher** – unabhängig von der Texturgröße (geprüft
+`Face_ControlBoard_CtrlRig`) über **110 GB zugesagten Speicher** (mit vergrößerter Auslagerungsdatei gemessen: 166 GB) – unabhängig von der Texturgröße (geprüft
 2026-10-26: Akaza mit 4K/2K und NPC_King mit 2K stürzten beide bei 108–109 GB mit „Auslagerungsdatei ist zu klein“
-ab). Auf einem Rechner mit 32 GB RAM muss die Auslagerungsdatei dafür vergrößert werden (z. B. 128 GB zusätzlich auf
+ab). Mit 32 GB RAM und großer Auslagerungsdatei stürzt er nicht mehr ab, lagert aber so stark aus, dass der Rechner kaum noch bedienbar ist und der Build stockt (2026-10-26 abgebrochen) – praktikabel erst mit 64 GB RAM oder über Nacht. Auf einem Rechner mit 32 GB RAM muss die Auslagerungsdatei dafür vergrößert werden (z. B. 128 GB zusätzlich auf
 einem Laufwerk mit Platz), sonst bricht jeder Build ab. Das Skript setzt Texturquellen trotzdem auf Spielgröße
 (Akaza: Gesicht 4K, Körper 2K; NPCs 2K), weil 8K-Quellen zusätzlich Speicher und Videospeicher kosten.
 Bauen am besten je Figur in einem eigenen Editor-Prozess:

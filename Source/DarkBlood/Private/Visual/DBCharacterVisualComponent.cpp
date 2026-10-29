@@ -295,6 +295,7 @@ USkeletalMeshComponent* UDBCharacterVisualComponent::AddPart(const FDBVisualPart
 		}
 	}
 	PartComponents.Add(Component);
+	UE_LOG(LogDarkBlood, Verbose, TEXT("Visual part %s: %s, %d materials"), *Part.PartId.ToString(), *PartMesh->GetName(), Component->GetNumMaterials());
 	return Component;
 }
 

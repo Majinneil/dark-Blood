@@ -980,5 +980,31 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		}
 	}
 
+	// Akaza's outfit (docs/AKAZA_OUTFIT.md, Tools/UE58/db_import_akaza_outfit.py): weighted to the UE5 skeleton, it follows
+	// the hidden animated mannequin like the MetaHuman body does. CV_MH_Akaza wears it; CV_AkazaOutfit shows it on the
+	// plain mannequin (DBSpawnNpc AkazaOutfit) to check fit and skinning without a MetaHuman build.
+	const FSoftObjectPath OutfitPath(TEXT("/Game/DarkBlood/Characters/Akaza/Outfit/SK_Akaza_Outfit.SK_Akaza_Outfit"));
+	IAssetRegistry::GetChecked().ScanPathsSynchronous({TEXT("/Game/DarkBlood/Characters/Akaza")}, false);
+	if (IAssetRegistry::GetChecked().GetAssetByObjectPath(OutfitPath).IsValid())
+	{
+		FDBVisualPart Outfit;
+		Outfit.PartId = TEXT("AkazaOutfit");
+		Outfit.Slot = EDBVisualSlot::Outfit;
+		Outfit.Mesh = TSoftObjectPtr<USkeletalMesh>(OutfitPath);
+		if (UDBCharacterVisualDefinition* Test = AddVisual(TEXT("CV_AkazaOutfit"), EDBVisualQualityTier::Hero, Manny, FLinearColor::White))
+		{
+			Test->OutfitTintParameter = NAME_None;
+		}
+		for (const TCHAR* Id : {TEXT("CV_MH_Akaza"), TEXT("CV_AkazaOutfit")})
+		{
+			UDBCharacterVisualDefinition* Profile = Data.FindCharacterVisual(Id);
+			if (Profile && !Profile->DefaultParts.ContainsByPredicate([](const FDBVisualPart& Part) { return Part.PartId == TEXT("AkazaOutfit"); }))
+			{
+				Profile->DefaultParts.Add(Outfit);
+				bAddedAny = true;
+			}
+		}
+	}
+
 	return bAddedAny;
 }

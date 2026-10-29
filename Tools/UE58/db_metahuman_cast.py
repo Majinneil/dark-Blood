@@ -3,6 +3,7 @@
 #   py "Tools/UE58/db_metahuman_cast.py" finish [Name]   cloud auto rig (joints only), texture sources and optimized build of every cast
 #                                                        member (or one), skipping those already built - needs the
 #                                                        Epic account authorization of MetaHuman Creator once
+#   py "Tools/UE58/db_metahuman_cast.py" finish Name rebuild   build that character again (after changing its look)
 #
 # The cast of DARK BLOOD as MetaHumans: the hero Akaza (db_create_akaza_metahuman.py) and the human NPCs. Characters
 # live in /Game/DarkBlood/Characters/MetaHumans/<Name>, builds in .../MetaHumans/Build/<Name> (blueprint BP_<Name>);
@@ -49,8 +50,8 @@ def set_texture_resolutions(character, hero):
     """Returns True if the resolutions changed (the texture sources must then be fetched again)."""
     skin = character.get_editor_property("skin_settings")
     wanted = skin.get_editor_property("desired_texture_sources_resolutions")
-    face = unreal.RequestTextureResolution.RES4K if hero else unreal.RequestTextureResolution.RES2K
-    body = unreal.RequestTextureResolution.RES2K
+    # The hero 4K throughout (seen close in every scene), NPCs 2K (many on screen at once: video memory).
+    face = body = unreal.RequestTextureResolution.RES4K if hero else unreal.RequestTextureResolution.RES2K
     values = {"face_albedo": face, "face_normal": face, "face_cavity": face, "face_animated_maps": body,
               "body_albedo": body, "body_normal": body, "body_cavity": body, "body_masks": body}
     changed = False
@@ -64,12 +65,12 @@ def set_texture_resolutions(character, hero):
     return changed
 
 
-def finish(only=None):
+def finish(only=None, rebuild=False):
     names = ["Akaza"] + list(CAST)
     for name in names:
         if only and name != only:
             continue
-        if library.does_asset_exist("%s/%s/BP_%s" % (BUILD, name, name)):
+        if not rebuild and library.does_asset_exist("%s/%s/BP_%s" % (BUILD, name, name)):
             log("%s already built" % name)
             continue
         character = unreal.load_asset(ROOT + "/" + name)
@@ -92,7 +93,7 @@ def finish(only=None):
             # need more than 90 GB of memory (it compresses many 8K maps at once) and cost video memory in play.
             resized = set_texture_resolutions(character, name == "Akaza")
             if resized:
-                log("%s texture sources set to %s" % (name, "4K face / 2K body" if name == "Akaza" else "2K"))
+                log("%s texture sources set to %s" % (name, "4K" if name == "Akaza" else "2K"))
             if resized or not subsystem.can_build_meta_human(character, False):
                 # The build also needs the face and body texture sources (Epic cloud, same authorization).
                 textures = unreal.MetaHumanCharacterTextureRequestParams()
@@ -123,4 +124,4 @@ mode = sys.argv[1] if len(sys.argv) > 1 else "create"
 if mode == "create":
     create()
 elif mode == "finish":
-    finish(sys.argv[2] if len(sys.argv) > 2 else None)
+    finish(sys.argv[2] if len(sys.argv) > 2 else None, len(sys.argv) > 3 and sys.argv[3] == "rebuild")

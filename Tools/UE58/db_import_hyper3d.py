@@ -145,9 +145,12 @@ for name in sorted(os.listdir(SOURCE)) if os.path.isdir(SOURCE) else []:
     if mesh is None:
         unreal.log_warning("DBHYPER %s: no skeletal mesh imported from %s" % (name, fbx))
         continue
-    materials = mesh.get_editor_property("materials")
-    for slot in materials:
-        slot.set_editor_property("material_interface", instance)
+    # Unreal's Python hands out copies of the slot structs: change the copies, write the whole list back.
+    materials = []
+    for slot in list(mesh.get_editor_property("materials")):
+        slot.material_interface = instance
+        materials.append(slot)
+    unreal.SystemLibrary.execute_console_command(None, "Editor.AsyncSkinnedAssetCompilationFinishAll")
     mesh.set_editor_property("materials", materials)
     if physics is not None:
         mesh.set_editor_property("physics_asset", physics)

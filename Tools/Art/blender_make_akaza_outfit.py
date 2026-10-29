@@ -1185,13 +1185,33 @@ outfit.parent = armature
 mod = outfit.modifiers.new("Armature", "ARMATURE")
 mod.object = armature
 
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "Akaza_Outfit.blend"))
+
+
+def rescale(factor):
+    """Scales armature and outfit about the origin and applies it (the outfit unparented meanwhile, so its bind stays)."""
+    outfit.parent = None
+    for obj in (armature, outfit):
+        obj.scale = (factor, factor, factor)
+    select_only(armature, outfit)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    outfit.parent = armature
+    outfit.matrix_parent_inverse = Matrix.Identity(4)
+
+
+# Export in centimetres, as Unreal works: mesh and bones carry the same numbers. With metres and "FBX units scale"
+# the mesh came in as centimetres but the bones stayed in metres - the outfit then skinned to nothing in the game.
+rescale(100.0)
+scene.unit_settings.system = "METRIC"
+scene.unit_settings.scale_length = 0.01
 select_only(armature, outfit)
-bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, "SK_Akaza_Outfit.fbx"), use_selection=True, apply_unit_scale=True,
-                         apply_scale_options="FBX_SCALE_UNITS", add_leaf_bones=False, bake_anim=False,
+bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, "SK_Akaza_Outfit.fbx"), use_selection=True, global_scale=1.0,
+                         apply_unit_scale=True, apply_scale_options="FBX_SCALE_NONE", add_leaf_bones=False, bake_anim=False,
                          mesh_smooth_type="FACE", path_mode="STRIP", embed_textures=False, use_armature_deform_only=False,
                          primary_bone_axis="Y", secondary_bone_axis="X", armature_nodetype="NULL")
-log("exported " + os.path.join(OUT, "SK_Akaza_Outfit.fbx"))
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "Akaza_Outfit.blend"))
+log("exported %s (pelvis at %.1f cm)" % (os.path.join(OUT, "SK_Akaza_Outfit.fbx"), armature.data.bones["pelvis"].head_local.z))
+rescale(0.01)
+scene.unit_settings.scale_length = 1.0
 
 
 render_views("Akaza_Outfit_check", ("front", "side", "back", "three"))

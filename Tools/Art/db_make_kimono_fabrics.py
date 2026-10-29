@@ -416,7 +416,21 @@ def rope_hemp():
     write_set("Rope_Hemp", color, twist * 0.8 + fibre * 0.2, 0.9 - 0.1 * twist, 5.0)
 
 
+def weave_detail(size=512, threads=32):
+    """Fine twill weave as a small, densely tiled detail normal (T_Weave_N): the cloth materials repeat it about 40
+    times per fabric tile, so the threads are sub-millimetre where the base textures cannot resolve them."""
+    y, x = np.meshgrid(np.linspace(0.0, 1.0, size, endpoint=False), np.linspace(0.0, 1.0, size, endpoint=False), indexing="ij")
+    u, v = x * threads, y * threads
+    over = np.where((np.floor(u) + np.floor(v)) % 3 == 0, 1.0, 0.0)          # 2/1 twill: the float steps diagonally
+    warp = np.sin(np.pi * (u % 1.0)) ** 0.7
+    weft = np.sin(np.pi * (v % 1.0)) ** 0.7
+    height = over * warp + (1.0 - over) * weft
+    save_png(os.path.join(OUT, "T_Weave_N.png"), normal_from_height(height, 2.0))
+    print("weave detail written (%d px)" % size)
+
+
 if __name__ == "__main__":
+    weave_detail()
     ivory_pattern()
     black_motif()
     black_border()
