@@ -181,7 +181,7 @@ for _ in range(COUNTS["bun"]):
 # Loose curls: temples, behind the ears, nape - hanging down.
 # Only at the temples, behind the ears and at the nape - never in front of the face.
 low_roots = [(r, n) for r, n in sample_roots(scalp, COUNTS["loose"] * 8)
-             if r.y > nose.y + 0.07 and (r.z < nose.z + 0.09 or (r.y > back_y - 0.03 and r.z < bun.z - 0.04))]
+             if r.y > back_y - 0.05 and r.z < bun.z - 0.05]   # nape only: curls at the sides puffed the head out
 for root, normal in low_roots[:COUNTS["loose"]]:
     length = 0.05 + 0.06 * random.random()
     direction = (normal * 0.35 + Vector((0, 0, -1))).normalized()
@@ -191,8 +191,11 @@ for root, normal in low_roots[:COUNTS["loose"]]:
 
 # Beard: short, dense, curly; longer at the chin.
 for root, normal in sample_roots(beard, COUNTS["beard"]):
+    # Keep the lips free: no strands in a band around the mouth line.
+    if abs(root.z - (nose.z - 0.035)) < 0.006 and abs(root.x - centre_x) < 0.025:
+        continue
     chin = smoothstep((nose.z - 0.07 - root.z) / 0.04)
-    length = 0.008 + 0.008 * random.random() + 0.01 * chin
+    length = 0.005 + 0.006 * random.random() + 0.009 * chin
     direction = (normal + Vector((0, 0, -0.8))).normalized()
     steps = 10
     pts = [root + direction * length * k / steps for k in range(steps + 1)]

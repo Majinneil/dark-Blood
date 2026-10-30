@@ -12,6 +12,7 @@
 
 class AActor;
 class UGroomAsset;
+class UGroomBindingAsset;
 class UAnimInstance;
 class UDBAnimationSetDefinition;
 class UMaterialInterface;
@@ -87,6 +88,10 @@ public:
 	/** Strand hair (grooms: hair, beard) authored in the body mesh's space and carried rigidly by BodyMesh's head bone. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
 	TArray<TSoftObjectPtr<UGroomAsset>> Grooms;
+
+	/** Skin bindings of the grooms to BodyMesh (same order as Grooms); a groom without one is carried by the head bone. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
+	TArray<TSoftObjectPtr<UGroomBindingAsset>> GroomBindings;
 
 	/** Material for every groom group (a hair shading material); none keeps the groom's own. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")

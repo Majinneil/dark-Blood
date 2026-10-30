@@ -26,6 +26,7 @@
 #include "DarkBloodRules/WorldState.h"
 #include "Visual/DBCharacterVisualDefinition.h"
 #include "GroomAsset.h"
+#include "GroomBindingAsset.h"
 
 namespace
 {
@@ -988,6 +989,11 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 				if (IAssetRegistry::GetChecked().GetAssetByObjectPath(GroomPath).IsValid())
 				{
 					Body->Grooms.Add(TSoftObjectPtr<UGroomAsset>(GroomPath));
+					// GB_<Name>_<Part>: the skin binding to the body (optional).
+					const FString BindingName = FString::Printf(TEXT("GB_%s_%s"), *Name, Part);
+					const FSoftObjectPath BindingPath(Folder + TEXT("/") + BindingName + TEXT(".") + BindingName);
+					Body->GroomBindings.Add(IAssetRegistry::GetChecked().GetAssetByObjectPath(BindingPath).IsValid()
+						? TSoftObjectPtr<UGroomBindingAsset>(BindingPath) : TSoftObjectPtr<UGroomBindingAsset>());
 				}
 			}
 			Body->GroomMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_Hair.M_DB_Hair")));

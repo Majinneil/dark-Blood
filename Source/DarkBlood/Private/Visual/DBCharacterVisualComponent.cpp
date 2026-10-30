@@ -15,6 +15,7 @@
 #include "DarkBlood.h"
 #include "Engine/SkeletalMesh.h"
 #include "GroomAsset.h"
+#include "GroomBindingAsset.h"
 #include "GroomComponent.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -566,16 +567,26 @@ void UDBCharacterVisualComponent::ApplyGrooms(const UDBCharacterVisualDefinition
 	// of the head bone's bind pose in component space, so in the bind pose the hair sits exactly where it was modelled.
 	const FTransform HeadBind = FAnimationRuntime::GetComponentSpaceTransformRefPose(Body->GetRefSkeleton(), HeadIndex);
 	UMaterialInterface* Material = Profile.GroomMaterial.LoadSynchronous();
-	for (const TSoftObjectPtr<UGroomAsset>& Asset : Profile.Grooms)
+	for (int32 GroomIndex = 0; GroomIndex < Profile.Grooms.Num(); ++GroomIndex)
 	{
-		UGroomAsset* GroomAsset = Asset.LoadSynchronous();
+		UGroomAsset* GroomAsset = Profile.Grooms[GroomIndex].LoadSynchronous();
 		if (!GroomAsset)
 		{
 			continue;
 		}
+		UGroomBindingAsset* Binding = Profile.GroomBindings.IsValidIndex(GroomIndex) ? Profile.GroomBindings[GroomIndex].LoadSynchronous() : nullptr;
 		UGroomComponent* Groom = NewObject<UGroomComponent>(GetOwner(), NAME_None, RF_Transient);
-		Groom->SetupAttachment(&Mesh, TEXT("head"));
-		Groom->SetRelativeTransform(HeadBind.Inverse());
+		if (Binding)
+		{
+			// Skin binding: the strands follow the skinned surface; the groom sits in the mesh component's space.
+			Groom->SetupAttachment(&Mesh);
+			Groom->SetBindingAsset(Binding);
+		}
+		else
+		{
+			Groom->SetupAttachment(&Mesh, TEXT("head"));
+			Groom->SetRelativeTransform(HeadBind.Inverse());
+		}
 		Groom->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		Groom->SetGroomAsset(GroomAsset);
 		if (Material)

@@ -209,6 +209,7 @@ select_only(body)
 groups = {name: body.vertex_groups.new(name=name) for name in SKIN}
 LEGS = {"thigh_l", "thigh_r", "calf_l", "calf_r"}
 pelvis_z = (armature.matrix_world @ armature.data.bones["pelvis"].head_local).z
+head_z = (armature.matrix_world @ armature.data.bones["head"].head_local).z
 # Hanging arms beside a skirt/hakama: cloth below the hip inward of the hands never belongs to the arm.
 ARM_PREFIXES = ("upperarm", "lowerarm", "hand", "thumb", "index", "middle", "ring", "pinky")
 hand_x = {side: abs((armature.matrix_world @ armature.data.bones["hand_" + side].head_local).x) for side in ("l", "r")}
@@ -235,6 +236,12 @@ for vertex in body.data.vertices:
         if share > 0.0:
             weights = {name: w * (1.0 - share) for name, w in weights.items()}
             weights["pelvis"] = weights.get("pelvis", 0.0) + share
+    # The skull is rigid: above the jaw everything belongs to the head bone (blended over the neck). Distance weights
+    # alone shared it with the neck bones - the head then tilted unlike anything carried by the head bone (strand hair).
+    head_blend = max(0.0, min(1.0, (vertex.co.z - (head_z - 0.01)) / 0.06)) if abs(vertex.co.x) < 0.14 else 0.0
+    if head_blend > 0.0:
+        weights = {name: w * (1.0 - head_blend) for name, w in weights.items()}
+        weights["head"] = weights.get("head", 0.0) + head_blend
     for name, weight in weights.items():
         if weight > 0.02:
             groups[name].add([vertex.index], weight, "REPLACE")

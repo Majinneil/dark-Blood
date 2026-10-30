@@ -37,15 +37,15 @@ def hair_material():
     material.set_editor_property("used_with_hair_strands", True)
     colour = mel.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -500, -200)
     colour.set_editor_property("parameter_name", "HairColor")
-    colour.set_editor_property("default_value", unreal.LinearColor(0.045, 0.03, 0.022, 1.0))
+    colour.set_editor_property("default_value", unreal.LinearColor(0.07, 0.045, 0.03, 1.0))
     mel.connect_material_property(colour, "", unreal.MaterialProperty.MP_BASE_COLOR)
     rough = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -500, 50)
     rough.set_editor_property("parameter_name", "Roughness")
-    rough.set_editor_property("default_value", 0.42)
+    rough.set_editor_property("default_value", 0.32)
     mel.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
     spec = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -500, 200)
     spec.set_editor_property("parameter_name", "Specular")
-    spec.set_editor_property("default_value", 0.35)
+    spec.set_editor_property("default_value", 0.55)
     mel.connect_material_property(spec, "", unreal.MaterialProperty.MP_SPECULAR)
     mel.recompile_material(material)
     library.save_loaded_asset(material, False)
@@ -92,4 +92,16 @@ for groom in grooms:
         settings.set_editor_property("geometry_settings", geometry)
     groom.set_editor_property("hair_groups_rendering", rendering)
     library.save_loaded_asset(groom, False)
+    # Skin binding: every strand root is attached to the nearest triangle of Akaza's body mesh, so the hair follows the
+    # skinned head exactly (a rigid head-bone attachment drifted off the head in the animations).
+    body = unreal.load_asset(TARGET + "/SK_Akaza")
+    binding_path = TARGET + "/GB_Akaza_Hair"
+    if library.does_asset_exist(binding_path):
+        library.delete_asset(binding_path)
+    binding = unreal.GroomLibrary.create_new_groom_binding_asset_with_path(binding_path, groom, body)
+    if binding:
+        library.save_loaded_asset(binding, False)
+        log("binding %s on %s" % (binding.get_path_name(), body.get_name()))
+    else:
+        unreal.log_warning("DBGROOM binding could not be created")
 log("done")
