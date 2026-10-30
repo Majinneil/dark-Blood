@@ -25,6 +25,7 @@
 
 #include "DarkBloodRules/WorldState.h"
 #include "Visual/DBCharacterVisualDefinition.h"
+#include "GroomAsset.h"
 
 namespace
 {
@@ -977,6 +978,19 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 			Body->bDevelopmentPlaceholder = false;
 			Body->OutfitTintParameter = NAME_None;
 			Body->bProceduralBlink = false;
+			// Strand hair made for this body (Tools/Art/blender_make_akaza_hair.py, Tools/UE58/db_import_akaza_groom.py):
+			// GR_<Name>_Hair / GR_<Name>_Beard next to the mesh, with the hair material M_DB_Hair.
+			const FString Folder = Asset.PackagePath.ToString();
+			for (const TCHAR* Part : {TEXT("Hair"), TEXT("Beard")})
+			{
+				const FString GroomName = FString::Printf(TEXT("GR_%s_%s"), *Name, Part);
+				const FSoftObjectPath GroomPath(Folder + TEXT("/") + GroomName + TEXT(".") + GroomName);
+				if (IAssetRegistry::GetChecked().GetAssetByObjectPath(GroomPath).IsValid())
+				{
+					Body->Grooms.Add(TSoftObjectPtr<UGroomAsset>(GroomPath));
+				}
+			}
+			Body->GroomMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_Hair.M_DB_Hair")));
 		}
 	}
 

@@ -89,6 +89,11 @@ private:
 	void ApplyWeapon();
 	void ApplyDemonAccent();
 	void ApplyVisualActor(const UDBCharacterVisualDefinition& Profile, USkeletalMeshComponent& Leader);
+	void ApplyGrooms(const UDBCharacterVisualDefinition& Profile, USkeletalMeshComponent& Mesh);
+
+	/** Strand hair of the profile, attached to the body's head bone. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UGroomComponent>> GroomComponents;
 
 	/** Spawned authored character (VisualActorClass), destroyed with the profile. */
 	UPROPERTY(Transient)

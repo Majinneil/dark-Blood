@@ -29,6 +29,8 @@
 		{ "Name": "ModelingToolsEditorMode", "Enabled": true, "TargetAllowList": [ "Editor" ] },
 		{ "Name": "PythonScriptPlugin", "Enabled": true, "TargetAllowList": [ "Editor" ] },
 		{ "Name": "EditorScriptingUtilities", "Enabled": true, "TargetAllowList": [ "Editor" ] },
-		{ "Name": "MetaHumanCharacter", "Enabled": true }
+		{ "Name": "MetaHumanCharacter", "Enabled": true },
+		{ "Name": "HairStrands", "Enabled": true },
+		{ "Name": "AlembicHairImporter", "Enabled": true, "TargetAllowList": [ "Editor" ] }
 	]
 }

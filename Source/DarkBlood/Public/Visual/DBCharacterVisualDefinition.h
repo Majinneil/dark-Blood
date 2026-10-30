@@ -11,6 +11,7 @@
 #include "DBCharacterVisualDefinition.generated.h"
 
 class AActor;
+class UGroomAsset;
 class UAnimInstance;
 class UDBAnimationSetDefinition;
 class UMaterialInterface;
@@ -82,6 +83,14 @@ public:
 	 * mesh; its body follows the hidden BodyMesh by bone name, so every animation of the profile drives it. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
 	TSoftClassPtr<AActor> VisualActorClass;
+
+	/** Strand hair (grooms: hair, beard) authored in the body mesh's space and carried rigidly by BodyMesh's head bone. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
+	TArray<TSoftObjectPtr<UGroomAsset>> Grooms;
+
+	/** Material for every groom group (a hair shading material); none keeps the groom's own. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
+	TSoftObjectPtr<UMaterialInterface> GroomMaterial;
 
 	// ---- Appearance mapping (FDBAppearance -> visuals) ------------------------------------------------
 

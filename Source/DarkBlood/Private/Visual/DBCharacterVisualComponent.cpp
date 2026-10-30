@@ -14,6 +14,8 @@
 #include "Data/DBGameDataSubsystem.h"
 #include "DarkBlood.h"
 #include "Engine/SkeletalMesh.h"
+#include "GroomAsset.h"
+#include "GroomComponent.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -234,6 +236,7 @@ void UDBCharacterVisualComponent::ApplyProfile(const UDBCharacterVisualDefinitio
 		}
 	}
 	ApplyVisualActor(Profile, *Mesh);
+	ApplyGrooms(Profile, *Mesh);
 	ActiveProfile = &Profile;
 	bHasVisualBody = true;
 	Character->SetPlaceholderVisible(false);
@@ -406,6 +409,14 @@ void UDBCharacterVisualComponent::ClearVisuals()
 	}
 	PartComponents.Reset();
 	TintableMaterials.Reset();
+	for (UGroomComponent* Groom : GroomComponents)
+	{
+		if (Groom)
+		{
+			Groom->DestroyComponent();
+		}
+	}
+	GroomComponents.Reset();
 	if (VisualActor)
 	{
 		VisualActor->Destroy();
@@ -541,6 +552,45 @@ void UDBCharacterVisualComponent::ApplyDemonAccent()
 	AccentOverlay->SetScalarParameterValue(TEXT("BodyOpacity"), FMath::Min(0.3f * AccentStrength, 0.45f));
 	Mesh->SetOverlayMaterial(AccentOverlay);
 	Mesh->SetOverlayMaterialMaxDrawDistance(AccentDrawDistance);
+}
+
+void UDBCharacterVisualComponent::ApplyGrooms(const UDBCharacterVisualDefinition& Profile, USkeletalMeshComponent& Mesh)
+{
+	const USkeletalMesh* Body = Mesh.GetSkeletalMeshAsset();
+	const int32 HeadIndex = Body ? Body->GetRefSkeleton().FindBoneIndex(TEXT("head")) : INDEX_NONE;
+	if (Profile.Grooms.IsEmpty() || HeadIndex == INDEX_NONE)
+	{
+		return;
+	}
+	// Grooms are authored in the body mesh's space (bind pose). Carried by the head bone: relative transform = the inverse
+	// of the head bone's bind pose in component space, so in the bind pose the hair sits exactly where it was modelled.
+	const FTransform HeadBind = FAnimationRuntime::GetComponentSpaceTransformRefPose(Body->GetRefSkeleton(), HeadIndex);
+	UMaterialInterface* Material = Profile.GroomMaterial.LoadSynchronous();
+	for (const TSoftObjectPtr<UGroomAsset>& Asset : Profile.Grooms)
+	{
+		UGroomAsset* GroomAsset = Asset.LoadSynchronous();
+		if (!GroomAsset)
+		{
+			continue;
+		}
+		UGroomComponent* Groom = NewObject<UGroomComponent>(GetOwner(), NAME_None, RF_Transient);
+		Groom->SetupAttachment(&Mesh, TEXT("head"));
+		Groom->SetRelativeTransform(HeadBind.Inverse());
+		Groom->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Groom->SetGroomAsset(GroomAsset);
+		if (Material)
+		{
+			for (int32 Index = 0; Index < Groom->GetNumMaterials(); ++Index)
+			{
+				Groom->SetMaterial(Index, Material);
+			}
+		}
+		Groom->RegisterComponent();
+		GroomComponents.Add(Groom);
+		UE_LOG(LogDarkBlood, Log, TEXT("Visual profile %s: groom %s on the head bone (groom bounds %s extent %s, head bone %s)"),
+			*Profile.ProfileId.ToString(), *GroomAsset->GetName(), *Groom->Bounds.Origin.ToString(), *Groom->Bounds.BoxExtent.ToString(),
+			*Mesh.GetSocketLocation(TEXT("head")).ToString());
+	}
 }
 
 void UDBCharacterVisualComponent::ApplyVisualActor(const UDBCharacterVisualDefinition& Profile, USkeletalMeshComponent& Leader)

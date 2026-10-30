@@ -30,5 +30,7 @@ public class DarkBlood : ModuleRules
 		// Open world: landscape (runtime queries, and the editor-only realm builder commandlet).
 		PrivateDependencyModuleNames.Add("Landscape");
 		PrivateDependencyModuleNames.Add("AssetRegistry");
+		// Strand hair (grooms) on authored characters, e.g. Akaza's curls and beard (docs/AKAZA_OUTFIT.md).
+		PrivateDependencyModuleNames.Add("HairStrandsCore");
 	}
 }
