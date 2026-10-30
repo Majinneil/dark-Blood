@@ -178,7 +178,27 @@ for name in sorted(os.listdir(SOURCE)) if os.path.isdir(SOURCE) else []:
     # Unreal's Python hands out copies of the slot structs: change the copies, write the whole list back.
     materials = []
     for slot in list(mesh.get_editor_property("materials")):
-        slot.material_interface = instance
+        # A slot with its own texture set (T_<Name>_<Slot>_<Usage>.png, e.g. a separately made head) gets its own
+        # instance MI_<Name>_<Slot>; every other slot shares MI_<Name>.
+        # The slot may be renamed on import ("model"); its imported name is the material name from Blender.
+        own = {}
+        for slot_name in (str(slot.get_editor_property("imported_material_slot_name")), str(slot.get_editor_property("material_slot_name"))):
+            own = {usage: os.path.join(export, "T_%s_%s_%s.png" % (name, slot_name, usage)) for usage in ("BaseColor", "Normal", "ORM")}
+            own = {usage: path for usage, path in own.items() if os.path.isfile(path)}
+            if own:
+                break
+        slot_instance = instance
+        if own:
+            slot_instance = unreal.load_asset("%s/MI_%s_%s" % (destination, name, slot_name)) or tools.create_asset(
+                "MI_%s_%s" % (name, slot_name), destination, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
+            mel.set_material_instance_parent(slot_instance, master)
+            for usage, path in own.items():
+                texture = import_texture(path, destination, "T_%s_%s_%s" % (name, slot_name, usage), usage)
+                if texture is not None:
+                    mel.set_material_instance_texture_parameter_value(slot_instance, usage, texture)
+            library.save_loaded_asset(slot_instance, False)
+            log("%s: slot %s with its own textures (%s)" % (name, slot_name, ",".join(sorted(own))))
+        slot.material_interface = slot_instance
         materials.append(slot)
     unreal.SystemLibrary.execute_console_command(None, "Editor.AsyncSkinnedAssetCompilationFinishAll")
     mesh.set_editor_property("materials", materials)

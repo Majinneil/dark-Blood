@@ -83,3 +83,16 @@ Kampf, FPS (Messung nur, wenn am Rechner nicht gespielt wird).
 - Chaos Cloth für Ärmel, Wickelgewand, Stola und Quaste (die Gewichte sind die Grundlage, die Simulation bewegt den
   Rest), verdeckte Körperteile ausblenden.
 - Lockiger Haarknoten (Groom) und Narbe über der linken Braue.
+
+## Akazas Kopf (Hyper3D + Blender) – 2026-10-30
+
+- Körper: Hyper3D Rodin Gen-2.5 aus den vier Ganzkörperansichten (`SourceArt/Hyper3D/Akaza/input`), 4K-PBR.
+- Kopf: eigene Rodin-Generierung aus der Kopf-Vorlage (vorn, hinten, beide Seiten), dadurch Gesicht, Locken und Haarknoten
+  mit voller Auflösung.
+- `Tools/Art/blender_merge_head.py <körper.glb> <kopf.glb> <ausgabe.glb>`: richtet den Kopf am Umriss aus (Hals bis
+  Scheitel, Gesichtsfront), entfernt den alten Kopf samt Bart, lässt den Hals im Schal enden und malt die Narbe
+  (Stirn über die linke Braue, zweite Narbe auf der linken Wange) in die Hauttextur. Körper und Kopf behalten eigene
+  Materialien (`Body`, `Head`); `blender_rig_hyper3d.py` schreibt dafür `T_Akaza_<Material>_<Art>.png`, der Import legt
+  `MI_Akaza_Head` an.
+- **Getestet:** verdeckt im Spiel, Nahaufnahme schräg von vorn und Seitenansicht. Offen: Strähnenhaar (Groom) für noch
+  echtere Locken, Haut-Porendetail, Ärmelgewichte.

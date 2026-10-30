@@ -252,9 +252,11 @@ for image in bpy.data.images:
     if image.size[0] == 0:
         continue
     usage = "Texture"
+    owner = None
     for material in body.data.materials:
         for node in material.node_tree.nodes if material and material.use_nodes else []:
             if node.type == "TEX_IMAGE" and node.image == image:
+                owner = material
                 for link in material.node_tree.links:
                     if link.from_node == node:
                         socket = link.to_socket.name
@@ -265,7 +267,12 @@ for image in bpy.data.images:
                             usage = "BaseColor"
                         elif target.type in ("SEPARATE_COLOR", "SEPRGB", "SEPARATE_RGB") or socket in ("Roughness", "Metallic"):
                             usage = "ORM"
-    path = os.path.join(OUT, "T_%s_%s.png" % (NAME, usage))
+    # Several materials (a body with a separately made head, Tools/Art/blender_merge_head.py): T_<Name>_<Material>_<Usage>,
+    # matched to the material slot of the same name on import.
+    if len([m for m in body.data.materials if m]) > 1 and owner is not None:
+        path = os.path.join(OUT, "T_%s_%s_%s.png" % (NAME, owner.name, usage))
+    else:
+        path = os.path.join(OUT, "T_%s_%s.png" % (NAME, usage))
     image.filepath_raw = path
     image.file_format = "PNG"
     image.save()
