@@ -29,6 +29,7 @@ if character is None:
     raise SystemExit("DBLOOK Akaza missing - run db_create_akaza_metahuman.py first")
 collection = character.internal_collection
 instance = collection.default_instance
+keys = []
 
 # Grooms: swap the item in each slot (the selection of a slot holds one item).
 for slot, relative in LOOK.items():
@@ -36,19 +37,20 @@ for slot, relative in LOOK.items():
     if item is None:
         unreal.log_warning("DBLOOK groom missing: " + relative)
         continue
-    for selection in list(instance.get_editor_property("slot_selections")):
-        if str(selection.get_editor_property("slot_name")) == slot:
-            instance.try_remove_slot_selection(selection)
-    key = collection.try_add_item_from_wardrobe_item(slot, item)
-    instance.try_add_slot_selection(unreal.MetaHumanPipelineSlotSelection(slot_name=slot, selected_item=key))
+    # Reuse the item if the collection already has it, then make it the slot's only selection.
+    existing = list(collection.get_item_keys_for_wardrobe_item(item))
+    key = existing[0] if existing else collection.try_add_item_from_wardrobe_item(slot, item)
+    instance.set_single_slot_selection(slot, key)
+    keys.append(key)
     log("%s: %s" % (slot, relative.split("/")[-1]))
 
 added = subsystem.try_add_object_to_edit(character)
 try:
     subsystem.assemble_for_preview(character=character)
     # Black hair and beard.
-    for selection in instance.get_editor_property("slot_selections"):
-        key = selection.get_editor_property("selected_item")
+    for slot in ("Hair", "Eyebrows", "Eyelashes"):
+        keys += [k for k in collection.get_item_keys_for_slot(slot) if k not in keys]
+    for key in keys:
         for parameter in instance.get_instance_parameters(item_path=unreal.MetaHumanPaletteItemPath(item_key=key)):
             if parameter.name == "Melanin":
                 parameter.set_float(value=0.95)
