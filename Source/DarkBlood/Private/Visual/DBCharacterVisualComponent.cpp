@@ -536,6 +536,12 @@ void UDBCharacterVisualComponent::ApplyDemonAccent()
 		}
 	}
 
+	// Bodies made after the concept art carry their own colours; the translucent overlay also floods thin two-sided cloth.
+	if (ActiveProfile && ActiveProfile->bOwnDemonColors)
+	{
+		Mesh->SetOverlayMaterial(nullptr);
+		return;
+	}
 	static TSoftObjectPtr<UMaterialInterface> OverlayAsset(FSoftObjectPath(TEXT("/Game/DarkBlood/Art/Materials/Master/M_DB_DemonOverlay.M_DB_DemonOverlay")));
 	UMaterialInterface* OverlayMaterial = OverlayAsset.LoadSynchronous();
 	if (!OverlayMaterial)

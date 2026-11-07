@@ -50,7 +50,20 @@ def node(material, cls, x, y, **props):
 
 
 DEFAULTS = {"BaseColor": "/Engine/EngineResources/WhiteSquareTexture", "Normal": "/Engine/EngineMaterials/FlatNormal",
-            "ORM": "/Engine/EngineMaterials/T_Default_Material_Grid_M"}
+            "ORM": "/Engine/EngineMaterials/T_Default_Material_Grid_M", "Emissive": "/Engine/EngineResources/Black"}
+EMISSIVE_STRENGTH = 4.0
+
+
+def add_emissive(material):
+    """Glow map (Rodin hands it out separately: embers, eyes, crystals). Black by default, so other bodies stay unlit."""
+    emissive = node(material, E.MaterialExpressionTextureSampleParameter2D, -600, 700, parameter_name="Emissive",
+                    texture=unreal.load_asset(DEFAULTS["Emissive"]))
+    strength = node(material, E.MaterialExpressionScalarParameter, -600, 950, parameter_name="EmissiveStrength",
+                    default_value=EMISSIVE_STRENGTH)
+    glow = node(material, E.MaterialExpressionMultiply, -300, 760)
+    mel.connect_material_expressions(emissive, "RGB", glow, "A")
+    mel.connect_material_expressions(strength, "", glow, "B")
+    mel.connect_material_property(glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
 
 def master_material():
@@ -73,6 +86,10 @@ def master_material():
                 # ORM: linear color sampler, like its engine default texture; the ORM textures are imported linear.
                 expression.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
                 changed = True
+        if not any(isinstance(e, E.MaterialExpressionTextureSampleParameter2D) and str(e.get_editor_property("parameter_name")) == "Emissive"
+                   for e in mel.get_material_expressions(material)):
+            add_emissive(material)
+            changed = True
         if changed:
             mel.recompile_material(material)
             library.save_loaded_asset(material, False)
@@ -98,6 +115,7 @@ def master_material():
     mel.connect_material_property(normal, "RGB", unreal.MaterialProperty.MP_NORMAL)
     mel.connect_material_property(orm, "G", unreal.MaterialProperty.MP_ROUGHNESS)
     mel.connect_material_property(orm, "B", unreal.MaterialProperty.MP_METALLIC)
+    add_emissive(material)
     mel.recompile_material(material)
     library.save_loaded_asset(material, False)
     log("created " + MASTER)
@@ -145,10 +163,10 @@ physics = unreal.load_asset(PHYSICS)
 if skeleton is None:
     raise SystemExit("UE5 mannequin missing - run Tools/UE58/Setup-DevMannequin.ps1 first")
 master = master_material()
-# DB_HYPER3D_ONLY=<Name> imports one character instead of all.
-only = os.environ.get("DB_HYPER3D_ONLY")
+# DB_HYPER3D_ONLY=<Name>[,<Name>...] imports only these characters instead of all.
+only = set(filter(None, os.environ.get("DB_HYPER3D_ONLY", "").split(",")))
 for name in sorted(os.listdir(SOURCE)) if os.path.isdir(SOURCE) else []:
-    if only and name != only:
+    if only and name not in only:
         continue
     export = os.path.join(SOURCE, name, "export")
     fbx = os.path.join(export, "SK_%s.fbx" % name)
@@ -156,7 +174,7 @@ for name in sorted(os.listdir(SOURCE)) if os.path.isdir(SOURCE) else []:
         continue
     destination = TARGET + "/" + name
     textures = {}
-    for usage in ("BaseColor", "Normal", "ORM"):
+    for usage in ("BaseColor", "Normal", "ORM", "Emissive"):
         path = os.path.join(export, "T_%s_%s.png" % (name, usage))
         if os.path.isfile(path):
             textures[usage] = import_texture(path, destination, "T_%s_%s" % (name, usage), usage)

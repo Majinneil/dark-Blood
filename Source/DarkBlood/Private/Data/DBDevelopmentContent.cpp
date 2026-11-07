@@ -977,6 +977,7 @@ bool FDBDevelopmentContent::RegisterMissing(UDBGameDataSubsystem& Data)
 		if (UDBCharacterVisualDefinition* Body = AddVisual(FName(TEXT("CV_Hyper3D_") + Name), EDBVisualQualityTier::Hero, *MeshPath, FLinearColor::White))
 		{
 			Body->bDevelopmentPlaceholder = false;
+			Body->bOwnDemonColors = true;
 			Body->OutfitTintParameter = NAME_None;
 			Body->bProceduralBlink = false;
 			// Strand hair made for this body (Tools/Art/blender_make_akaza_hair.py, Tools/UE58/db_import_akaza_groom.py):

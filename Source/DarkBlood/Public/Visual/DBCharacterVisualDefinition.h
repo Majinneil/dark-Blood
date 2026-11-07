@@ -56,6 +56,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Profile")
 	bool bDevelopmentPlaceholder = false;
 
+	/** Made after the concept art, with its own colours: no demon overlay on top (it is meant for borrowed bodies). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Profile")
+	bool bOwnDemonColors = false;
+
 	// ---- Body --------------------------------------------------------------------------------------
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body")
