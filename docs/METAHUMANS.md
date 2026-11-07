@@ -95,7 +95,13 @@ Farbparameter des Creators nur in einem fertigen Vorschau-Zusammenbau vorhanden 
 
 - **Kleidung:** MetaHuman bringt nur moderne Kleidung mit; Akazas Gewand entsteht deshalb in Blender
   ([AKAZA_OUTFIT.md](AKAZA_OUTFIT.md)). NPC-Kleidung folgt nach demselben Verfahren.
-- Erst geriggte und gebaute MetaHumans (nach der Epic-Freigabe) zeigen das echte Ergebnis; danach FPS-Messung mit
-  mehreren MetaHumans gleichzeitig.
+- **NPC-Kleidung fehlt:** Alle neun Figuren sind gebaut (2026-11-07). König, Hauptmann und Dorfbewohner tragen aber noch
+  Epics Standardkleidung (Unterwäsche) und erscheinen so im Spiel, sobald ihr Build lokal vorhanden ist.
+- **Akaza:** Narben und lange Locken fehlen, Gesichtsanimation ist noch nicht geprüft.
+- **Gemessen** (2026-11-07, verdeckt mit `-RenderOffscreen`, 1600×900, Figuren stehen, ohne Gefecht): 82 Bilder pro Sekunde
+  mit Akaza und den Figuren der Siedlung (21 Figuren), 62–63 mit acht weiteren MetaHumans dicht vor der Kamera (29 Figuren).
+  Dazu ein Durchlauf, keine Messung im echten Spielablauf.
+- `DBSpawnNpc` blendet die Spielfigur aus; das trifft Akazas Gewand, aber nicht seinen MetaHuman-Körper. Er steht dann ohne
+  Gewand im Bild. Das betrifft nur diesen Testbefehl.
 - Ein automatisches Anpassen des Gesichts an ein Hyper3D-Modell (`db_conform_metahuman_head.py`) verzerrt das Gesicht,
   weil Bart und Haare dort feste Geometrie sind – Gesichter werden im Creator von Hand angepasst.
