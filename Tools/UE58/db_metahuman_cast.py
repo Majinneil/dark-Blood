@@ -4,6 +4,7 @@
 #                                                        member (or one), skipping those already built - needs the
 #                                                        Epic account authorization of MetaHuman Creator once
 #   py "Tools/UE58/db_metahuman_cast.py" finish Name rebuild   build that character again (after changing its look)
+#   py "Tools/UE58/db_metahuman_cast.py" colour Name     set the hair colour on an existing build
 #
 # The cast of DARK BLOOD as MetaHumans: the hero Akaza (db_create_akaza_metahuman.py) and the human NPCs. Characters
 # live in /Game/DarkBlood/Characters/MetaHumans/<Name>, builds in .../MetaHumans/Build/<Name> (blueprint BP_<Name>);
@@ -26,6 +27,9 @@ CAST = {
     "Villager_05": "Tuya",
     "Villager_06": "Mateo",
 }
+# Hair colour of a build (melanin, redness): the creator's colour parameters only exist in a finished preview assembly, so
+# it goes into the materials the build wrote. Akaza's hair and beard are black.
+HAIR_COLOUR = {"Akaza": (0.98, 0.05)}
 library = unreal.EditorAssetLibrary
 subsystem = unreal.get_editor_subsystem(unreal.MetaHumanCharacterEditorSubsystem)
 
@@ -37,6 +41,31 @@ def log(message):
 def blueprint_path(name):
     # The pipeline puts everything of a character into a folder of its name inside the build path.
     return "%s/%s/%s/BP_%s" % (BUILD, name, name, name)
+
+
+def apply_hair_colour(name):
+    """Sets melanin and redness on every material of the build's grooms and on the face (baked hair of the far LODs)."""
+    if name not in HAIR_COLOUR:
+        return
+    melanin, redness = HAIR_COLOUR[name]
+    material_library = unreal.MaterialEditingLibrary
+    folder = "%s/%s/%s" % (BUILD, name, name)
+    for path in library.list_assets(folder, recursive=True, include_folder=False):
+        if "/Grooms/" not in path and "/Face/Materials/" not in path:
+            continue
+        material = unreal.load_asset(path)
+        if not isinstance(material, unreal.MaterialInstanceConstant):
+            continue
+        changed = []
+        for parameter in material_library.get_scalar_parameter_names(material):
+            lower = str(parameter).lower()
+            value = melanin if lower.endswith("melanin") else redness if lower.endswith("redness") else None
+            if value is not None and not lower.startswith("region"):
+                material_library.set_material_instance_scalar_parameter_value(material, parameter, value)
+                changed.append(str(parameter))
+        if changed:
+            library.save_loaded_asset(material, False)
+            log("%s: %s" % (material.get_name(), ", ".join(changed)))
 
 
 def create():
@@ -133,6 +162,7 @@ def finish(only=None, rebuild=False):
             except RuntimeError as error:
                 unreal.log_warning("DBCAST %s: saving reported: %s" % (name, str(error)[:400]))
             library.save_loaded_asset(character, False)
+            apply_hair_colour(name)
             log("%s built" % name)
         finally:
             if added and subsystem.is_object_added_for_editing(character):
@@ -142,5 +172,7 @@ def finish(only=None, rebuild=False):
 mode = sys.argv[1] if len(sys.argv) > 1 else "create"
 if mode == "create":
     create()
+elif mode == "colour":
+    apply_hair_colour(sys.argv[2] if len(sys.argv) > 2 else "Akaza")
 elif mode == "finish":
     finish(sys.argv[2] if len(sys.argv) > 2 else None, len(sys.argv) > 3 and sys.argv[3] == "rebuild")

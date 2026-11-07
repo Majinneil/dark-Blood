@@ -28,9 +28,12 @@ es als fein gekachelte Detail-Normal-Map in den Stoffmaterialien dazu.
 
 `blender -b --python Tools/Art/blender_make_akaza_outfit.py -- [Körper.fbx] [Ausgabe] [Stufe]`
 
-- **Körper:** ein gehäuteter Körper auf dem UE5-Skelett – Akazas MetaHuman-Körper aus Unreal oder (Standard, solange
-  der MetaHuman-Build fehlt) der Mannequin `SourceArt/Mannequin/SKM_Manny_Simple.fbx`. Alle Maße werden per Strahl
-  von den Knochenachsen gemessen; das Skript passt sich also an jeden Körper an.
+- **Körper:** ein gehäuteter Körper auf dem UE5-Skelett – für das Spiel Akazas MetaHuman-Körper
+  `SourceArt/MetaHumans/Akaza/SKM_Akaza_BodyMesh.fbx` (aus dem Build exportiert mit `Tools/UE58/db_export_metahuman_body.py`,
+  nicht im Git), ohne Angabe der Mannequin `SourceArt/Mannequin/SKM_Manny_Simple.fbx`. Alle Maße werden per Strahl
+  von den Knochenachsen gemessen; das Skript passt sich also an jeden Körper an. Hilfsgelenke des MetaHumans, die die
+  Mannequin-Animationen nicht bewegen, fallen weg (ihre Gewichte gehen an das nächste Elterngelenk), damit das Gewand
+  auf `SK_Mannequin` importierbar bleibt und die Grundhaltung des Körpers behält.
 - **Aufbau:** Kimono-Rumpf aus gemessenen Querschnitten (blusig über dem Obi, unten gerade fallend), Schulterpasse
   über die Schultern gelegt; die Armlöcher werden entlang des Oberarms zu tiefen Kimonoärmeln ausgeformt, die letzten
   12 cm tragen die Borte. Wickelgewand mit Überlappung vorn, Falten, immer frei von Hüften und Knien. Hosen,
@@ -47,8 +50,8 @@ es als fein gekachelte Detail-Normal-Map in den Stoffmaterialien dazu.
   `Akaza_Outfit.blend` und Prüfbilder vorn, Seite, hinten, schräg.
 - **Stufen** zum Prüfen: `kimono_raw`, `kimono`, `lower` – bauen bis dahin, rendern, enden.
 
-Stand mit dem Mannequin: rund 29 000 Ecken, 76 000 Dreiecke (Schal und Stola einmal unterteilt), alle Ecken gewichtet,
-Laufzeit etwa 1,5 Minuten.
+Stand auf Akazas MetaHuman-Körper: rund 40 000 Ecken, 79 000 Dreiecke (Schal und Stola einmal unterteilt), alle Ecken
+gewichtet, Laufzeit etwa 1,5 Minuten.
 
 Der Export rechnet in **Zentimetern** (Szene ×100, Einheitenmaßstab 0,01): Mit Metern und „FBX Units Scale“ kam das
 Mesh in Zentimetern, die Knochen aber in Metern an – das Gewand verschwand im Spiel auf Knochengröße. Dasselbe gilt
@@ -67,8 +70,8 @@ für `Tools/UE58/blender_rig_hyper3d.py`.
 - Materialplätze: Unreals Python liefert Kopien der Slot-Strukturen – die Liste wird neu gebaut und als Ganzes
   zurückgeschrieben (sonst blieb das Grid-Material).
 - Im Spiel (`DBDevelopmentContent`): `CV_MH_Akaza` trägt das Gewand als Teil, das per Leader Pose dem animierten
-  Skelett folgt; `CV_AkazaOutfit` zeigt es auf dem Mannequin – `DBSpawnNpc AkazaOutfit Akaza` stellt die Figur vor die
-  Kamera.
+  Skelett folgt. Es ist jetzt auf den MetaHuman-Körper zugeschnitten; `CV_AkazaOutfit` (`DBSpawnNpc AkazaOutfit Akaza`)
+  zeigt es weiter auf dem Mannequin, dort passt es aber nicht mehr genau.
 
 **Getestet (2026-10-29):** verdeckt gerendert im Spiel (`-RenderOffscreen`): Gewand mit allen neun Materialien auf
 der Testfigur in der Ruhe-Animation, von vorn, schräg und hinten; zwei Figuren gleichzeitig. Nicht getestet: Laufen,
@@ -78,11 +81,10 @@ Kampf, FPS (Messung nur, wenn am Rechner nicht gespielt wird).
 
 - Ärmel liegen bei gesenkten Armen bauschig am Oberarm statt zu hängen – Chaos Cloth für Ärmel, Wickelgewand, Stola,
   Quaste; das Creme wirkt in starker Sonne zu hell (Tönung/Belichtung prüfen).
-- Auf Akazas MetaHuman-Körper neu anpassen, sobald sein Build steht (er braucht über 160 GB Speicher, siehe
-  [METAHUMANS.md](METAHUMANS.md)); bis dahin trägt die Spielfigur weiter den Hyper3D-Körper.
 - Chaos Cloth für Ärmel, Wickelgewand, Stola und Quaste (die Gewichte sind die Grundlage, die Simulation bewegt den
   Rest), verdeckte Körperteile ausblenden.
-- Lockiger Haarknoten (Groom) und Narbe über der linken Braue.
+- Lange Locken zum Haarknoten (die Frisur ist die Vorlage `Hair_S_UpdoBuns`), Narben über der linken Braue und auf der
+  linken Wange. Die Stiefel lassen vorne im Kontrollbild noch Haut des Fußes sehen.
 
 ## Akazas Kopf (Hyper3D + Blender) – 2026-10-30
 

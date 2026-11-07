@@ -78,13 +78,18 @@ Was geprüft wurde:
   (`db_metahuman_build.py`: nach 120 Bildern statt in Bild 0) läuft durch. Welcher Teil davon nötig ist und warum der Bau
   jetzt nur noch Minuten dauert, wurde nicht einzeln geprüft.
 
+Während des Baus darf nur ein Editor laufen, und jede Figur braucht einen eigenen Prozess: Ohne Auslagerung läuft sonst der
+Videospeicher voll (`NPC_Captain` stürzte mit „Out of video memory“ ab, als zweite Figur im selben Prozess und neben weiteren
+Editoren).
+
 Die Schalter gelten nur für den Bau, nicht für das Spiel. Das Spiel lief danach mit `BP_Akaza` und normalen Einstellungen
 ohne Absturz (ein verdeckter Lauf von rund drei Minuten).
 
 Python meldet jede Fehlerzeile des Baus als `RuntimeError`, auch wenn er durchläuft (`Cannot break link` der Steuerungs-Rigs,
 Skelett-Abgleich des ARKit-Mappings beim Speichern). `db_metahuman_cast.py` entscheidet deshalb über das vorhandene
 `BP_<Name>` und speichert danach selbst, denn der Bau lässt alles ungespeichert im Speicher. Der Blueprint liegt unter
-`Build/<Name>/<Name>/BP_<Name>`.
+`Build/<Name>/<Name>/BP_<Name>`. Die Haarfarbe setzt das Skript direkt in den Materialien des Builds (`HAIR_COLOUR`), weil die
+Farbparameter des Creators nur in einem fertigen Vorschau-Zusammenbau vorhanden sind (`db_metahuman_cast.py colour <Name>`).
 
 ## Offen
 

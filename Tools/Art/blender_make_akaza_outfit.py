@@ -23,7 +23,8 @@ from mathutils.bvhtree import BVHTree
 
 PROJECT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-BODY_FBX = args[0] if len(args) > 0 and args[0] else os.path.join(PROJECT, "SourceArt", "Mannequin", "SKM_Manny_Simple.fbx")
+MANNEQUIN_FBX = os.path.join(PROJECT, "SourceArt", "Mannequin", "SKM_Manny_Simple.fbx")
+BODY_FBX = args[0] if len(args) > 0 and args[0] else MANNEQUIN_FBX
 OUT = args[1] if len(args) > 1 and args[1] else os.path.join(PROJECT, "SourceArt", "Generated", "AkazaOutfit")
 STAGE = args[2] if len(args) > 2 else "all"     # kimono_raw | kimono | lower | all: stop and render after that stage
 FABRICS = os.path.join(PROJECT, "SourceArt", "Generated", "AkazaOutfit")
@@ -71,6 +72,51 @@ body.name = "Body"
 armature.name = "root"
 for mod in list(body.modifiers):
     body.modifiers.remove(mod)
+
+
+def keep_animated_bones():
+    """A MetaHuman body has many helper bones the mannequin animations do not move: their weights go to the nearest
+    bone of the mannequin, then they are removed, so the outfit imports onto SK_Mannequin with the body's bind pose."""
+    bpy.ops.import_scene.fbx(filepath=MANNEQUIN_FBX)
+    template = next(o for o in bpy.context.selected_objects if o.type == "ARMATURE")
+    keep = {b.name for b in template.data.bones}
+    for obj in list(bpy.context.selected_objects):
+        bpy.data.objects.remove(obj, do_unlink=True)
+    removed = [b.name for b in armature.data.bones if b.name not in keep]
+    if not removed:
+        return
+    target = {}
+    for b in armature.data.bones:
+        ancestor = b
+        while ancestor and ancestor.name not in keep:
+            ancestor = ancestor.parent
+        target[b.name] = ancestor.name if ancestor else "root"
+    groups = {g.index: g.name for g in body.vertex_groups}
+    for name in set(target.values()):
+        if name not in body.vertex_groups:
+            body.vertex_groups.new(name=name)
+    for v in body.data.vertices:
+        moved = {}
+        for g in v.groups:
+            name = groups.get(g.group)
+            if name in target and target[name] != name:
+                moved[target[name]] = moved.get(target[name], 0.0) + g.weight
+        for name, weight in moved.items():
+            body.vertex_groups[name].add([v.index], weight, "ADD")
+    for name in removed:
+        group = body.vertex_groups.get(name)
+        if group:
+            body.vertex_groups.remove(group)
+    select_only(armature)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode="EDIT")
+    for name in removed:
+        armature.data.edit_bones.remove(armature.data.edit_bones[name])
+    bpy.ops.object.mode_set(mode="OBJECT")
+    log("removed %d helper bones, %d left" % (len(removed), len(armature.data.bones)))
+
+
+keep_animated_bones()
 log("body %d vertices, %d groups, height %.3f" % (len(body.data.vertices), len(body.vertex_groups), body.dimensions.z))
 
 
@@ -858,7 +904,7 @@ def build_scarf(bvh):
             c_bot = Vector((0.0, axis_y(z_bot), z_bot))
             r_top = (first_hit(BODY_BVH, c_top, direction, 0.2) or 0.07) + 0.035
             r_bot = min((last_hit(bvh, c_bot, direction, 0.4) or 0.2) + 0.035, 0.3)
-            bulge = (0.08 + 0.04 * back) * math.sin(math.pi * t) + 0.012 * math.sin(5 * a + 3 * t)
+            bulge = (0.045 + 0.03 * back) * math.sin(math.pi * t) + 0.012 * math.sin(5 * a + 3 * t)
             c = c_top.lerp(c_bot, t)
             ring.append(c + direction * (lerp(r_top, r_bot, t) + bulge))
         rings.append(ring)
