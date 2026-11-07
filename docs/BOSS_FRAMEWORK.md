@@ -153,6 +153,25 @@ Eigene Modelle, Animationen und Telegraph-VFX je Boss; Musik; Intros und Finishe
 StateTree-KI pro Boss mit eigenen GAS-Abilities statt der gemeinsamen Mechanik-Bausteine; Arena-Transformation des
 Königs; Checkpoints.
 
+## Eigene Körper: Weg vom Entwurf ins Spiel
+
+Stand 2026-11-07, geprüft mit Tetsukhan:
+
+1. **Vorlage:** Das Plakat aus `References/` geht an ChatGPT, das daraus eine saubere Ansicht macht (neutrale Pose, gleichmäßiges
+   Licht, grauer Hintergrund, keine Schrift, keine Waffe). Ablage: `SourceArt/Hyper3D/<Name>/input/`.
+2. **3D:** Hyper3D Rodin Gen-2.5, „Faithful“, „Symmetric“. Beim Material ohne „Beleuchtung entfernen“ und mit einer klaren
+   Farbangabe, sonst wird dunkles Eisen zu hellem Beige.
+3. **Skelett:** `blender -b --python Tools/UE58/blender_rig_hyper3d.py -- <glb> SourceArt/Hyper3D/<Name>/export <Name>`.
+4. **Import:** `DB_HYPER3D_ONLY=<Name>` setzen und `Tools/UE58/db_import_hyper3d.py` ausführen. Der Boss nimmt `CV_Hyper3D_<Name>`
+   danach von selbst.
+
+Grenzen ohne Abo (Stand 2026-11-07): Rodin nimmt nur ein Bild, „Extreme-High“ ist gesperrt, Modelle in „High“ lassen sich nicht
+herunterladen, 50000 Vierecke, gebackene Normalen und 4K-Texturen ließen sich nicht wählen. Frei sind „Low“, 18000 Vierecke und 2K.
+Die Low-Fassung wirkt aus der Nähe wachsartig und glänzt zu stark; aus Kampfentfernung trägt die Silhouette. Das High-Modell
+ist sichtbar schärfer, im Spiel aber ungeprüft.
+
+Gemessen (verdeckt, 1600×900, ein Durchlauf): 78 FPS mit 22 Figuren, 70 FPS mit 23 Figuren und laufendem Bosskampf (zwei Tetsukhan).
+
 ## Körper aus den Paragon-Figuren
 
 Bosse und Dämonen nutzen die kostenlosen Paragon-Figuren von Epic, wenn sie lokal eingerichtet sind (siehe

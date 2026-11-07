@@ -145,7 +145,11 @@ physics = unreal.load_asset(PHYSICS)
 if skeleton is None:
     raise SystemExit("UE5 mannequin missing - run Tools/UE58/Setup-DevMannequin.ps1 first")
 master = master_material()
+# DB_HYPER3D_ONLY=<Name> imports one character instead of all.
+only = os.environ.get("DB_HYPER3D_ONLY")
 for name in sorted(os.listdir(SOURCE)) if os.path.isdir(SOURCE) else []:
+    if only and name != only:
+        continue
     export = os.path.join(SOURCE, name, "export")
     fbx = os.path.join(export, "SK_%s.fbx" % name)
     if not os.path.isfile(fbx):

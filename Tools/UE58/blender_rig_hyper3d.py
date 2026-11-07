@@ -219,10 +219,35 @@ def arm_side(name):
     return name[-1] if name.startswith(ARM_PREFIXES) and name[-2:] in ("_l", "_r") else None
 
 
+# Massive armored bodies: chest and side plates lie closer to the hanging arm than to the spine, but they belong to the
+# trunk. Whatever lies well inside the arm's axis at its height is never the arm (else raised arms pull shards out of it).
+ARM_RADIUS = 0.16
+arm_axis = {side: sorted(((armature.matrix_world @ armature.data.bones[name + "_" + side].head_local).z,
+                          abs((armature.matrix_world @ armature.data.bones[name + "_" + side].head_local).x))
+                         for name in ("upperarm", "lowerarm", "hand")) for side in ("l", "r")}
+
+
+def inside_arm_axis(vertex, side):
+    axis = arm_axis[side]
+    z, x = vertex.co.z, abs(vertex.co.x)
+    if z < axis[0][0] or z > axis[-1][0] - 0.02:
+        return False
+    for (z0, x0), (z1, x1) in zip(axis, axis[1:]):
+        if z0 <= z <= z1:
+            return x < x0 + (x1 - x0) * (z - z0) / max(z1 - z0, 1e-4) - ARM_RADIUS
+    return False
+
+
 for vertex in body.data.vertices:
     side = "l" if vertex.co.x > 0.0 else "r"
-    below_hip = vertex.co.z < pelvis_z + 0.1 and abs(vertex.co.x) < hand_x[side] - 0.05
-    usable = [(name, h, t) for name, h, t in segments if not (below_hip and arm_side(name))]
+    # Below the hands the skirt rule alone decides; above them the slanted arm axis does (thick forearms reach the hip).
+    below_hands = vertex.co.z < arm_axis[side][0][0] and vertex.co.z < pelvis_z + 0.1
+    below_hip = below_hands and abs(vertex.co.x) < hand_x[side] - 0.05
+    # The wrist itself reaches a little below the hand bone's start.
+    at_wrist = below_hip and min(segment_distance(vertex.co, h, t) for name, h, t in segments
+                                 if arm_side(name) == side and name.startswith(("lowerarm", "hand"))) < 0.09
+    trunk = (below_hip and not at_wrist) or inside_arm_axis(vertex, side)
+    usable = [(name, h, t) for name, h, t in segments if not (trunk and arm_side(name))]
     scored = sorted((max(segment_distance(vertex.co, h, t), 0.01), name) for name, h, t in usable)[:4]
     weights = {name: 1.0 / d ** 6 for d, name in scored}
     total = sum(weights.values())
