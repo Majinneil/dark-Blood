@@ -2,18 +2,21 @@
 #   UnrealEditor.exe DarkBlood.uproject "-ExecCmds=py <project>/Tools/UE58/db_akaza_look.py,QUIT_EDITOR"
 #
 # Brings Akaza (/Game/DarkBlood/Characters/MetaHumans/Akaza) to the project owner's reference sheet (docs/AKAZA_OUTFIT.md):
-# full curly beard and curly moustache, dense brows, black hair (melanin), sun-tanned weathered skin, brown eyes.
-# The hair stays pulled back (closest preset to the top knot); the curly top knot itself is a custom groom. After this
-# run the character must be built again: db_metahuman_cast.py finish Akaza rebuild.
+# full curly beard and curly moustache, dense brows, black hair (melanin), sun-tanned weathered skin, brown eyes. The hair
+# is the updo with buns (closest preset to the top knot; the curly top knot itself is a custom groom). No MetaHuman outfit:
+# he wears his own gown (SK_Akaza_Outfit). After this run the character must be built again:
+# db_metahuman_cast.py finish Akaza rebuild.
 import unreal
 
 TARGET = "/Game/DarkBlood/Characters/MetaHumans/Akaza"
 GROOMS = "/MetaHumanCharacter/Optional/Grooms/Bindings/"
 LOOK = {
+    "Hair": "Hair/WI_Hair_S_UpdoBuns",
     "Beard": "Beards/WI_Beard_M_Curly",
     "Mustache": "Mustaches/WI_Mustache_M_Curly",
     "Eyebrows": "Eyebrows/WI_Eyebrows_M_Dense",
 }
+HAIR_COLOUR = {"Melanin": 0.95, "Redness": 0.0}
 EYE_PRESETS = "/MetaHumanCharacter/Tools/EyePresets/EyePresets"
 
 library = unreal.EditorAssetLibrary
@@ -44,25 +47,30 @@ for slot, relative in LOOK.items():
     keys.append(key)
     log("%s: %s" % (slot, relative.split("/")[-1]))
 
+# The empty key selects nothing: without it Epic's default garment shows through the gown.
+instance.set_single_slot_selection("Outfits", unreal.MetaHumanPaletteItemKey())
+
 added = subsystem.try_add_object_to_edit(character)
 try:
     subsystem.assemble_for_preview(character=character)
     # Black hair and beard.
-    for slot in ("Hair", "Eyebrows", "Eyelashes"):
+    for slot in ("Hair", "Beard", "Mustache", "Eyebrows", "Eyelashes"):
         keys += [k for k in collection.get_item_keys_for_slot(slot) if k not in keys]
     for key in keys:
-        for parameter in instance.get_instance_parameters(item_path=unreal.MetaHumanPaletteItemPath(item_key=key)):
-            if parameter.name == "Melanin":
-                parameter.set_float(value=0.95)
+        path = unreal.MetaHumanPaletteItemPath(item_key=key)
+        for parameter in instance.get_instance_parameters(item_path=path):
+            if parameter.name in HAIR_COLOUR:
+                parameter.set_float(value=HAIR_COLOUR[parameter.name])
+                log("%s %s = %s" % (collection.get_item_display_name(key), parameter.name, HAIR_COLOUR[parameter.name]))
     # Skin: sun-tanned (U is the skin's depth - darker), warm undertone, a little rougher - weathered.
     settings = character.get_editor_property("skin_settings")
     skin = settings.get_editor_property("skin")
-    skin.set_editor_property("u", 0.62)
-    skin.set_editor_property("v", 0.47)
+    skin.set_editor_property("u", 0.5)
+    skin.set_editor_property("v", 0.5)
     skin.set_editor_property("roughness", 1.1)
     settings.set_editor_property("skin", skin)
     subsystem.commit_skin_settings(character, settings)
-    log("skin: tanned (u 0.62, v 0.47)")
+    log("skin: tanned (u 0.5, v 0.5)")
     # Eyes: a brown preset from Epic's eye presets, else a dark brown by hand.
     eyes = character.get_editor_property("eyes_settings")
     brown = None

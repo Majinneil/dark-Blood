@@ -34,6 +34,11 @@ def log(message):
     unreal.log("DBCAST " + message)
 
 
+def blueprint_path(name):
+    # The pipeline puts everything of a character into a folder of its name inside the build path.
+    return "%s/%s/%s/BP_%s" % (BUILD, name, name, name)
+
+
 def create():
     for name, preset in CAST.items():
         path = ROOT + "/" + name
@@ -70,7 +75,7 @@ def finish(only=None, rebuild=False):
     for name in names:
         if only and name != only:
             continue
-        if not rebuild and library.does_asset_exist("%s/%s/BP_%s" % (BUILD, name, name)):
+        if not rebuild and library.does_asset_exist(blueprint_path(name)):
             log("%s already built" % name)
             continue
         character = unreal.load_asset(ROOT + "/" + name)
@@ -112,7 +117,21 @@ def finish(only=None, rebuild=False):
             params.common_folder_path = BUILD + "/Common"
             params.name_override = name
             params.enable_wardrobe_item_validation = False
-            subsystem.build_meta_human(character=character, params=params)
+            try:
+                subsystem.build_meta_human(character=character, params=params)
+            except RuntimeError as error:
+                # Python turns every error line the build logged into an exception, also when the build went through
+                # (the control rigs report "Cannot break link" while they are copied): only the blueprint decides.
+                unreal.log_warning("DBCAST %s: build reported: %s" % (name, str(error)[:400]))
+            if not library.does_asset_exist(blueprint_path(name)):
+                unreal.log_error("DBCAST %s: build failed, no %s" % (name, blueprint_path(name)))
+                continue
+            # The build leaves its assets unsaved in memory. Saving reports a mismatch of the ARKit mapping's skeleton
+            # as an error too, after everything has been written.
+            try:
+                library.save_directory(BUILD, only_if_is_dirty=True, recursive=True)
+            except RuntimeError as error:
+                unreal.log_warning("DBCAST %s: saving reported: %s" % (name, str(error)[:400]))
             library.save_loaded_asset(character, False)
             log("%s built" % name)
         finally:

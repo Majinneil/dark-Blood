@@ -55,6 +55,37 @@ einem Laufwerk mit Platz), sonst bricht jeder Build ab. Das Skript setzt Texturq
 Bauen am besten je Figur in einem eigenen Editor-Prozess:
 `UnrealEditor.exe DarkBlood.uproject "-ExecCmds=py <Pfad>/db_metahuman_cast.py finish <Name>,QUIT_EDITOR"`.
 
+## Unbeaufsichtigter Bau: so läuft er durch
+
+Stand 2026-11-07 (UE 5.8.4, RTX 4070 SUPER, 32 GB RAM). So gebaut dauert Akaza etwa 2 Minuten:
+
+```
+UnrealEditor.exe DarkBlood.uproject /Engine/Maps/Entry
+  -dpcvars=Editor.AsynctextureCompilationMaxConcurrency=1,r.SkinCache.Mode=0,D3D12.ResidencyManagement=0,D3D12.ResourcesStartResident=1
+  "-ExecCmds=py <Pfad>/Tools/UE58/db_metahuman_build.py finish Akaza rebuild" -nosplash -unattended -nosound
+```
+
+Vorher: sechs Läufe über rund eine Stunde (Startkarte `L_Realm`, Skript direkt aus `-ExecCmds`) endeten alle beim
+Fertigstellen von `SKM_Akaza_BodyMesh` mit `DXGI_ERROR_DEVICE_HUNG`. Aftermath meldete keine Zeitüberschreitung, sondern
+einen Seitenfehler: Die Kopier-Einheit liest eine nicht eingeblendete Adresse (`PageFault`, `AddressTranslationError`,
+`CopyEngine`), bei nur 3,6 von 11,2 GB belegtem Videospeicher.
+
+Was geprüft wurde:
+- `r.SkinCache.Mode=0` allein und `-nod3dasync -DisableAsyncCompute` änderten nichts.
+- `D3D12.ResidencyManagement=0` allein stürzt nach 30 Sekunden ab, weil Ressourcen ausgelagert starten
+  (`D3D12.ResourcesStartResident` gehört dazu).
+- Die Kombination aus den beiden D3D12-Schaltern, leerer Startkarte und spätem Start
+  (`db_metahuman_build.py`: nach 120 Bildern statt in Bild 0) läuft durch. Welcher Teil davon nötig ist und warum der Bau
+  jetzt nur noch Minuten dauert, wurde nicht einzeln geprüft.
+
+Die Schalter gelten nur für den Bau, nicht für das Spiel. Das Spiel lief danach mit `BP_Akaza` und normalen Einstellungen
+ohne Absturz (ein verdeckter Lauf von rund drei Minuten).
+
+Python meldet jede Fehlerzeile des Baus als `RuntimeError`, auch wenn er durchläuft (`Cannot break link` der Steuerungs-Rigs,
+Skelett-Abgleich des ARKit-Mappings beim Speichern). `db_metahuman_cast.py` entscheidet deshalb über das vorhandene
+`BP_<Name>` und speichert danach selbst, denn der Bau lässt alles ungespeichert im Speicher. Der Blueprint liegt unter
+`Build/<Name>/<Name>/BP_<Name>`.
+
 ## Offen
 
 - **Kleidung:** MetaHuman bringt nur moderne Kleidung mit; Akazas Gewand entsteht deshalb in Blender
