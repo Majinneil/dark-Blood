@@ -51,7 +51,7 @@ def node(material, cls, x, y, **props):
 
 DEFAULTS = {"BaseColor": "/Engine/EngineResources/WhiteSquareTexture", "Normal": "/Engine/EngineMaterials/FlatNormal",
             "ORM": "/Engine/EngineMaterials/T_Default_Material_Grid_M", "Emissive": "/Engine/EngineResources/Black"}
-EMISSIVE_STRENGTH = 4.0
+EMISSIVE_STRENGTH = 1.5
 
 
 def add_emissive(material):
@@ -130,6 +130,8 @@ def import_texture(path, destination, name, usage):
     if usage == "Normal":
         texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
         texture.set_editor_property("srgb", False)
+        # glTF normal maps are OpenGL (green up), Unreal expects DirectX: unflipped, light falls on details from below.
+        texture.set_editor_property("flip_green_channel", True)
     elif usage == "ORM":
         # Linear color (not masks): matches the master's Linear Color sampler and its engine default texture.
         texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT)
@@ -185,6 +187,8 @@ for name in sorted(os.listdir(SOURCE)) if os.path.isdir(SOURCE) else []:
     for usage, texture in textures.items():
         if texture is not None:
             mel.set_material_instance_texture_parameter_value(instance, usage, texture)
+    # Masters made before the strength was lowered: the instance carries the current value.
+    mel.set_material_instance_scalar_parameter_value(instance, "EmissiveStrength", EMISSIVE_STRENGTH)
     library.save_loaded_asset(instance, False)
 
     imported = run_import(fbx, destination, "SK_" + name, mesh_options(skeleton, physics))

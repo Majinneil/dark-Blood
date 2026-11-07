@@ -162,8 +162,16 @@ Stand 2026-11-07, geprüft mit Tetsukhan:
 2. **3D:** Hyper3D Rodin Gen-2.5, „Faithful“, „Symmetric“. Beim Material ohne „Beleuchtung entfernen“ und mit einer klaren
    Farbangabe, sonst wird dunkles Eisen zu hellem Beige.
 3. **Skelett:** `blender -b --python Tools/UE58/blender_rig_hyper3d.py -- <glb> SourceArt/Hyper3D/<Name>/export <Name>`.
-4. **Import:** `DB_HYPER3D_ONLY=<Name>` setzen und `Tools/UE58/db_import_hyper3d.py` ausführen. Der Boss nimmt `CV_Hyper3D_<Name>`
+4. **Nacharbeit:** `blender -b --python Tools/Art/blender_refine_hyper3d.py -- <Name> ...` holt die feinen Details aus der
+   Farbtextur in die Normal-Map und dunkelt Vertiefungen ab (Originale bleiben als `*_rodin.png`).
+5. **Import:** `DB_HYPER3D_ONLY=<Name>[,<Name>...]` setzen und `Tools/UE58/db_import_hyper3d.py` ausführen. Der Boss nimmt `CV_Hyper3D_<Name>`
    danach von selbst.
+
+Seit 2026-11-08 sind alle 16 Vasallen so gebaut. Der Import dreht den Grünkanal der Normal-Maps (glTF ist OpenGL, Unreal
+DirectX) und übernimmt Rodins Leuchttextur (`T_<Name>_Emissive.png`, Stärke 1,5). Diese Körper tragen ihre eigenen Farben
+(`bOwnDemonColors`): Das Dämonen-Overlay färbte dünne, doppelseitige Stoffe flächig ein und bleibt bei ihnen aus.
+Offen: Weite Ärmel, Stolen und Roben sind mit den Armen ein Netz und dehnen sich beim Armheben in langen Streifen. Weiche
+Gewichte halfen kaum (geprüft an Shikotsu). Das lösen erst getrennte Stoffteile mit Stoffsimulation.
 
 Grenzen ohne Abo (Stand 2026-11-07): Rodin nimmt nur ein Bild, „Extreme-High“ ist gesperrt, Modelle in „High“ lassen sich nicht
 herunterladen, 50000 Vierecke, gebackene Normalen und 4K-Texturen ließen sich nicht wählen. Frei sind „Low“, 18000 Vierecke und 2K.
